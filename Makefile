@@ -3,11 +3,12 @@
 CC = gcc
 
 CFLAGS += -Wall -Werror -std=gnu99
-CFLAGS += $(shell pkg-config --cflags gtk+-2.0 zlib)
+CFLAGS += $(shell pkg-config --cflags gio-2.0 sdl zlib)
+CFLAGS += -g
 
-LDFLAGS += $(shell pkg-config --libs gtk+-2.0 zlib)
+LDFLAGS += $(shell pkg-config --libs gio-2.0 sdl zlib)
 
-sources = main.c protocol.c world.c
+sources = main.c map.c protocol.c world.c
 
 objs = $(sources:.c=.o)
 deps = $(sources:.c=.d)

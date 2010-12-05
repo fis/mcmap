@@ -1,49 +1,42 @@
+#include <limits.h>
 #include <stdlib.h>
 
+#include <SDL.h>
 #include <glib.h>
 #include <zlib.h>
 
+#include "map.h"
 #include "protocol.h"
 #include "world.h"
 
-#define CHUNK_XBITS 4
-#define CHUNK_ZBITS 4
-
-#define CHUNK_XSIZE (1 << CHUNK_XBITS)
-#define CHUNK_ZSIZE (1 << CHUNK_ZBITS)
-#define CHUNK_YSIZE 128 /* world height */
-
-#define CHUNK_XIDX(coord) ((coord) >> CHUNK_XBITS)
-#define CHUNK_ZIDX(coord) ((coord) >> CHUNK_ZBITS)
-
-#define CHUNK_XOFF(coord) ((coord) & (CHUNK_XSIZE-1))
-#define CHUNK_ZOFF(coord) ((coord) & (CHUNK_ZSIZE-1))
-
-union chunk_coord
-{
-	gint xz[2];
-	gint64 i64;
-};
-
-struct chunk
-{
-	union chunk_coord key;
-	unsigned char blocks[CHUNK_XSIZE][CHUNK_ZSIZE][CHUNK_YSIZE];
-	unsigned char height[CHUNK_XSIZE][CHUNK_ZSIZE];
-	unsigned char surface[CHUNK_XSIZE][CHUNK_ZSIZE];
-};
-
 static GHashTable *chunk_table = 0;
 
-static struct chunk *get_chunk(guint64 coord)
+int chunk_min_x = 0, chunk_min_z = 0;
+int chunk_max_x = 0, chunk_max_z = 0;
+
+struct chunk *world_chunk(guint64 coord, int gen)
 {
 	struct chunk *c = g_hash_table_lookup(chunk_table, &coord);
 	if (c)
 		return c;
+	if (!gen)
+		return 0;
 
 	c = g_malloc0(sizeof *c);
 	c->key.i64 = coord;
 	g_hash_table_insert(chunk_table, &c->key.i64, c);
+
+	int x = c->key.xz[0], z = c->key.xz[1];
+
+	if (x < chunk_min_x)
+		chunk_min_x = x;
+	if (x > chunk_max_x)
+		chunk_max_x = x;
+
+	if (z < chunk_min_z)
+		chunk_min_z = z;
+	if (z > chunk_max_z)
+		chunk_max_z = z;
 
 	return c;
 }
@@ -54,19 +47,25 @@ static void handle_chunk(int x0, int y0, int z0,
 {
 	z_stream zstr;
 
+	printf("got chunk update (%d,%d,%d) - %dx%dx%d\n", x0, y0, z0, xs, ys, zs);
+
 	zstr.zalloc = 0;
 	zstr.zfree = 0;
-	if (inflateInit(&zstr) != Z_OK)
-		abort();
 
 	zstr.next_in = zdata;
 	zstr.avail_in = zlen;
+
+	if (inflateInit(&zstr) != Z_OK)
+		abort();
 
 	gint64 current_chunk = 0x7fffffffffffffffll;
 	struct chunk *c = 0;
 
 	if (y0 < 0 || y0+ys > CHUNK_YSIZE)
 		abort();
+
+	int c_min_x = INT_MAX, c_min_z = INT_MAX;
+	int c_max_x = INT_MIN, c_max_z = INT_MIN;
 
 	for (int x = x0; x < x0+xs; x++)
 	{
@@ -77,7 +76,7 @@ static void handle_chunk(int x0, int y0, int z0,
 
 			if (cc.i64 != current_chunk)
 			{
-				c = get_chunk(cc.i64);
+				c = world_chunk(cc.i64, 1);
 				current_chunk = cc.i64;
 			}
 
@@ -105,9 +104,40 @@ static void handle_chunk(int x0, int y0, int z0,
 
 				c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)] = newh;
 				c->surface[CHUNK_XOFF(x)][CHUNK_ZOFF(z)] = surfblock;
+
+#if 0
+				int cx = cc.xz[0], cz = cc.xz[1];
+				if (!surface_changed)
+				{
+					surface_changed = 1;
+					sc_min_x = cx; sc_max_x = cx;
+					sc_min_z = cz; sc_max_z = cz;
+				}
+				else
+				{
+					if (cx < sc_min_x) sc_min_x = cx;
+					if (cx > sc_max_x) sc_max_x = cx;
+					if (cz < sc_min_z) sc_min_z = cz;
+					if (cz > sc_max_z) sc_max_z = cz;
+				}
+#endif
 			}
+
+			int cx = cc.xz[0], cz = cc.xz[1];
+			if (cx < c_min_x) c_min_x = cx;
+			if (cx > c_max_x) c_max_x = cx;
+			if (cz < c_min_z) c_min_z = cz;
+			if (cz > c_max_z) c_max_z = cz;
 		}
 	}
+
+	map_update(c_min_x, c_max_x, c_min_z, c_max_z);
+#if 0
+	if (surface_changed)
+	{
+		map_update(sc_min_x, sc_max_x, sc_min_z, sc_max_z);
+	}
+#endif
 }
 
 void world_init(void)

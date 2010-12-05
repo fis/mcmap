@@ -1,22 +1,11 @@
 #include <stdio.h>
 
 #include <gio/gio.h>
-#include <gtk/gtk.h>
+#include <SDL.h>
 
+#include "map.h"
 #include "protocol.h"
 #include "world.h"
-
-/* UI callbacks */
-
-static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
-{
-	return TRUE;
-}
-
-static void destroy(GtkWidget *widget, gpointer data)
-{
-	gtk_main_quit();
-}
 
 /* proxying thread function to pass packets */
 
@@ -64,7 +53,13 @@ gpointer proxy_thread(gpointer data)
 
 int main(int argc, char **argv)
 {
-	gtk_init(&argc, &argv);
+	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
+	{
+		fprintf(stderr, "SDL init failed\n");
+		return 1;
+	}
+	g_thread_init(0);
+	g_type_init();
 
 	/* build up the world model */
 
@@ -123,26 +118,46 @@ int main(int argc, char **argv)
 	g_thread_create(proxy_thread, &proxy_client_server, FALSE, 0);
 	g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
 
-	/* construct and show the GUI */
+	/* start the user interface side */
 
-	GtkWidget *window;
-	GtkWidget *button;
+	SDL_Surface *screen = SDL_SetVideoMode(600, 600, 32, SDL_SWSURFACE);
+	if (!screen)
+	{
+		fprintf(stderr, "video mode setting failed: %s\n", SDL_GetError());
+		return 1;
+	}
 
-	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_container_set_border_width(GTK_CONTAINER(window), 16);
+	map_init(screen);
 
-	g_signal_connect(window, "delete-event", G_CALLBACK(delete_event), 0);
-	g_signal_connect(window, "destroy", G_CALLBACK(destroy), 0);
+	while (1)
+	{
+		int repaint = 0;
 
-	button = gtk_button_new_with_label("x");
+		/* process pending events, coalesce repaints */
 
-	g_signal_connect_swapped(button, "clicked", G_CALLBACK(gtk_widget_destroy), window);
+		SDL_Event e;
 
-	gtk_container_add(GTK_CONTAINER(window), button);
+		while (SDL_PollEvent(&e))
+		{
+			switch (e.type)
+			{
+			case SDL_QUIT:
+				SDL_Quit();
+				return 0;
 
-	gtk_widget_show(button);
-	gtk_widget_show(window);
+			case MCMAP_EVENT_REPAINT:
+				repaint = 1;
+				break;
+			}
+		}
 
-	gtk_main();
-	return 0;
+		/* repaint dirty bits if necessary */
+
+		if (repaint)
+			map_draw(screen);
+
+		/* wait for something interesting to happen */
+
+		SDL_WaitEvent(0);
+	}
 }
