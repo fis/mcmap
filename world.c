@@ -1,5 +1,6 @@
 #include <limits.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <SDL.h>
 #include <glib.h>
@@ -45,17 +46,12 @@ static void handle_chunk(int x0, int y0, int z0,
                          int xs, int ys, int zs,
                          unsigned zlen, unsigned char *zdata)
 {
-	z_stream zstr;
+	static unsigned char zbuf[256*1024];
+	uLongf zbuf_len = sizeof zbuf;
 
-	printf("got chunk update (%d,%d,%d) - %dx%dx%d\n", x0, y0, z0, xs, ys, zs);
-
-	zstr.zalloc = 0;
-	zstr.zfree = 0;
-
-	zstr.next_in = zdata;
-	zstr.avail_in = zlen;
-
-	if (inflateInit(&zstr) != Z_OK)
+	if (uncompress(zbuf, &zbuf_len, zdata, zlen) != Z_OK)
+		abort();
+	if (zbuf_len != (5*xs*ys*zs+1)/2)
 		abort();
 
 	gint64 current_chunk = 0x7fffffffffffffffll;
@@ -66,6 +62,8 @@ static void handle_chunk(int x0, int y0, int z0,
 
 	int c_min_x = INT_MAX, c_min_z = INT_MAX;
 	int c_max_x = INT_MIN, c_max_z = INT_MIN;
+
+	unsigned char *zb = zbuf;
 
 	for (int x = x0; x < x0+xs; x++)
 	{
@@ -80,11 +78,8 @@ static void handle_chunk(int x0, int y0, int z0,
 				current_chunk = cc.i64;
 			}
 
-			zstr.next_out = &c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0];
-			zstr.avail_out = ys;
-
-			while (inflate(&zstr, Z_SYNC_FLUSH) == Z_OK && zstr.avail_out > 0)
-				/* loop */;
+			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, ys);
+			zb += ys;
 
 			int h = c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
 
@@ -163,6 +158,27 @@ gpointer world_thread(gpointer data)
 			             packet_int(packet, 3)+1, packet_int(packet, 4)+1, packet_int(packet, 5)+1,
 			             (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3], &p[4]);
 			break;
+
+		case PACKET_PLAYER_MOVE:
+			map_update_player_pos(packet_double(packet, 0),
+			                      packet_double(packet, 1),
+			                      packet_double(packet, 3));
+			break;
+
+		case PACKET_PLAYER_ROTATE:
+			map_update_player_dir(packet_double(packet, 0),
+			                      packet_double(packet, 1));
+			break;
+
+		case PACKET_PLAYER_MOVE_ROTATE:
+			map_update_player_pos(packet_double(packet, 0),
+			                      packet_double(packet, 1),
+			                      packet_double(packet, 3));
+			map_update_player_dir(packet_double(packet, 4),
+			                      packet_double(packet, 5));
+			break;
 		}
+
+		packet_free(packet);
 	}
 }

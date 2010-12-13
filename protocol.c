@@ -434,3 +434,24 @@ int packet_int(packet_t *packet, unsigned field)
 		abort();
 	}
 }
+
+double packet_double(packet_t *packet, unsigned field)
+{
+	unsigned char *p = &packet->bytes[packet->field_offset[field]];
+	unsigned char buf[8];
+
+	switch (packet_format[packet->id].ftype[field])
+	{
+	case FIELD_FLOAT:
+		buf[0] = p[3]; buf[1] = p[2]; buf[2] = p[1]; buf[3] = p[0];
+		return *(float *)buf;
+
+	case FIELD_DOUBLE:
+		buf[0] = p[7]; buf[1] = p[6]; buf[2] = p[5]; buf[3] = p[4];
+		buf[4] = p[3]; buf[5] = p[2]; buf[6] = p[1]; buf[7] = p[0];
+		return *(double *)buf;
+
+	default:
+		return packet_int(packet, field);
+	}
+}

@@ -97,5 +97,6 @@ packet_t *packet_dup(packet_t *packet);
 void packet_free(packet_t *packet);
 
 int packet_int(packet_t *packet, unsigned field);
+double packet_double(packet_t *packet, unsigned field);
 
 #endif /* MCMAP_PROTOCOL_H */

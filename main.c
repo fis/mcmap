@@ -40,9 +40,14 @@ gpointer proxy_thread(gpointer data)
 
 		/* communicate interesting chunks back */
 
-		if (p->id == PACKET_CHUNK)
+		switch (p->id)
 		{
+		case PACKET_CHUNK:
+		case PACKET_PLAYER_MOVE:
+		case PACKET_PLAYER_ROTATE:
+		case PACKET_PLAYER_MOVE_ROTATE:
 			g_async_queue_push(cfg->q, packet_dup(p));
+			break;
 		}
 	}
 
@@ -90,7 +95,7 @@ int main(int argc, char **argv)
 
 	GSocketClient *client = g_socket_client_new();
 
-	GSocketConnection *conn_srv = g_socket_client_connect_to_host(client, /*"a322.org:25566"*/ "localhost", 25565, 0, 0);
+	GSocketConnection *conn_srv = g_socket_client_connect_to_host(client, "a322.org:25566" /* "localhost" */, 25565, 0, 0);
 
 	if (!conn_srv)
 	{
