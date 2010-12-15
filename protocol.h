@@ -98,5 +98,6 @@ void packet_free(packet_t *packet);
 
 int packet_int(packet_t *packet, unsigned field);
 double packet_double(packet_t *packet, unsigned field);
+char *packet_string(packet_t *packet, unsigned field, int *len);
 
 #endif /* MCMAP_PROTOCOL_H */

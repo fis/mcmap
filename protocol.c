@@ -455,3 +455,18 @@ double packet_double(packet_t *packet, unsigned field)
 		return packet_int(packet, field);
 	}
 }
+
+char *packet_string(packet_t *packet, unsigned field, int *len)
+{
+	unsigned char *p = &packet->bytes[packet->field_offset[field]];
+
+	switch (packet_format[packet->id].ftype[field])
+	{
+	case FIELD_STRING:
+		*len = (p[0] << 8) | p[1];
+		return (char *)&p[2];
+
+	default:
+		abort();
+	}
+}

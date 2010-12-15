@@ -15,6 +15,8 @@ static GHashTable *chunk_table = 0;
 int chunk_min_x = 0, chunk_min_z = 0;
 int chunk_max_x = 0, chunk_max_z = 0;
 
+//static GHashTable *player_table = 0;
+
 struct chunk *world_chunk(guint64 coord, int gen)
 {
 	struct chunk *c = g_hash_table_lookup(chunk_table, &coord);
@@ -89,7 +91,7 @@ static void handle_chunk(int x0, int y0, int z0,
 				int newh = h;
 
 				unsigned char *stack = c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
-				for (; h < y0+ys; h++)
+				for (h = 0; h < y0+ys; h++)
 				{
 					if (!stack[h])
 						continue; /* air */
@@ -97,25 +99,11 @@ static void handle_chunk(int x0, int y0, int z0,
 					newh = h;
 				}
 
-				c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)] = newh;
-				c->surface[CHUNK_XOFF(x)][CHUNK_ZOFF(z)] = surfblock;
-
-#if 0
-				int cx = cc.xz[0], cz = cc.xz[1];
-				if (!surface_changed)
+				if (surfblock)
 				{
-					surface_changed = 1;
-					sc_min_x = cx; sc_max_x = cx;
-					sc_min_z = cz; sc_max_z = cz;
+					c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)] = newh;
+					c->surface[CHUNK_XOFF(x)][CHUNK_ZOFF(z)] = surfblock;
 				}
-				else
-				{
-					if (cx < sc_min_x) sc_min_x = cx;
-					if (cx > sc_max_x) sc_max_x = cx;
-					if (cz < sc_min_z) sc_min_z = cz;
-					if (cz > sc_max_z) sc_max_z = cz;
-				}
-#endif
 			}
 
 			int cx = cc.xz[0], cz = cc.xz[1];
@@ -176,6 +164,19 @@ gpointer world_thread(gpointer data)
 			                      packet_double(packet, 3));
 			map_update_player_dir(packet_double(packet, 4),
 			                      packet_double(packet, 5));
+			break;
+
+		case PACKET_ENTITY_SPAWN_NAMED:
+			
+			break;
+
+		case PACKET_ENTITY_DESTROY:
+			break;
+
+		case PACKET_ENTITY_REL_MOVE:
+		case PACKET_ENTITY_LOOK:
+		case PACKET_ENTITY_REL_MOVE_LOOK:
+		case PACKET_ENTITY_MOVE:
 			break;
 		}
 

@@ -75,11 +75,16 @@ static Uint32 special_colors[COLOR_MAX_SPECIAL] = {
 static SDL_Surface *map = 0;
 static int map_min_x = 0, map_min_z = 0;
 static int map_max_x = 0, map_max_z = 0;
+static int map_y = 0;
+
+static enum map_mode map_mode = MAP_MODE_SURFACE;
+static unsigned map_flags = 0;
 
 static GMutex *map_mutex;
 
+static SDL_Surface *player_surf = 0;
 static int player_x = 0, player_y = 0, player_z = 0;
-static double player_yaw = 0.0, player_pitch = 0.0;
+static int player_yaw = -1;
 
 void map_init(SDL_Surface *screen)
 {
@@ -100,14 +105,16 @@ void map_init(SDL_Surface *screen)
 			special_colors[i] = get_color(special_colors[i]);
 	}
 
-	map = SDL_CreateRGBSurface(SDL_SWSURFACE, CHUNK_ZSIZE, CHUNK_XSIZE, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
-	if (!map)
+	map = SDL_CreateRGBSurface(SDL_SWSURFACE, CHUNK_XSIZE, CHUNK_ZSIZE, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
+	player_surf = SDL_CreateRGBSurface(SDL_SWSURFACE, 3, 3, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
+
+	if (!map || !player_surf)
 		abort();
+
+	SDL_SetColorKey(player_surf, SDL_SRCCOLORKEY, 0);
 
 	map_mutex = g_mutex_new();
 }
-
-static int map_ymode = 0;
 
 void map_update(int x1, int x2, int z1, int z2)
 {
@@ -127,7 +134,7 @@ void map_update(int x1, int x2, int z1, int z2)
 		Uint32 rmask = map->format->Rmask, gmask = map->format->Gmask, bmask = map->format->Bmask;
 
 		SDL_FreeSurface(map);
-		map = SDL_CreateRGBSurface(SDL_SWSURFACE, zs*CHUNK_ZSIZE, xs*CHUNK_XSIZE, 32, rmask, gmask, bmask, 0);
+		map = SDL_CreateRGBSurface(SDL_SWSURFACE, xs*CHUNK_XSIZE, zs*CHUNK_ZSIZE, 32, rmask, gmask, bmask, 0);
 		if (!map)
 			abort();
 	}
@@ -135,13 +142,13 @@ void map_update(int x1, int x2, int z1, int z2)
 	SDL_LockSurface(map);
 	Uint32 pitch = map->pitch;
 
-	for (int cx = x1; cx <= x2; cx++)
+	for (int cz = z1; cz <= z2; cz++)
 	{
-		int cxo = cx - map_min_x;
+		int czo = cz - map_min_z;
 
-		for (int cz = z1; cz <= z2; cz++)
+		for (int cx = x1; cx <= x2; cx++)
 		{
-			int czo = cz - map_min_z;
+			int cxo = cx - map_min_x;
 
 			union chunk_coord cc;
 			cc.xz[0] = cx; cc.xz[1] = cz;
@@ -154,37 +161,41 @@ void map_update(int x1, int x2, int z1, int z2)
 				continue;
 			}
 
-			unsigned char *pixels = (unsigned char *)map->pixels + cxo*CHUNK_XSIZE*pitch + czo*CHUNK_ZSIZE*4;
+			unsigned char *pixels = (unsigned char *)map->pixels + czo*CHUNK_ZSIZE*pitch + cxo*CHUNK_XSIZE*4;
 			unsigned char *blocks;
 			unsigned blocks_pitch;
 
-			if (map_ymode)
+			if (map_mode == MAP_MODE_SURFACE)
 			{
-				int y0 = player_y;
+				blocks = &c->surface[0][0];
+				blocks_pitch = 1;
+			}
+			else if (map_mode == MAP_MODE_CROSS)
+			{
+				int y0 = map_y;
 				if (y0 < 0) y0 = 0;
 				else if (y0 >= CHUNK_YSIZE) y0 = CHUNK_YSIZE - 1;
 				blocks = &c->blocks[0][0][y0];
 				blocks_pitch = CHUNK_YSIZE;
 			}
 			else
-			{
-				blocks = &c->surface[0][0];
-				blocks_pitch = 1;
-			}
+				abort();
 
-			for (int bx = 0; bx < CHUNK_XSIZE; bx++)
+			unsigned blocks_xpitch = CHUNK_ZSIZE*blocks_pitch;
+
+			for (int bz = 0; bz < CHUNK_ZSIZE; bz++)
 			{
 				Uint32 *p = (Uint32*)pixels;
 				unsigned char *b = blocks;
 
-				for (int bz = 0; bz < CHUNK_ZSIZE; bz++)
+				for (int bx = 0; bx < CHUNK_XSIZE; bx++)
 				{
 					*p++ = block_colors[*b];
-					b += blocks_pitch;
+					b += blocks_xpitch;
 				}
 
 				pixels += pitch;
-				blocks += CHUNK_ZSIZE*blocks_pitch;
+				blocks += blocks_pitch;
 			}
 		}
 	}
@@ -204,14 +215,12 @@ void map_update_player_pos(double x, double y, double z)
 	if (new_x == player_x && new_y == player_y && new_z == player_z)
 		return;
 
-	int redraw = map_ymode && new_y != player_y;
-
 	player_x = new_x;
 	player_y = new_y;
 	player_z = new_z;
 
-	if (redraw)
-		map_update(map_min_x, map_max_x, map_min_z, map_max_z);
+	if (map_mode == MAP_MODE_CROSS && (map_flags & MAP_FLAG_FOLLOW_Y))
+		map_update_alt(new_y, 0);
 
 	SDL_Event e = { .type = MCMAP_EVENT_REPAINT };
 	SDL_PushEvent(&e);
@@ -219,11 +228,88 @@ void map_update_player_pos(double x, double y, double z)
 
 void map_update_player_dir(double yaw, double pitch)
 {
-	player_yaw = yaw;
-	player_pitch = pitch;
+	static unsigned char bitmaps[8][9] = {
+		"   " "###" " # ",
+		"#  " "## " "###",
+		" # " "## " " # ",
+		"###" "## " "#  ",
+		" # " "###" "   ",
+		"###" " ##" "  #",
+		" # " " ##" " # ",
+		"  #" " ##" "###"
+	};
 
-	//SDL_Event e = { .type = MCMAP_EVENT_REPAINT };
-	//SDL_PushEvent(&e);
+	int new_yaw = 0;
+
+	yaw = fmod(yaw, 360.0);
+
+	if (yaw < 0.0) yaw += 360.0;
+	if (yaw > 360-22.5) yaw -= 360;
+
+	while (new_yaw < 7 && yaw > 22.5)
+		new_yaw++, yaw -= 45.0;
+
+	if (new_yaw == player_yaw)
+		return;
+
+	player_yaw = new_yaw;
+	fprintf(stderr, "player direction -> %d (%.2f)\n", player_yaw, yaw);
+
+	SDL_LockSurface(player_surf);
+
+	unsigned char *b = bitmaps[new_yaw];
+
+	for (int y = 0; y < 3; y++)
+	{
+		Uint32 *p = (Uint32*)((unsigned char *)player_surf->pixels + y*player_surf->pitch);
+
+		for (int x = 0; x < 3; x++)
+			*p++ = *b++ == ' ' ? 0 : special_colors[COLOR_PLAYER];
+	}
+
+	SDL_UnlockSurface(player_surf);
+
+	SDL_Event e = { .type = MCMAP_EVENT_REPAINT };
+	SDL_PushEvent(&e);
+}
+
+void map_update_alt(int y, int relative)
+{
+	int new_y = relative ? map_y + y : y;
+	if (new_y < 0) new_y = 0;
+	else if (new_y >= CHUNK_YSIZE) new_y = CHUNK_YSIZE-1;
+
+	if (new_y == map_y)
+		return;
+	map_y = new_y;
+
+	if (map_mode == MAP_MODE_CROSS)
+	{
+		map_update(map_min_x, map_max_x, map_min_z, map_max_z);
+
+		SDL_Event e = { .type = MCMAP_EVENT_REPAINT };
+		SDL_PushEvent(&e);
+	}
+}
+
+void map_setmode(enum map_mode mode, unsigned flags)
+{
+	static char *modenames[] = {
+		[MAP_MODE_SURFACE] = "surface",
+		[MAP_MODE_CROSS] = "cross-section"
+	};
+
+	map_mode = mode;
+	map_flags = flags;
+
+	if (mode == MAP_MODE_CROSS)
+		map_y = player_y;
+
+	printf("MODE: %s%s\n",
+	       modenames[mode],
+	       mode == MAP_MODE_CROSS && (flags & MAP_FLAG_FOLLOW_Y) ? " (follow player)" : "");
+
+	map_update(map_min_x, map_max_x, map_min_z, map_max_z);
 }
 
 void map_draw(SDL_Surface *screen)
@@ -237,14 +323,14 @@ void map_draw(SDL_Surface *screen)
 
 	g_mutex_lock(map_mutex);
 
-	int scr_z0 = player_z - screen->w/2;
-	int scr_x0 = player_x - screen->h/2;
+	int scr_x0 = player_x - screen->w/2;
+	int scr_z0 = player_z - screen->h/2;
 
 	{
 		SDL_Rect rect_dst = { .x = 0, .y = 0, .w = screen->w, .h = screen->h };
 		SDL_Rect rect_src = {
-			.x = scr_z0 - map_min_z*CHUNK_ZSIZE,
-			.y = scr_x0 - map_min_x*CHUNK_XSIZE,
+			.x = scr_x0 - map_min_x*CHUNK_XSIZE,
+			.y = scr_z0 - map_min_z*CHUNK_ZSIZE,
 			.w = screen->w,
 			.h = screen->h
 		};
@@ -290,8 +376,9 @@ void map_draw(SDL_Surface *screen)
 	/* player indicators and such */
 
 	{
-		SDL_Rect r = { .x = screen->w/2 - 1, .y = screen->h/2 - 1, .w = 3, .h = 3 };
-		SDL_FillRect(screen, &r, special_colors[COLOR_PLAYER]);
+		SDL_Rect rect_dst = { .x = screen->w/2 - 1, .y = screen->h/2 - 1, .w = 3, .h = 3 };
+		SDL_Rect rect_src = { .x = 0, .y = 0, .w = 3, .h = 3 };
+		SDL_BlitSurface(player_surf, &rect_src, screen, &rect_dst);
 	}
 
 	/* update screen buffers */
