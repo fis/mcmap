@@ -25,8 +25,8 @@ Usage
 Command line
 ------------
 
-In the most basic form, `./mcmap -r 600x600 host:port` (or just `host`
-for the default Minecraft port 25565).  The `-r` command line option
+In the most basic form, `./mcmap -s 600x600 host:port` (or just `host`
+for the default Minecraft port 25565).  The `-s` command line option
 specifies the window size.  If you leave it out, the window will be
 resizable, but resize events are not handled, so something bad will
 probably happen.  (Fixing this is on the hypothetical TODO list.)
