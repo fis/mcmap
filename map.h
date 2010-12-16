@@ -23,6 +23,8 @@ void map_update_alt(int y, int relative);
 
 void map_setmode(enum map_mode mode, unsigned flags);
 
+void map_repaint(void);
+
 void map_draw(SDL_Surface *screen);
 
 #endif /* MCMAP_MAP_H */

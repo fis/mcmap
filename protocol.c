@@ -456,7 +456,7 @@ double packet_double(packet_t *packet, unsigned field)
 	}
 }
 
-char *packet_string(packet_t *packet, unsigned field, int *len)
+unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
 {
 	unsigned char *p = &packet->bytes[packet->field_offset[field]];
 
@@ -464,7 +464,7 @@ char *packet_string(packet_t *packet, unsigned field, int *len)
 	{
 	case FIELD_STRING:
 		*len = (p[0] << 8) | p[1];
-		return (char *)&p[2];
+		return &p[2];
 
 	default:
 		abort();

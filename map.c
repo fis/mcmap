@@ -43,6 +43,7 @@ static Uint32 block_colors[256] = {
 	[0x2b] = RGB(180, 180, 180), /* double step */
 	[0x2c] = RGB(180, 180, 180), /* step */
 	[0x2d] = RGB(160, 0,   0),   /* brick */
+	[0x30] = RGB(0,   255, 0),   /* mossy cobble */
 	[0x31] = RGB(91,  0,   104), /* obsidian */
 	[0x32] = RGB(255, 255, 0),   /* torch */
 	[0x33] = RGB(255, 108, 0),   /* fire */
@@ -52,6 +53,7 @@ static Uint32 block_colors[256] = {
 	[0x39] = RGB(0,   255, 255), /* diamond block */
 	[0x3c] = RGB(114, 76,  9),   /* soil */
 	[0x41] = AIR_COLOR,          /* ladder */
+	[0x43] = RGB(128, 128, 128), /* cobblestone stairs */
 	[0x45] = AIR_COLOR,          /* lever */
 	[0x49] = RGB(160, 0,   0),   /* redstone ore */
 	[0x4a] = RGB(160, 0,   0),   /* redstone ore (lit) */
@@ -114,6 +116,12 @@ void map_init(SDL_Surface *screen)
 	SDL_SetColorKey(player_surf, SDL_SRCCOLORKEY, 0);
 
 	map_mutex = g_mutex_new();
+}
+
+inline void map_repaint(void)
+{
+	SDL_Event e = { .type = MCMAP_EVENT_REPAINT };
+	SDL_PushEvent(&e);
 }
 
 void map_update(int x1, int x2, int z1, int z2)
@@ -204,8 +212,7 @@ void map_update(int x1, int x2, int z1, int z2)
 
 	g_mutex_unlock(map_mutex);
 
-	SDL_Event e = { .type = MCMAP_EVENT_REPAINT };
-	SDL_PushEvent(&e);
+	map_repaint();
 }
 
 void map_update_player_pos(double x, double y, double z)
@@ -222,8 +229,7 @@ void map_update_player_pos(double x, double y, double z)
 	if (map_mode == MAP_MODE_CROSS && (map_flags & MAP_FLAG_FOLLOW_Y))
 		map_update_alt(new_y, 0);
 
-	SDL_Event e = { .type = MCMAP_EVENT_REPAINT };
-	SDL_PushEvent(&e);
+	map_repaint();
 }
 
 void map_update_player_dir(double yaw, double pitch)
@@ -253,7 +259,6 @@ void map_update_player_dir(double yaw, double pitch)
 		return;
 
 	player_yaw = new_yaw;
-	fprintf(stderr, "player direction -> %d (%.2f)\n", player_yaw, yaw);
 
 	SDL_LockSurface(player_surf);
 
@@ -269,8 +274,7 @@ void map_update_player_dir(double yaw, double pitch)
 
 	SDL_UnlockSurface(player_surf);
 
-	SDL_Event e = { .type = MCMAP_EVENT_REPAINT };
-	SDL_PushEvent(&e);
+	map_repaint();
 }
 
 void map_update_alt(int y, int relative)
@@ -286,9 +290,7 @@ void map_update_alt(int y, int relative)
 	if (map_mode == MAP_MODE_CROSS)
 	{
 		map_update(map_min_x, map_max_x, map_min_z, map_max_z);
-
-		SDL_Event e = { .type = MCMAP_EVENT_REPAINT };
-		SDL_PushEvent(&e);
+		map_repaint();
 	}
 }
 
@@ -310,6 +312,31 @@ void map_setmode(enum map_mode mode, unsigned flags)
 	       mode == MAP_MODE_CROSS && (flags & MAP_FLAG_FOLLOW_Y) ? " (follow player)" : "");
 
 	map_update(map_min_x, map_max_x, map_min_z, map_max_z);
+}
+
+static void map_draw_entity_marker(struct entity *e, void *userdata)
+{
+	SDL_Surface *screen = userdata;
+
+	int ex = e->x - (player_x - screen->w/2) - 1;
+	int ez = e->z - (player_z - screen->h/2) - 1;
+
+#if 0
+	static int qqq = 0;
+	if (qqq == 50)
+	{
+		fprintf(stderr, "drawing MARKER (%d,%d) for %s (%d,%d) <- (%d,%d,%d) [self at %d,%d]\n", ex, ez, e->name, e->x, e->z, e->ax, e->ay, e->az, player_x, player_z);
+		qqq = 0;
+	}
+	else
+		qqq++;
+#endif
+
+	if (ex < 0 || ez < 0 || ex+3 > screen->w || ez+3 > screen->h)
+		return;
+
+	SDL_Rect r = { .x = ex, .y = ez, .w = 3, .h = 3 };
+	SDL_FillRect(screen, &r, special_colors[COLOR_PLAYER]);
 }
 
 void map_draw(SDL_Surface *screen)
@@ -380,6 +407,8 @@ void map_draw(SDL_Surface *screen)
 		SDL_Rect rect_src = { .x = 0, .y = 0, .w = 3, .h = 3 };
 		SDL_BlitSurface(player_surf, &rect_src, screen, &rect_dst);
 	}
+
+	world_entities(map_draw_entity_marker, screen);
 
 	/* update screen buffers */
 

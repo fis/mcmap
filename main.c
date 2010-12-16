@@ -24,7 +24,7 @@ struct
 
 static void handle_key(SDL_KeyboardEvent *e, int *repaint);
 
-static void handle_chat(char *msg, int msglen);
+static void handle_chat(unsigned char *msg, int msglen);
 
 /* proxying thread function to pass packets */
 
@@ -66,13 +66,14 @@ gpointer proxy_thread(gpointer data)
 		switch (p->id)
 		{
 		case PACKET_CHUNK:
+		case PACKET_MULTI_SET_BLOCK:
+		case PACKET_SET_BLOCK:
 		case PACKET_PLAYER_MOVE:
 		case PACKET_PLAYER_ROTATE:
 		case PACKET_PLAYER_MOVE_ROTATE:
 		case PACKET_ENTITY_SPAWN_NAMED:
 		case PACKET_ENTITY_DESTROY:
 		case PACKET_ENTITY_REL_MOVE:
-		case PACKET_ENTITY_LOOK:
 		case PACKET_ENTITY_REL_MOVE_LOOK:
 		case PACKET_ENTITY_MOVE:
 			g_async_queue_push(cfg->q, packet_dup(p));
@@ -82,7 +83,7 @@ gpointer proxy_thread(gpointer data)
 			if (!cfg->client_to_server)
 			{
 				int msglen;
-				char *msg = packet_string(p, 0, &msglen);
+				unsigned char *msg = packet_string(p, 0, &msglen);
 				handle_chat(msg, msglen);
 			}
 			break;
@@ -222,6 +223,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	SDL_WM_SetCaption("mcmap", "mcmap");
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
 	map_init(screen);
@@ -297,7 +299,7 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 	}
 }
 
-static void handle_chat(char *msg, int msglen)
+static void handle_chat(unsigned char *msg, int msglen)
 {
 	fputs("[CHAT] ", stdout);
 
@@ -308,7 +310,7 @@ static void handle_chat(char *msg, int msglen)
 		return;
 	}
 
-	unsigned char *p = (unsigned char *)msg;
+	unsigned char *p = msg;
 	char *colormap[16] =
 	{
 		"30",   "34",   "32",   "36",   "31",   "35",   "33",   "37",
