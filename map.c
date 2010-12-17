@@ -80,6 +80,8 @@ static int map_min_x = 0, map_min_z = 0;
 static int map_max_x = 0, map_max_z = 0;
 static int map_y = 0;
 
+static int map_scale = 1;
+
 static enum map_mode map_mode = MAP_MODE_SURFACE;
 static unsigned map_flags = 0;
 
@@ -327,23 +329,24 @@ void map_setmode(enum map_mode mode, unsigned flags)
 	map_update(map_min_x, map_max_x, map_min_z, map_max_z);
 }
 
+void map_setscale(int scale, int relative)
+{
+	int s = relative ? map_scale + scale : scale;
+	if (s < 1) s = 1;
+
+	if (s == map_scale)
+		return;
+
+	map_scale = s;
+	map_repaint();
+}
+
 static void map_draw_entity_marker(struct entity *e, void *userdata)
 {
 	SDL_Surface *screen = userdata;
 
-	int ex = e->x - (player_x - screen->w/2) - 1;
-	int ez = e->z - (player_z - screen->h/2) - 1;
-
-#if 0
-	static int qqq = 0;
-	if (qqq == 50)
-	{
-		fprintf(stderr, "drawing MARKER (%d,%d) for %s (%d,%d) <- (%d,%d,%d) [self at %d,%d]\n", ex, ez, e->name, e->x, e->z, e->ax, e->ay, e->az, player_x, player_z);
-		qqq = 0;
-	}
-	else
-		qqq++;
-#endif
+	int ex = screen->w/2 + map_scale*(e->x - player_x) - 1;
+	int ez = screen->h/2 + map_scale*(e->z - player_z) - 1;
 
 	if (ex < 0 || ez < 0 || ex+3 > screen->w || ez+3 > screen->h)
 		return;
@@ -363,9 +366,10 @@ void map_draw(SDL_Surface *screen)
 
 	g_mutex_lock(map_mutex);
 
-	int scr_x0 = player_x - screen->w/2;
-	int scr_z0 = player_z - screen->h/2;
+	int scr_x0 = player_x - screen->w/2/map_scale;
+	int scr_z0 = player_z - screen->h/2/map_scale;
 
+	if (map_scale == 1)
 	{
 		SDL_Rect rect_dst = { .x = 0, .y = 0, .w = screen->w, .h = screen->h };
 		SDL_Rect rect_src = {
@@ -409,6 +413,43 @@ void map_draw(SDL_Surface *screen)
 
 		if (rect_dst.w > 0 && rect_dst.h > 0)
 			SDL_BlitSurface(map, &rect_src, screen, &rect_dst);
+	}
+	else
+	{
+		SDL_LockSurface(screen);
+		SDL_LockSurface(map);
+
+		int m_x0 = scr_x0 - map_min_x*CHUNK_XSIZE;
+		int m_z = scr_z0 - map_min_z*CHUNK_ZSIZE;
+
+		int m_xo0 = 0; /* FIXME offsets for smooth scaling, to keep "player at w/2" true */
+		int m_zo = 0;
+
+		for (int s_y = 0; s_y < screen->h && m_z < map->h; s_y++)
+		{
+			if (m_z >= 0)
+			{
+				int m_x = m_x0, m_xo = m_xo0;
+				for (int s_x = 0; s_x < screen->w && m_x < map->w; s_x++)
+				{
+					if (m_x >= 0)
+					{
+						void *s = (unsigned char *)screen->pixels + s_y*screen->pitch + 4*s_x;
+						void *m = (unsigned char *)map->pixels + m_z*map->pitch + 4*m_x;
+						*(Uint32 *)s = *(Uint32 *)m;
+					}
+
+					if (++m_xo == map_scale)
+						m_xo = 0, m_x++;
+				}
+			}
+
+			if (++m_zo == map_scale)
+				m_zo = 0, m_z++;
+		}
+
+		SDL_UnlockSurface(map);
+		SDL_UnlockSurface(screen);
 	}
 
 	g_mutex_unlock(map_mutex);

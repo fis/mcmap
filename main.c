@@ -293,11 +293,19 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 		break;
 
 	case SDLK_UP:
-		map_update_alt(1, 1);
+		map_update_alt(+1, 1);
 		break;
 
 	case SDLK_DOWN:
 		map_update_alt(-1, 1);
+		break;
+
+	case SDLK_PAGEUP:
+		map_setscale(+1, 1);
+		break;
+
+	case SDLK_PAGEDOWN:
+		map_setscale(-1, 1);
 		break;
 
 	default:

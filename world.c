@@ -62,8 +62,12 @@ static void handle_chunk(int x0, int y0, int z0,
 	gint64 current_chunk = 0x7fffffffffffffffll;
 	struct chunk *c = 0;
 
-	if (y0 < 0 || y0+ys > CHUNK_YSIZE)
+	int yupds = ys;
+
+	if (y0 > CHUNK_YSIZE)
 		dief("too high chunk update: %d..%d", y0, y0+ys-1);
+	else if (y0 + ys > CHUNK_YSIZE)
+		yupds = CHUNK_YSIZE - y0;
 
 	int c_min_x = INT_MAX, c_min_z = INT_MAX;
 	int c_max_x = INT_MIN, c_max_z = INT_MIN;
@@ -83,18 +87,18 @@ static void handle_chunk(int x0, int y0, int z0,
 				current_chunk = cc.i64;
 			}
 
-			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, ys);
+			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, yupds);
 			zb += ys;
 
 			int h = c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
 
-			if (y0+ys >= h)
+			if (y0+yupds >= h)
 			{
 				unsigned char surfblock = 0x00; /* air */
 				int newh = h;
 
 				unsigned char *stack = c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
-				for (h = 0; h < y0+ys; h++)
+				for (h = 0; h < y0+yupds; h++)
 				{
 					if (!stack[h])
 						continue; /* air */

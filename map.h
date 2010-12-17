@@ -23,6 +23,7 @@ void map_update_player_dir(double yaw, double pitch);
 void map_update_alt(int y, int relative);
 
 void map_setmode(enum map_mode mode, unsigned flags);
+void map_setscale(int scale, int relative);
 
 void map_repaint(void);
 
