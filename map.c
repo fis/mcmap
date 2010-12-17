@@ -231,7 +231,8 @@ void map_update(int x1, int x2, int z1, int z2)
 
 void map_update_player_pos(double x, double y, double z)
 {
-	int new_x = round(x), new_y = round(y), new_z = round(z);
+	//int new_x = round(x), new_y = round(y), new_z = round(z);
+	int new_x = floor(x), new_y = floor(y), new_z = floor(z);
 
 	if (new_x == player_x && new_y == player_y && new_z == player_z)
 		return;
@@ -422,8 +423,18 @@ void map_draw(SDL_Surface *screen)
 		int m_x0 = scr_x0 - map_min_x*CHUNK_XSIZE;
 		int m_z = scr_z0 - map_min_z*CHUNK_ZSIZE;
 
-		int m_xo0 = 0; /* FIXME offsets for smooth scaling, to keep "player at w/2" true */
-		int m_zo = 0;
+		/* we want the player_x'th block have it's middle pixel at screen->w/2.
+		   (player_x - scr_x0)*map_scale - m_xo + map_scale/2 = screen->w/2
+		   m_xo = (player_x - scr_x0)*map_scale + map_scale/2 - screen->w/2 */
+
+		int m_xo0 = (player_x - scr_x0)*map_scale + map_scale/2 - screen->w/2;
+		int m_zo = (player_z - scr_z0)*map_scale + map_scale/2 - screen->h/2;
+
+		while (m_xo0 < 0) m_xo0 += map_scale, m_x0--;
+		while (m_zo < 0) m_zo += map_scale, m_z--;
+
+		m_x0 += m_xo0/map_scale; m_xo0 %= map_scale;
+		m_z += m_zo/map_scale; m_zo %= map_scale;
 
 		for (int s_y = 0; s_y < screen->h && m_z < map->h; s_y++)
 		{
