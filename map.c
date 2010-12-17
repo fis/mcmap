@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "common.h"
 #include "map.h"
 #include "world.h"
 
@@ -111,7 +112,7 @@ void map_init(SDL_Surface *screen)
 	player_surf = SDL_CreateRGBSurface(SDL_SWSURFACE, 3, 3, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
 
 	if (!map || !player_surf)
-		abort();
+		die("SDL map surface init");
 
 	SDL_SetColorKey(player_surf, SDL_SRCCOLORKEY, 0);
 
@@ -144,11 +145,13 @@ void map_update(int x1, int x2, int z1, int z2)
 		SDL_FreeSurface(map);
 		map = SDL_CreateRGBSurface(SDL_SWSURFACE, xs*CHUNK_XSIZE, zs*CHUNK_ZSIZE, 32, rmask, gmask, bmask, 0);
 		if (!map)
-			abort();
+			die("SDL map resize");
 	}
 
 	SDL_LockSurface(map);
 	Uint32 pitch = map->pitch;
+
+	Uint32 rshift = map->format->Rshift, gshift = map->format->Gshift, bshift = map->format->Bshift;
 
 	for (int cz = z1; cz <= z2; cz++)
 	{
@@ -173,9 +176,9 @@ void map_update(int x1, int x2, int z1, int z2)
 			unsigned char *blocks;
 			unsigned blocks_pitch;
 
-			if (map_mode == MAP_MODE_SURFACE)
+			if (map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_TOPO)
 			{
-				blocks = &c->surface[0][0];
+				blocks = map_mode == MAP_MODE_SURFACE ? &c->surface[0][0] : &c->height[0][0];
 				blocks_pitch = 1;
 			}
 			else if (map_mode == MAP_MODE_CROSS)
@@ -187,7 +190,7 @@ void map_update(int x1, int x2, int z1, int z2)
 				blocks_pitch = CHUNK_YSIZE;
 			}
 			else
-				abort();
+				dief("unrecognized map mode: %d", map_mode);
 
 			unsigned blocks_xpitch = CHUNK_ZSIZE*blocks_pitch;
 
@@ -198,7 +201,16 @@ void map_update(int x1, int x2, int z1, int z2)
 
 				for (int bx = 0; bx < CHUNK_XSIZE; bx++)
 				{
-					*p++ = block_colors[*b];
+					if (map_mode == MAP_MODE_TOPO)
+					{
+						Uint32 v = *b;
+						if (v < 64)
+							*p++ = ((4*v) << rshift) | ((4*v) << gshift) | ((255-4*v) << bshift);
+						else
+							*p++ = (255 << rshift) | ((255-4*(v-64)) << gshift);
+					}
+					else
+						*p++ = block_colors[*b];
 					b += blocks_xpitch;
 				}
 
@@ -298,7 +310,8 @@ void map_setmode(enum map_mode mode, unsigned flags)
 {
 	static char *modenames[] = {
 		[MAP_MODE_SURFACE] = "surface",
-		[MAP_MODE_CROSS] = "cross-section"
+		[MAP_MODE_CROSS] = "cross-section",
+		[MAP_MODE_TOPO] = "topographic",
 	};
 
 	map_mode = mode;

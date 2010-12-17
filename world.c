@@ -6,6 +6,7 @@
 #include <glib.h>
 #include <zlib.h>
 
+#include "common.h"
 #include "map.h"
 #include "protocol.h"
 #include "world.h"
@@ -52,16 +53,17 @@ static void handle_chunk(int x0, int y0, int z0,
 	static unsigned char zbuf[256*1024];
 	uLongf zbuf_len = sizeof zbuf;
 
-	if (uncompress(zbuf, &zbuf_len, zdata, zlen) != Z_OK)
-		abort();
+	int t = uncompress(zbuf, &zbuf_len, zdata, zlen);
+	if (t != Z_OK)
+		dief("chunk update decompression failed: %d", t);
 	if (zbuf_len != (5*xs*ys*zs+1)/2)
-		abort();
+		dief("broken decompressed chunk length: %d != %d", (int)zbuf_len, (int)(5*xs*ys*zs+1)/2);
 
 	gint64 current_chunk = 0x7fffffffffffffffll;
 	struct chunk *c = 0;
 
 	if (y0 < 0 || y0+ys > CHUNK_YSIZE)
-		abort();
+		dief("too high chunk update: %d..%d", y0, y0+ys-1);
 
 	int c_min_x = INT_MAX, c_min_z = INT_MAX;
 	int c_max_x = INT_MIN, c_max_z = INT_MIN;

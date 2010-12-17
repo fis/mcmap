@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "common.h"
 #include "protocol.h"
 
 /*
@@ -280,7 +281,7 @@ packet_t *packet_read(GSocket *sock, packet_state_t *state)
 	int buf_get_i16(void)
 	{
 		if (!buf_skip(2))
-			abort();
+			die("out of data while getting i16");
 		int v = (buf[buf_pos-2] << 8) | buf[buf_pos-1];
 		return v >= 0x8000 ? v - 0x10000 : v;
 	}
@@ -288,7 +289,7 @@ packet_t *packet_read(GSocket *sock, packet_state_t *state)
 	int buf_get_i32(void)
 	{
 		if (!buf_skip(4))
-			abort();
+			die("out of data while getting i32");
 		return (buf[buf_pos-4] << 24) | (buf[buf_pos-3] << 16) | (buf[buf_pos-2] << 8) | buf[buf_pos-1];
 	}
 
@@ -431,7 +432,8 @@ int packet_int(packet_t *packet, unsigned field)
 		return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
 
 	default:
-		abort();
+		dief("can't interpret field type %d as int (packet 0x%02x, field %u)",
+		     packet_format[packet->id].ftype[field], packet->id, field);
 	}
 }
 
@@ -467,6 +469,7 @@ unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
 		return &p[2];
 
 	default:
-		abort();
+		dief("can't interpret field type %d as string (packet 0x%02x, field %u)",
+		     packet_format[packet->id].ftype[field], packet->id, field);
 	}
 }

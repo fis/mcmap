@@ -8,7 +8,8 @@
 enum map_mode
 {
 	MAP_MODE_SURFACE,
-	MAP_MODE_CROSS
+	MAP_MODE_CROSS,
+	MAP_MODE_TOPO
 };
 
 #define MAP_FLAG_FOLLOW_Y 0x01

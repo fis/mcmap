@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stdio.h>
 
 #include <gio/gio.h>
@@ -286,6 +287,11 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 		*repaint = 1;
 		break;
 
+	case SDLK_4:
+		map_setmode(MAP_MODE_TOPO, 0);
+		*repaint = 1;
+		break;
+
 	case SDLK_UP:
 		map_update_alt(1, 1);
 		break;
@@ -343,4 +349,20 @@ static void handle_chat(unsigned char *msg, int msglen)
 	}
 
 	fputs("\x1b[0m\n", stdout);
+}
+
+/* common.h functions */
+
+void do_die(char *file, int line, char *fmt, ...)
+{
+	fprintf(stderr, "DIE: %s:%d: ", file, line);
+
+	va_list ap;
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+
+	putc('\n', stderr);
+
+	exit(1);
 }
