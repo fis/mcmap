@@ -12,12 +12,14 @@
 
 struct
 {
-	gboolean noansi;
 	gint localport;
+	gboolean noansi;
+	gint scale;
 	gchar *wndsize;
 } opt = {
-	.noansi = FALSE,
 	.localport = 25565,
+	.noansi = FALSE,
+	.scale = 1,
 	.wndsize = 0,
 };
 
@@ -102,6 +104,7 @@ int main(int argc, char **argv)
 		{ "nocolor", 'c', 0, G_OPTION_ARG_NONE, &opt.noansi, "Disable ANSI color escapes" },
 		{ "port", 'p', 0, G_OPTION_ARG_INT, &opt.localport, "Local port to listen at", "P" },
 		{ "size", 's', 0, G_OPTION_ARG_STRING, &opt.wndsize, "Fixed-size window size", "WxH" },
+		{ "scale", 'x', 0, G_OPTION_ARG_INT, &opt.scale, "Zoom factor", "N" },
 		{ NULL }
 	};
 
@@ -125,6 +128,12 @@ int main(int argc, char **argv)
 	if (opt.localport < 1 || opt.localport > 65535)
 	{
 		fprintf(stderr, "invalid port number: %d\n", opt.localport);
+		return 1;
+	}
+
+	if (opt.scale < 1 || opt.scale > 64)
+	{
+		fprintf(stderr, "unreasonable scale factor: %d\n", opt.scale);
 		return 1;
 	}
 
@@ -228,6 +237,7 @@ int main(int argc, char **argv)
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
 	map_init(screen);
+	map_setscale(opt.scale, 0);
 
 	while (1)
 	{

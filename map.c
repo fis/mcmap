@@ -231,7 +231,6 @@ void map_update(int x1, int x2, int z1, int z2)
 
 void map_update_player_pos(double x, double y, double z)
 {
-	//int new_x = round(x), new_y = round(y), new_z = round(z);
 	int new_x = floor(x), new_y = floor(y), new_z = floor(z);
 
 	if (new_x == player_x && new_y == player_y && new_z == player_z)
