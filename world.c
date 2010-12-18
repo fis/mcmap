@@ -48,6 +48,19 @@ struct chunk *world_chunk(guint64 coord, int gen)
 	return c;
 }
 
+int world_getheight(int x, int z)
+{
+	union chunk_coord cc;
+	cc.xz[0] = CHUNK_XIDX(x);
+	cc.xz[1] = CHUNK_ZIDX(z);
+
+	struct chunk *c = world_chunk(cc.i64, 0);
+	if (!c)
+		return -1;
+
+	return c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
+}
+
 static void handle_chunk(int x0, int y0, int z0,
                          int xs, int ys, int zs,
                          unsigned zlen, unsigned char *zdata)
@@ -270,6 +283,47 @@ void world_entities(void (*callback)(struct entity *e, void *userdata), void *us
 	g_mutex_unlock(entity_mutex);
 }
 
+void handle_command(unsigned char *cmd, int cmdlen)
+{
+	gchar *cmdstr = g_strndup((gchar *)cmd, cmdlen);
+	gchar **cmdv = g_strsplit_set(cmdstr, " ", -1);
+	g_free(cmdstr);
+
+	gint cmdc = 0;
+	while (cmdv[cmdc])
+		cmdc++;
+
+	if (strcmp(cmdv[0], "goto") == 0)
+	{
+		if (cmdc == 3)
+		{
+			int x = atoi(cmdv[1]), z = atoi(cmdv[2]);
+
+			packet_t *pjump1 = packet_new(PACKET_PLAYER_MOVE,
+			                              (double)player_x, 128.0, 129.62, (double)player_z, 0);
+			packet_t *pjump2 = packet_dup(pjump1);
+
+			packet_t *pmove1 = packet_new(PACKET_PLAYER_MOVE,
+			                              (double)x, 128.0, 129.62, (double)z, 0);
+			packet_t *pmove2 = packet_dup(pmove1);
+
+			inject_to_client(pjump1);
+			inject_to_server(pjump2);
+
+			inject_to_client(pmove1);
+			inject_to_server(pmove2);
+
+			printf("[CMD] //goto: jumping to (%d,%d)\n", x, z);
+		}
+		else
+			printf("[CMD] //goto: usage: //goto x z\n");
+	}
+	else
+		printf("[CMD] unknown command: //%s\n", cmdv[0]);
+
+	g_strfreev(cmdv);
+}
+
 void world_init(void)
 {
 	chunk_table = g_hash_table_new_full(g_int64_hash, g_int64_equal, 0, g_free);
@@ -359,6 +413,12 @@ gpointer world_thread(gpointer data)
 			            packet_int(packet, 2),
 			            packet_int(packet, 3),
 			            0);
+			break;
+
+		case PACKET_CHAT:
+			p = packet_string(packet, 0, &t);
+			if (t >= 3 && p[0] == '/' && p[1] == '/')
+				handle_command(p+2, t-2);
 			break;
 		}
 

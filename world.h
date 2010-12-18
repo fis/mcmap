@@ -49,6 +49,8 @@ gpointer world_thread(gpointer data);
 
 struct chunk *world_chunk(guint64 coord, int gen);
 
+int world_getheight(int x, int z);
+
 void world_entities(void (*callback)(struct entity *e, void *userdata), void *userdata);
 
 #endif /* MCMAP_WORLD_H */

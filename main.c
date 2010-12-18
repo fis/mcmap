@@ -4,6 +4,7 @@
 #include <gio/gio.h>
 #include <SDL.h>
 
+#include "common.h"
 #include "map.h"
 #include "protocol.h"
 #include "world.h"
@@ -26,7 +27,7 @@ struct
 /* miscellaneous helper routines */
 
 static void handle_key(SDL_KeyboardEvent *e, int *repaint);
-
+static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen);
 static void handle_chat(unsigned char *msg, int msglen);
 
 /* proxying thread function to pass packets */
@@ -36,18 +37,24 @@ struct proxy_config
 	GSocket *sock_from, *sock_to;
 	int client_to_server;
 	GAsyncQueue *q;
+	GAsyncQueue *iq;
 };
+
+static GAsyncQueue *iq_client = 0;
+static GAsyncQueue *iq_server = 0;
 
 gpointer proxy_thread(gpointer data)
 {
 	struct proxy_config *cfg = data;
 	GSocket *sfrom = cfg->sock_from, *sto = cfg->sock_to;
-	int sfromfd = g_socket_get_fd(sfrom), stofd = g_socket_get_fd(sto);
+	char *desc = cfg->client_to_server ? "client -> server" : "server -> client";
 
 	packet_state_t state = PACKET_STATE_INIT;
 
 	while (1)
 	{
+		/* read in one packet */
+
 		packet_t *p = packet_read(sfrom, &state);
 		if (!p)
 		{
@@ -56,12 +63,28 @@ gpointer proxy_thread(gpointer data)
 			return 0;
 		}
 
-		if (!packet_write(sto, p))
+		/* either write it out or handle if it's a command to us */
+
+		if (cfg->client_to_server
+		    && p->id == PACKET_CHAT
+		    && p->bytes[3] == '/' && p->bytes[4] == '/')
 		{
-			fprintf(stderr, "proxy thread (%d -> %d) write failed\n", sfromfd, stofd);
-			SDL_Event e = { .type = SDL_QUIT };
-			SDL_PushEvent(&e);
-			return 0;
+			g_async_queue_push(cfg->q, packet_dup(p));
+		}
+		else
+		{
+			if (!packet_write(sto, p))
+				dief("proxy thread (%s) write failed", desc);
+		}
+
+		/* write pending injected packets */
+
+		packet_t *ip;
+		while ((ip = g_async_queue_try_pop(cfg->iq)) != 0)
+		{
+			if (!packet_write(sto, ip))
+				dief("proxy thread (%s) inject failed", desc);
+			packet_free(ip);
 		}
 
 		/* communicate interesting chunks back */
@@ -154,19 +177,17 @@ int main(int argc, char **argv)
 
 	/* initialization stuff */
 
-	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
-	{
-		fprintf(stderr, "SDL init failed\n");
-		return 1;
-	}
 	g_thread_init(0);
 	g_type_init();
+
+	iq_client = g_async_queue_new_full(packet_free);
+	iq_server = g_async_queue_new_full(packet_free);
 
 	/* build up the world model */
 
 	world_init();
 
-	GAsyncQueue *packetq = g_async_queue_new_full(g_free);
+	GAsyncQueue *packetq = g_async_queue_new_full(packet_free);
 	g_thread_create(world_thread, packetq, FALSE, 0);
 
 	/* wait for a client to connect to us */
@@ -214,20 +235,28 @@ int main(int argc, char **argv)
 		.sock_from = sock_cli,
 		.sock_to = sock_srv,
 		.client_to_server = 1,
-		.q = packetq
+		.q = packetq,
+		.iq = iq_server
 	};
 
 	struct proxy_config proxy_server_client = {
 		.sock_from = sock_srv,
 		.sock_to = sock_cli,
 		.client_to_server = 0,
-		.q = packetq
+		.q = packetq,
+		.iq = iq_client
 	};
 
 	g_thread_create(proxy_thread, &proxy_client_server, FALSE, 0);
 	g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
 
 	/* start the user interface side */
+
+	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
+	{
+		fprintf(stderr, "SDL init failed\n");
+		return 1;
+	}
 
 	SDL_Surface *screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|(opt.wndsize ? 0 : SDL_RESIZABLE));
 	if (!screen)
@@ -260,6 +289,10 @@ int main(int argc, char **argv)
 
 			case SDL_KEYDOWN:
 				handle_key(&e.key, &repaint);
+				break;
+
+			case SDL_MOUSEBUTTONDOWN:
+				handle_mouse(&e.button, screen);
 				break;
 
 			case MCMAP_EVENT_REPAINT:
@@ -326,6 +359,31 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 	}
 }
 
+static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen)
+{
+	if (e->button == SDL_BUTTON_RIGHT)
+	{
+		/* teleport */
+
+		int x, z;
+		map_getpos(screen, e->x, e->y, &x, &z);
+
+		packet_t *pjump1 = packet_new(PACKET_PLAYER_MOVE,
+		                              (double)player_x, 128.0, 129.62, (double)player_z, 0);
+		packet_t *pjump2 = packet_dup(pjump1);
+
+		packet_t *pmove1 = packet_new(PACKET_PLAYER_MOVE,
+		                              (double)x, 128.0, 129.62, (double)z, 0);
+		packet_t *pmove2 = packet_dup(pmove1);
+
+		inject_to_client(pjump1);
+		inject_to_server(pjump2);
+
+		inject_to_client(pmove1);
+		inject_to_server(pmove2);
+	}
+}
+
 static void handle_chat(unsigned char *msg, int msglen)
 {
 	fputs("[CHAT] ", stdout);
@@ -374,6 +432,16 @@ static void handle_chat(unsigned char *msg, int msglen)
 
 /* common.h functions */
 
+void inject_to_client(packet_t *p)
+{
+	g_async_queue_push(iq_client, p);
+}
+
+void inject_to_server(packet_t *p)
+{
+	g_async_queue_push(iq_server, p);
+}
+
 void do_die(char *file, int line, int is_stop, char *fmt, ...)
 {
 	fprintf(stderr, "DIE: %s:%d: ", file, line);
@@ -389,7 +457,8 @@ void do_die(char *file, int line, int is_stop, char *fmt, ...)
 	{
 		world_running = 0;
 		g_thread_exit(0);
+		/* never reached */
 	}
-	else
-		exit(1);
+
+	exit(1);
 }

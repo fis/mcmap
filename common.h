@@ -1,6 +1,15 @@
 #ifndef MCMAP_COMMON_H
 #define MCMAP_COMMON_H
 
+#include "protocol.h"
+
+/* packet injection */
+
+void inject_to_client(packet_t *p);
+void inject_to_server(packet_t *p);
+
+/* fatal error handling */
+
 #define die(msg) do_die(__FILE__, __LINE__, 0, "%s", msg)
 #define dief(fmt, ...) do_die(__FILE__, __LINE__, 0, fmt, __VA_ARGS__)
 

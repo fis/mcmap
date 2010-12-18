@@ -404,11 +404,142 @@ packet_t *packet_dup(packet_t *packet)
 	return newp;
 }
 
-void packet_free(packet_t *packet)
+packet_t *packet_new(enum packet_id type, ...)
 {
-	g_free(packet->bytes);
-	g_free(packet->field_offset);
-	g_free(packet);
+	GByteArray *data = g_byte_array_new();
+	GArray *offsets = g_array_new(FALSE, FALSE, sizeof(unsigned));
+
+	/* add the type byte */
+
+	{
+		guint8 typebyte = type;
+		g_byte_array_append(data, &typebyte, 1);
+	}
+
+	unsigned offset = 1;
+
+	/* build the fields */
+
+	va_list ap;
+	va_start(ap, type);
+
+	unsigned nfields = packet_format[type].nfields;
+	for (unsigned field = 0; field < nfields; field++)
+	{
+		int t;
+		long long tl;
+		double td;
+		unsigned char *tp;
+
+		g_array_append_val(offsets, offset);
+
+		switch (packet_format[type].ftype[field])
+		{
+		case FIELD_BYTE:
+			t = va_arg(ap, int);
+			{
+				signed char v = t;
+				g_byte_array_append(data, (unsigned char *)&v, 1);
+				offset++;
+			}
+			break;
+
+		case FIELD_UBYTE:
+			t = va_arg(ap, int);
+			{
+				unsigned char v = t;
+				g_byte_array_append(data, &v, 1);
+				offset++;
+			}
+			break;
+
+		case FIELD_SHORT:
+			t = va_arg(ap, int);
+			{
+				unsigned char v[2] = { t >> 8, t };
+				g_byte_array_append(data, v, 2);
+				offset += 2;
+			}
+			break;
+
+		case FIELD_INT:
+			t = va_arg(ap, int);
+			{
+				unsigned char v[4] = { t >> 24, t >> 16, t >> 8, t };
+				g_byte_array_append(data, v, 4);
+				offset += 4;
+			}
+			break;
+
+		case FIELD_LONG:
+			tl = va_arg(ap, long long);
+			{
+				unsigned char v[8] = {
+					tl >> 56, tl >> 48, tl >> 40, tl >> 32,
+					tl >> 24, tl >> 16, tl >> 8, tl
+				};
+				g_byte_array_append(data, v, 8);
+				offset += 8;
+			}
+			break;
+
+		case FIELD_FLOAT:
+			td = va_arg(ap, double);
+			{
+				unsigned char *p = (unsigned char *)&td;
+				unsigned char v[4] = { p[3], p[2], p[1], p[0] };
+				g_byte_array_append(data, v, 4);
+				offset += 4;
+			}
+			break;
+
+		case FIELD_DOUBLE:
+			td = va_arg(ap, double);
+			{
+				unsigned char *p = (unsigned char *)&td;
+				unsigned char v[8] = { p[7], p[6], p[5], p[4], p[3], p[2], p[1], p[0] };
+				g_byte_array_append(data, v, 8);
+				offset += 8;
+			}
+			break;
+
+		case FIELD_STRING:
+			tp = va_arg(ap, unsigned char *);
+			{
+				int len = strlen((char *)tp);
+				unsigned char lenb[2] = { len >> 8, len };
+				g_byte_array_append(data, lenb, 2);
+				g_byte_array_append(data, tp, len);
+				offset += 2 + len;
+			}
+			break;
+
+		default:
+			dief("unhandled field type %d (packet 0x%02x, field %u)",
+			     packet_format[type].ftype[field], type, field);
+		}
+	}
+
+	va_end(ap);
+
+	/* construct the actual packet */
+
+	packet_t *p = g_malloc(sizeof *p);
+
+	p->id = type;
+	p->size = offset;
+	p->bytes = g_byte_array_free(data, FALSE);
+	p->field_offset = (unsigned *)g_array_free(offsets, FALSE);
+
+	return p;
+}
+
+void packet_free(gpointer packet)
+{
+	packet_t *p = packet;
+	g_free(p->bytes);
+	g_free(p->field_offset);
+	g_free(p);
 }
 
 int packet_int(packet_t *packet, unsigned field)

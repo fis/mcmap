@@ -94,7 +94,9 @@ int packet_write(GSocket *sock, packet_t *packet);
 
 packet_t *packet_dup(packet_t *packet);
 
-void packet_free(packet_t *packet);
+packet_t *packet_new(enum packet_id type, ...);
+
+void packet_free(gpointer packet);
 
 int packet_int(packet_t *packet, unsigned field);
 double packet_double(packet_t *packet, unsigned field);

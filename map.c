@@ -75,6 +75,8 @@ static Uint32 special_colors[COLOR_MAX_SPECIAL] = {
 
 /* map graphics code */
 
+int player_x = 0, player_y = 0, player_z = 0;
+
 static SDL_Surface *map = 0;
 static int map_min_x = 0, map_min_z = 0;
 static int map_max_x = 0, map_max_z = 0;
@@ -88,7 +90,6 @@ static unsigned map_flags = 0;
 static GMutex *map_mutex;
 
 static SDL_Surface *player_surf = 0;
-static int player_x = 0, player_y = 0, player_z = 0;
 static int player_yaw = -1;
 
 void map_init(SDL_Surface *screen)
@@ -306,6 +307,12 @@ void map_update_alt(int y, int relative)
 		map_update(map_min_x, map_max_x, map_min_z, map_max_z);
 		map_repaint();
 	}
+}
+
+void map_getpos(SDL_Surface *screen, int sx, int sy, int *x, int *z)
+{
+	*x = player_x + (sx - screen->w/2)/map_scale;
+	*z = player_z + (sy - screen->h/2)/map_scale;
 }
 
 void map_setmode(enum map_mode mode, unsigned flags)
