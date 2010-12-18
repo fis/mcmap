@@ -41,6 +41,8 @@ struct entity
 extern int chunk_min_x, chunk_min_z;
 extern int chunk_max_x, chunk_max_z;
 
+extern volatile int world_running;
+
 void world_init(void);
 
 gpointer world_thread(gpointer data);

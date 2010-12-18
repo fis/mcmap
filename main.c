@@ -66,6 +66,9 @@ gpointer proxy_thread(gpointer data)
 
 		/* communicate interesting chunks back */
 
+		if (!world_running)
+			continue;
+
 		switch (p->id)
 		{
 		case PACKET_CHUNK:
@@ -371,7 +374,7 @@ static void handle_chat(unsigned char *msg, int msglen)
 
 /* common.h functions */
 
-void do_die(char *file, int line, char *fmt, ...)
+void do_die(char *file, int line, int is_stop, char *fmt, ...)
 {
 	fprintf(stderr, "DIE: %s:%d: ", file, line);
 
@@ -382,5 +385,11 @@ void do_die(char *file, int line, char *fmt, ...)
 
 	putc('\n', stderr);
 
-	exit(1);
+	if (is_stop)
+	{
+		world_running = 0;
+		g_thread_exit(0);
+	}
+	else
+		exit(1);
 }

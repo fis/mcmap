@@ -19,6 +19,8 @@ int chunk_max_x = 0, chunk_max_z = 0;
 static GHashTable *entity_table = 0;
 static GMutex *entity_mutex = 0;
 
+volatile int world_running = 1;
+
 struct chunk *world_chunk(guint64 coord, int gen)
 {
 	struct chunk *c = g_hash_table_lookup(chunk_table, &coord);
@@ -55,9 +57,9 @@ static void handle_chunk(int x0, int y0, int z0,
 
 	int t = uncompress(zbuf, &zbuf_len, zdata, zlen);
 	if (t != Z_OK)
-		dief("chunk update decompression failed: %d", t);
+		stopf("chunk update decompression failed: %d", t);
 	if (zbuf_len != (5*xs*ys*zs+1)/2)
-		dief("broken decompressed chunk length: %d != %d", (int)zbuf_len, (int)(5*xs*ys*zs+1)/2);
+		stopf("broken decompressed chunk length: %d != %d", (int)zbuf_len, (int)(5*xs*ys*zs+1)/2);
 
 	gint64 current_chunk = 0x7fffffffffffffffll;
 	struct chunk *c = 0;
@@ -65,7 +67,7 @@ static void handle_chunk(int x0, int y0, int z0,
 	int yupds = ys;
 
 	if (y0 > CHUNK_YSIZE)
-		dief("too high chunk update: %d..%d", y0, y0+ys-1);
+		stopf("too high chunk update: %d..%d", y0, y0+ys-1);
 	else if (y0 + ys > CHUNK_YSIZE)
 		yupds = CHUNK_YSIZE - y0;
 
