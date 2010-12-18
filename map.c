@@ -37,6 +37,7 @@ static Uint32 block_colors[256] = {
 	[0x11] = RGB(95,  55,  0),   /* log */
 	[0x12] = RGB(0,   132, 0),   /* leaves */
 	[0x14] = RGB(185, 234, 231), /* glass */
+	[0x23] = RGB(240, 240, 240), /* cloth */
 	[0x25] = RGB(137, 180, 0),   /* yellow flower */
 	[0x26] = RGB(122, 130, 0),   /* red flower */
 	[0x29] = RGB(255, 180, 0),   /* gold block */
@@ -65,6 +66,11 @@ static Uint32 block_colors[256] = {
 	[0x4f] = RGB(211, 255, 255), /* ice */
 	[0x50] = RGB(238, 255, 255), /* snow */
 	[0x52] = RGB(225, 225, 178), /* clay */
+	[0x56] = RGB(246, 156, 0),   /* pumpkin */
+	[0x57] = RGB(121, 17,  0),   /* netherstone */
+	[0x58] = RGB(107, 43,  15),  /* slow sand */
+	[0x59] = RGB(186, 157, 0),   /* lightstone */
+	[0x5b] = RGB(246, 156, 0),   /* pumpkin (lit) */
 };
 
 static Uint32 special_colors[COLOR_MAX_SPECIAL] = {
