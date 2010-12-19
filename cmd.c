@@ -36,6 +36,22 @@ void cmd_parse(unsigned char *cmd, int cmdlen)
 	g_strfreev(cmdv);
 }
 
+/* FIXME: This function is horrible. */
+static void cmd_say(char *fmt, ...)
+{
+	char msg[1024]; /* I have a wonderful proof that this buffer is big
+	                 * enough, but this margin is too small to contain it. */
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(msg+3, sizeof(msg)-3, fmt, ap);
+	printf("[CMD] %s\n", msg+3);
+	msg[0] = '\xc2';
+	msg[1] = '\xa7';
+	msg[2] = 'b'; /* cyan */
+	inject_to_client(packet_new(PACKET_CHAT, msg));
+	va_end(ap);
+}
+
 void cmd_goto(int x, int z)
 {
 	/* check that the sky is free */
@@ -65,7 +81,7 @@ void cmd_goto(int x, int z)
 	{
 		if (!stacks[i])
 		{
-			printf("[CMD] //goto: impossible: jump from unloaded block\n");
+			cmd_say("//goto: impossible: jump from unloaded block");
 			return;
 		}
 	}
@@ -78,7 +94,7 @@ void cmd_goto(int x, int z)
 		{
 			if (stacks[i][h])
 			{
-				printf("[CMD] //goto: blocked: the skies are not clear\n");
+				cmd_say("//goto: blocked: the skies are not clear");
 				return;
 			}
 		}
@@ -100,10 +116,10 @@ void cmd_goto(int x, int z)
 	inject_to_client(pmove1);
 	inject_to_server(pmove2);
 
-	printf("[CMD] //goto: jumping to (%d,%d)\n", x, z);
+	cmd_say("//goto: jumping to (%d,%d)", x, z);
 }
 
 void cmd_coords()
 {
-	printf("[CMD] //coords: x=%d, z=%d, y=%d\n", player_x, player_z, player_y);
+	cmd_say("//coords: x=%d, z=%d, y=%d", player_x, player_z, player_y);
 }
