@@ -83,7 +83,7 @@ enum field_type packet_format_entity_collect[] = {
 	FIELD_INT, FIELD_INT
 };
 
-enum field_type packet_format_add_object_or_vehicle[] = {
+enum field_type packet_format_entity_spawn_object[] = {
 	FIELD_INT, FIELD_UBYTE, FIELD_INT, FIELD_INT, FIELD_INT
 };
 
@@ -104,7 +104,7 @@ enum field_type packet_format_entity_spawn_named[] = {
 	FIELD_UBYTE, FIELD_BYTE, FIELD_SHORT
 };
 
-enum field_type packet_format_entity_spawn_typed[] = {
+enum field_type packet_format_entity_spawn_pickup[] = {
 	FIELD_INT, FIELD_SHORT, FIELD_UBYTE, FIELD_INT, FIELD_INT, FIELD_INT,
 	FIELD_UBYTE, FIELD_BYTE, FIELD_BYTE
 };
@@ -209,9 +209,9 @@ struct packet_format_desc packet_format[] =
 	[PACKET_INVENTORY_ADD] = P(packet_format_inventory_add),
 	[PACKET_ENTITY_ANIMATE] = P(packet_format_entity_animate),
 	[PACKET_ENTITY_SPAWN_NAMED] = P(packet_format_entity_spawn_named),
-	[PACKET_ENTITY_SPAWN_TYPED] = P(packet_format_entity_spawn_typed),
+	[PACKET_ENTITY_SPAWN_PICKUP] = P(packet_format_entity_spawn_pickup),
 	[PACKET_ENTITY_COLLECT] = P(packet_format_entity_collect),
-	[PACKET_ADD_OBJECT_OR_VEHICLE] = P(packet_format_add_object_or_vehicle),
+	[PACKET_ENTITY_SPAWN_OBJECT] = P(packet_format_entity_spawn_object),
 	[PACKET_MOB_SPAWN] = P(packet_format_mob_spawn),
 	[PACKET_ENTITY_VELOCITY] = P(packet_format_entity_velocity),
 	[PACKET_ENTITY_DESTROY] = P(packet_format_entity_destroy),
@@ -396,6 +396,7 @@ packet_t *packet_dup(packet_t *packet)
 {
 	packet_t *newp = g_malloc(sizeof *newp);
 
+	newp->dir = packet->dir;
 	newp->id = packet->id;
 	newp->size = packet->size;
 	newp->bytes = g_memdup(packet->bytes, packet->size);
@@ -404,7 +405,7 @@ packet_t *packet_dup(packet_t *packet)
 	return newp;
 }
 
-packet_t *packet_new(enum packet_id type, ...)
+packet_t *packet_new(enum packet_dir dir, enum packet_id type, ...)
 {
 	GByteArray *data = g_byte_array_new();
 	GArray *offsets = g_array_new(FALSE, FALSE, sizeof(unsigned));
@@ -526,6 +527,7 @@ packet_t *packet_new(enum packet_id type, ...)
 
 	packet_t *p = g_malloc(sizeof *p);
 
+	p->dir = dir;
 	p->id = type;
 	p->size = offset;
 	p->bytes = g_byte_array_free(data, FALSE);

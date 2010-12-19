@@ -18,7 +18,11 @@ int chunk_min_x = 0, chunk_min_z = 0;
 int chunk_max_x = 0, chunk_max_z = 0;
 
 static GHashTable *entity_table = 0;
+static GHashTable *anentity_table = 0;
 static GMutex *entity_mutex = 0;
+
+static int entity_player = -1;
+static int entity_vehicle = -1;
 
 volatile int world_running = 1;
 
@@ -237,33 +241,52 @@ static void entity_add(int id, unsigned char *name, int x, int y, int z)
 	e->x = x/32;
 	e->z = z/32;
 
-	printf("[PLAYER] appear: %s\n", name);
+	if (name)
+	{
+		printf("[PLAYER] appear: %s\n", name);
 
-	g_mutex_lock(entity_mutex);
-	g_hash_table_replace(entity_table, &e->id, e);
-	g_mutex_unlock(entity_mutex);
+		g_mutex_lock(entity_mutex);
+		g_hash_table_replace(entity_table, &e->id, e);
+		g_mutex_unlock(entity_mutex);
 
-	map_repaint();
+		map_repaint();
+	}
+	else
+		g_hash_table_replace(anentity_table, &e->id, e);
 }
 
 static void entity_del(int id)
 {
+	if (id == entity_vehicle)
+	{
+		entity_vehicle = -1;
+		printf("[VEHICLE] unmounted %d by destroying\n", id);
+	}
+
 	struct entity *e = g_hash_table_lookup(entity_table, &id);
-	if (!e)
+	if (e)
+	{
+		printf("[PLAYER] disappear: %s\n", e->name);
+
+		g_mutex_lock(entity_mutex);
+		g_hash_table_remove(entity_table, &id);
+		g_mutex_unlock(entity_mutex);
+
+		map_repaint();
 		return;
+	}
 
-	printf("[PLAYER] disappear: %s\n", e->name);
-
-	g_mutex_lock(entity_mutex);
-	g_hash_table_remove(entity_table, &id);
-	g_mutex_unlock(entity_mutex);
-
-	map_repaint();
+	g_hash_table_remove(anentity_table, &id);
 }
 
 static void entity_move(int id, int x, int y, int z, int relative)
 {
-	struct entity *e = g_hash_table_lookup(entity_table, &id);
+	struct entity *e;
+
+	e = g_hash_table_lookup(anentity_table, &id);
+	if (!e)
+		e = g_hash_table_lookup(entity_table, &id);
+
 	if (!e)
 		return;
 
@@ -286,7 +309,11 @@ static void entity_move(int id, int x, int y, int z, int relative)
 
 	e->x = ex;
 	e->z = ez;
-	map_repaint();
+
+	if (id == entity_vehicle)
+		map_update_player_pos(ex, e->ay/32, ez);
+	else
+		map_repaint();
 }
 
 static void entity_free(gpointer ep)
@@ -322,6 +349,7 @@ void world_init(void)
 
 	entity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
 	entity_mutex = g_mutex_new();
+	anentity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
 }
 
 gpointer world_thread(gpointer data)
@@ -358,10 +386,16 @@ gpointer world_thread(gpointer data)
 			                 packet_int(packet, 3));
 			break;
 
+		case PACKET_LOGIN:
+			if (packet->dir == PACKET_TO_CLIENT)
+				entity_player = packet_int(packet, 0);
+			break;
+
 		case PACKET_PLAYER_MOVE:
-			map_update_player_pos(packet_double(packet, 0),
-			                      packet_double(packet, 1),
-			                      packet_double(packet, 3));
+			if (entity_vehicle < 0)
+				map_update_player_pos(packet_double(packet, 0),
+				                      packet_double(packet, 1),
+				                      packet_double(packet, 3));
 			break;
 
 		case PACKET_PLAYER_ROTATE:
@@ -370,9 +404,10 @@ gpointer world_thread(gpointer data)
 			break;
 
 		case PACKET_PLAYER_MOVE_ROTATE:
-			map_update_player_pos(packet_double(packet, 0),
-			                      packet_double(packet, 1),
-			                      packet_double(packet, 3));
+			if (entity_vehicle < 0)
+				map_update_player_pos(packet_double(packet, 0),
+				                      packet_double(packet, 1),
+				                      packet_double(packet, 3));
 			map_update_player_dir(packet_double(packet, 4),
 			                      packet_double(packet, 5));
 			break;
@@ -381,6 +416,14 @@ gpointer world_thread(gpointer data)
 			p = packet_string(packet, 1, &t);
 			entity_add(packet_int(packet, 0),
 			           (unsigned char *)g_strndup((gchar *)p, t),
+			           packet_int(packet, 2),
+			           packet_int(packet, 3),
+			           packet_int(packet, 4));
+			break;
+
+		case PACKET_ENTITY_SPAWN_OBJECT:
+			entity_add(packet_int(packet, 0),
+			           0,
 			           packet_int(packet, 2),
 			           packet_int(packet, 3),
 			           packet_int(packet, 4));
@@ -405,6 +448,18 @@ gpointer world_thread(gpointer data)
 			            packet_int(packet, 2),
 			            packet_int(packet, 3),
 			            0);
+			break;
+
+		case PACKET_ENTITY_ATTACH:
+			if (packet_int(packet, 0) == entity_player)
+			{
+				int new_vehicle = packet_int(packet, 1);
+				if (new_vehicle < 0)
+					printf("[VEHICLE] unmounted %d normally\n", entity_vehicle);
+				else
+					printf("[VEHICLE] mounted %d\n", new_vehicle);
+				entity_vehicle = packet_int(packet, 1);
+			}
 			break;
 
 		case PACKET_CHAT:

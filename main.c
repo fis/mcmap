@@ -50,7 +50,7 @@ gpointer proxy_thread(gpointer data)
 	GSocket *sfrom = cfg->sock_from, *sto = cfg->sock_to;
 	char *desc = cfg->client_to_server ? "client -> server" : "server -> client";
 
-	packet_state_t state = PACKET_STATE_INIT;
+	packet_state_t state = PACKET_STATE_INIT(cfg->client_to_server ? PACKET_TO_SERVER : PACKET_TO_CLIENT);
 
 	while (1)
 	{
@@ -95,6 +95,7 @@ gpointer proxy_thread(gpointer data)
 
 		switch (p->id)
 		{
+		case PACKET_LOGIN:
 		case PACKET_CHUNK:
 		case PACKET_MULTI_SET_BLOCK:
 		case PACKET_SET_BLOCK:
@@ -102,10 +103,12 @@ gpointer proxy_thread(gpointer data)
 		case PACKET_PLAYER_ROTATE:
 		case PACKET_PLAYER_MOVE_ROTATE:
 		case PACKET_ENTITY_SPAWN_NAMED:
+		case PACKET_ENTITY_SPAWN_OBJECT:
 		case PACKET_ENTITY_DESTROY:
 		case PACKET_ENTITY_REL_MOVE:
 		case PACKET_ENTITY_REL_MOVE_LOOK:
 		case PACKET_ENTITY_MOVE:
+		case PACKET_ENTITY_ATTACH:
 			g_async_queue_push(cfg->q, packet_dup(p));
 			break;
 
@@ -441,7 +444,7 @@ void chat(char *fmt, ...)
 	static const char prefix[4] = { 0xc2, 0xa7, 'b', 0 };
 	char *cmsg = g_strjoin("", prefix, msg, NULL);
 
-	inject_to_client(packet_new(PACKET_CHAT, cmsg));
+	inject_to_client(packet_new(PACKET_TO_ANY, PACKET_CHAT, cmsg));
 
 	g_free(cmsg);
 	g_free(msg);
