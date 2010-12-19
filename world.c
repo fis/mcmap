@@ -237,7 +237,7 @@ static void entity_add(int id, unsigned char *name, int x, int y, int z)
 	e->x = x/32;
 	e->z = z/32;
 
-	printf("[PLAYER] appear: %s\n", name);
+	log_print("[PLAYER] appear: %s", name);
 
 	g_mutex_lock(entity_mutex);
 	g_hash_table_replace(entity_table, &e->id, e);
@@ -252,7 +252,7 @@ static void entity_del(int id)
 	if (!e)
 		return;
 
-	printf("[PLAYER] disappear: %s\n", e->name);
+	log_print("[PLAYER] disappear: %s", e->name);
 
 	g_mutex_lock(entity_mutex);
 	g_hash_table_remove(entity_table, &id);

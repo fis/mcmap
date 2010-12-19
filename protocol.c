@@ -302,8 +302,7 @@ packet_t *packet_read(GSocket *sock, packet_state_t *state)
 	struct packet_format_desc *fmt;
 	if (t >= MAX_PACKET_FORMAT || !(fmt = &packet_format[t])->known)
 	{
-		fprintf(stderr, "unknown packet id: 0x%02x\n", t);
-		return 0;
+		dief("Unknown packet id: 0x%02x", t);
 	}
 
 	state->p.field_offset = state->offset;

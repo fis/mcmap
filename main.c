@@ -141,8 +141,7 @@ int main(int argc, char **argv)
 	g_option_context_add_main_entries(gopt, gopt_entries, 0);
 	if (!g_option_context_parse(gopt, &argc, &argv, &gopt_error))
 	{
-		fprintf(stderr, "option parsing failed: %s\n", gopt_error->message);
-		return 1;
+		die(gopt_error->message);
 	}
 
 	if (argc != 2)
@@ -154,14 +153,12 @@ int main(int argc, char **argv)
 
 	if (opt.localport < 1 || opt.localport > 65535)
 	{
-		fprintf(stderr, "invalid port number: %d\n", opt.localport);
-		return 1;
+		dief("Invalid port number: %d", opt.localport);
 	}
 
 	if (opt.scale < 1 || opt.scale > 64)
 	{
-		fprintf(stderr, "unreasonable scale factor: %d\n", opt.scale);
-		return 1;
+		dief("Unreasonable scale factor: %d", opt.scale);
 	}
 
 	int wnd_w = 512, wnd_h = 512;
@@ -171,8 +168,7 @@ int main(int argc, char **argv)
 		if (sscanf(opt.wndsize, "%dx%d", &wnd_w, &wnd_h) != 2
 		    || wnd_w < 0 || wnd_h < 0)
 		{
-			fprintf(stderr, "invalid size spec: %s\n", opt.wndsize);
-			return 1;
+			dief("Invalid window size: %s", opt.wndsize);
 		}
 	}
 
@@ -193,13 +189,13 @@ int main(int argc, char **argv)
 
 	/* wait for a client to connect to us */
 
-	printf("Waiting for connection...\n");
+	log_print("Waiting for connection...");
 
 	GSocketListener *listener = g_socket_listener_new();
 
 	if (!g_socket_listener_add_inet_port(listener, opt.localport, 0, 0))
 	{
-		fprintf(stderr, "unable to set up sockets\n");
+		die("Unable to set up sockets.");
 		return 1;
 	}
 
@@ -207,13 +203,13 @@ int main(int argc, char **argv)
 
 	if (!conn_cli)
 	{
-		fprintf(stderr, "client never connected\n");
+		die("Client never connected.");
 		return 1;
 	}
 
 	/* connect to the minecraft server side */
 
-	printf("Connecting to %s...\n", argv[1]);
+	log_print("Connecting to %s...", argv[1]);
 
 	GSocketClient *client = g_socket_client_new();
 
@@ -221,13 +217,13 @@ int main(int argc, char **argv)
 
 	if (!conn_srv)
 	{
-		fprintf(stderr, "unable to connect to server\n");
+		die("Unable to connect to server.");
 		return 1;
 	}
 
 	/* start the proxying threads */
 
-	printf("Starting mcmap...\n");
+	log_print("Starting mcmap...");
 
 	GSocket *sock_cli = g_socket_connection_get_socket(conn_cli);
 	GSocket *sock_srv = g_socket_connection_get_socket(conn_srv);
@@ -255,14 +251,14 @@ int main(int argc, char **argv)
 
 	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
 	{
-		fprintf(stderr, "SDL init failed\n");
+		die("Failed to initialize SDL.");
 		return 1;
 	}
 
 	SDL_Surface *screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|(opt.wndsize ? 0 : SDL_RESIZABLE));
 	if (!screen)
 	{
-		fprintf(stderr, "video mode setting failed: %s\n", SDL_GetError());
+		dief("Failed to set video mode: %s", SDL_GetError());
 		return 1;
 	}
 
@@ -373,23 +369,19 @@ static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen)
 
 static void handle_chat(unsigned char *msg, int msglen)
 {
-	fputs("[CHAT] ", stdout);
-
 	if (opt.noansi)
 	{
-		fwrite(msg, 1, msglen, stdout);
-		putchar('\n');
+		log_print("[CHAT] %s", msg);
 		return;
 	}
 
-	unsigned char *p = msg;
-	char *colormap[16] =
+	static char *colormap[16] =
 	{
 		"30",   "34",   "32",   "36",   "31",   "35",   "33",   "37",
 		"30;1", "34;1", "32;1", "36;1", "31;1", "35;1", "33;1", "0"
 	};
-
-	printf("\x1b[%sm", colormap[15]);
+	unsigned char *p = msg;
+	GString *s = g_string_new("");
 
 	while (msglen > 0)
 	{
@@ -403,18 +395,18 @@ static void handle_chat(unsigned char *msg, int msglen)
 
 			if (c >= 0 && c <= 15)
 			{
-				printf("\x1b[%sm", colormap[c]);
+				g_string_append_printf(s, "\x1b[%sm", colormap[c]);
 				p += 3;
 				msglen -= 3;
 				continue;
 			}
 		}
 
-		putchar(*p++);
+		g_string_append_c(s, *p++);
 		msglen--;
 	}
 
-	fputs("\x1b[0m\n", stdout);
+	log_print("[CHAT] %s\x1b[0m", g_string_free(s, FALSE));
 }
 
 /* common.h functions */
@@ -429,6 +421,25 @@ void inject_to_server(packet_t *p)
 	g_async_queue_push(iq_server, p);
 }
 
+static void print_timestamp(void)
+{
+	char stamp[sizeof("HH:MM:SS ")];
+	time_t now = time(NULL);
+	struct tm *tm = localtime(&now);
+	strftime(stamp, sizeof(stamp),  "%H:%M:%S ", tm);
+	fwrite(stamp, sizeof(stamp)-1, 1, stdout);
+}
+
+void log_print(char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	print_timestamp();
+	vprintf(fmt, ap);
+	putchar('\n');
+	va_end(ap);
+}
+
 void chat(char *fmt, ...)
 {
 	va_list ap;
@@ -436,7 +447,7 @@ void chat(char *fmt, ...)
 	char *msg = g_strdup_vprintf(fmt, ap);
 	va_end(ap);
 
-	printf("[CMD] %s\n", msg);
+	log_print("[CMD] %s", msg);
 
 	static const char prefix[4] = { 0xc2, 0xa7, 'b', 0 };
 	char *cmsg = g_strjoin("", prefix, msg, NULL);
@@ -449,14 +460,15 @@ void chat(char *fmt, ...)
 
 void do_die(char *file, int line, int is_stop, char *fmt, ...)
 {
-	fprintf(stderr, "DIE: %s:%d: ", file, line);
+	print_timestamp();
+	printf("[DIE] %s:%d: ", file, line);
 
 	va_list ap;
 	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
+	vprintf(fmt, ap);
 	va_end(ap);
 
-	putc('\n', stderr);
+	putchar('\n');
 
 	if (is_stop)
 	{

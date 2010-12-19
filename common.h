@@ -8,6 +8,7 @@
 void inject_to_client(packet_t *p);
 void inject_to_server(packet_t *p);
 
+void log_print(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 void chat(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 
 /* fatal error handling */
