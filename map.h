@@ -14,6 +14,7 @@ enum map_mode
 
 #define MAP_FLAG_FOLLOW_Y 0x01
 
+extern double player_dx, player_dy, player_dz;
 extern int player_x, player_y, player_z;
 
 void map_init(SDL_Surface *screen);

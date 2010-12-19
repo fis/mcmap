@@ -66,11 +66,30 @@ static void handle_chunk(int x0, int y0, int z0,
                          unsigned zlen, unsigned char *zdata)
 {
 	static unsigned char zbuf[256*1024];
-	uLongf zbuf_len = sizeof zbuf;
+	int err;
 
-	int t = uncompress(zbuf, &zbuf_len, zdata, zlen);
-	if (t != Z_OK)
-		stopf("chunk update decompression failed: %d", t);
+	z_stream zstr = {
+		.next_in  = zdata,
+		.avail_in = zlen,
+		.next_out = zbuf,
+		.avail_out = sizeof zbuf
+	};
+
+	if ((err = inflateInit(&zstr)) != Z_OK)
+		stopf("chunk update decompression: inflateInit: %d", err);
+
+	while (zstr.avail_in)
+	{
+		err = inflate(&zstr, Z_PARTIAL_FLUSH);
+		if (err != Z_OK && err != Z_STREAM_END)
+			stopf("chunk update decompression: inflate: %d", err);
+		if (err == Z_STREAM_END)
+			break;
+	}
+
+	int zbuf_len = (sizeof zbuf) - zstr.avail_out;
+	inflateEnd(&zstr);
+
 	if (zbuf_len != (5*xs*ys*zs+1)/2)
 		stopf("broken decompressed chunk length: %d != %d", (int)zbuf_len, (int)(5*xs*ys*zs+1)/2);
 

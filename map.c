@@ -81,6 +81,7 @@ static Uint32 special_colors[COLOR_MAX_SPECIAL] = {
 
 /* map graphics code */
 
+double player_dx = 0.0, player_dy = 0.0, player_dz = 0.0;
 int player_x = 0, player_y = 0, player_z = 0;
 
 static SDL_Surface *map = 0;
@@ -242,6 +243,10 @@ void map_update_player_pos(double x, double y, double z)
 
 	if (new_x == player_x && new_y == player_y && new_z == player_z)
 		return;
+
+	player_dx = x;
+	player_dy = y;
+	player_dz = z;
 
 	player_x = new_x;
 	player_y = new_y;
