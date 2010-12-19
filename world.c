@@ -196,7 +196,7 @@ static inline void block_change(struct chunk *c, int x, int y, int z, unsigned c
 	}
 }
 
-static void handle_multi_set_block(int cx, int cz, int size, short *coord, unsigned char *type)
+static void handle_multi_set_block(int cx, int cz, int size, unsigned char *coord, unsigned char *type)
 {
 	union chunk_coord cc;
 	cc.xz[0] = cx; cc.xz[1] = cz;
@@ -207,8 +207,8 @@ static void handle_multi_set_block(int cx, int cz, int size, short *coord, unsig
 
 	while (size--)
 	{
-		short bc = *coord++;
-		int x = (bc >> 12) & 0xf, y = bc & 0xff, z = (bc >> 8) & 0xf;
+		int x = coord[0] >> 4, y = coord[1], z = coord[0] & 0x0f;
+		coord += 2;
 		block_change(c, x, y, z, *type++);
 	}
 
@@ -376,7 +376,7 @@ gpointer world_thread(gpointer data)
 			p = &packet->bytes[packet->field_offset[2]];
 			t = (p[0] << 8) | p[1];
 			handle_multi_set_block(packet_int(packet, 0), packet_int(packet, 1),
-			                       t, (short *)(p+2), p+2+t*2);
+			                       t, p+2, p+2+t*2);
 			break;
 
 		case PACKET_SET_BLOCK:
