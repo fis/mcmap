@@ -8,7 +8,7 @@ CFLAGS += -g
 
 LDFLAGS += $(shell pkg-config --libs gio-2.0 sdl zlib)
 
-sources = main.c map.c protocol.c world.c
+sources = cmd.c main.c map.c protocol.c world.c
 
 objs = $(sources:.c=.o)
 deps = $(sources:.c=.d)

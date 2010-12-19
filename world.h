@@ -48,6 +48,7 @@ void world_init(void);
 gpointer world_thread(gpointer data);
 
 struct chunk *world_chunk(guint64 coord, int gen);
+unsigned char *world_stack(int x, int z, int gen);
 
 int world_getheight(int x, int z);
 

@@ -4,6 +4,7 @@
 #include <gio/gio.h>
 #include <SDL.h>
 
+#include "cmd.h"
 #include "common.h"
 #include "map.h"
 #include "protocol.h"
@@ -364,23 +365,9 @@ static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen)
 	if (e->button == SDL_BUTTON_RIGHT)
 	{
 		/* teleport */
-
 		int x, z;
 		map_getpos(screen, e->x, e->y, &x, &z);
-
-		packet_t *pjump1 = packet_new(PACKET_PLAYER_MOVE,
-		                              (double)player_x, 128.0, 129.62, (double)player_z, 0);
-		packet_t *pjump2 = packet_dup(pjump1);
-
-		packet_t *pmove1 = packet_new(PACKET_PLAYER_MOVE,
-		                              (double)x, 128.0, 129.62, (double)z, 0);
-		packet_t *pmove2 = packet_dup(pmove1);
-
-		inject_to_client(pjump1);
-		inject_to_server(pjump2);
-
-		inject_to_client(pmove1);
-		inject_to_server(pmove2);
+		cmd_goto(x, z);
 	}
 }
 
