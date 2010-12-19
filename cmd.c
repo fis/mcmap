@@ -93,11 +93,11 @@ void cmd_goto(int x, int z)
 
 	/* inject jumping packets */
 
-	packet_t *pjump1 = packet_new(PACKET_PLAYER_MOVE,
+	packet_t *pjump1 = packet_new(PACKET_TO_ANY, PACKET_PLAYER_MOVE,
 	                              (double)player_x, 128.0, 129.62, (double)player_z, 0);
 	packet_t *pjump2 = packet_dup(pjump1);
 
-	packet_t *pmove1 = packet_new(PACKET_PLAYER_MOVE,
+	packet_t *pmove1 = packet_new(PACKET_TO_ANY, PACKET_PLAYER_MOVE,
 	                              (double)x, 128.0, 129.62, (double)z, 0);
 	packet_t *pmove2 = packet_dup(pmove1);
 
