@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 
 	/* wait for a client to connect to us */
 
-	log_print("Waiting for connection...");
+	log_print("[INFO] Waiting for connection...");
 
 	GSocketListener *listener = g_socket_listener_new();
 
@@ -212,7 +212,7 @@ int main(int argc, char **argv)
 
 	/* connect to the minecraft server side */
 
-	log_print("Connecting to %s...", argv[1]);
+	log_print("[INFO] Connecting to %s...", argv[1]);
 
 	GSocketClient *client = g_socket_client_new();
 
@@ -226,7 +226,7 @@ int main(int argc, char **argv)
 
 	/* start the proxying threads */
 
-	log_print("Starting mcmap...");
+	log_print("[INFO] Starting up...");
 
 	GSocket *sock_cli = g_socket_connection_get_socket(conn_cli);
 	GSocket *sock_srv = g_socket_connection_get_socket(conn_srv);
@@ -450,7 +450,7 @@ void chat(char *fmt, ...)
 	char *msg = g_strdup_vprintf(fmt, ap);
 	va_end(ap);
 
-	log_print("[CMD] %s", msg);
+	log_print("[INFO] %s", msg);
 
 	static const char prefix[4] = { 0xc2, 0xa7, 'b', 0 };
 	char *cmsg = g_strjoin("", prefix, msg, NULL);
@@ -464,7 +464,7 @@ void chat(char *fmt, ...)
 void do_die(char *file, int line, int is_stop, char *fmt, ...)
 {
 	print_timestamp();
-	printf("[DIE] %s:%d: ", file, line);
+	printf("[DIED] %s:%d: ", file, line);
 
 	va_list ap;
 	va_start(ap, fmt);

@@ -243,7 +243,7 @@ static void entity_add(int id, unsigned char *name, int x, int y, int z)
 
 	if (name)
 	{
-		log_print("[PLAYER] Appear: %s", name);
+		log_print("[INFO] Player appeared: %s", name);
 		g_mutex_lock(entity_mutex);
 		g_hash_table_replace(entity_table, &e->id, e);
 		g_mutex_unlock(entity_mutex);
@@ -258,13 +258,13 @@ static void entity_del(int id)
 	if (id == entity_vehicle)
 	{
 		entity_vehicle = -1;
-		log_print("[VEHICLE] Unmounted %d by destroying", id);
+		log_print("[INFO] Unmounted vehicle %d by destroying", id);
 	}
 
 	struct entity *e = g_hash_table_lookup(entity_table, &id);
 	if (e)
 	{
-		log_print("[PLAYER] Disappear: %s", e->name);
+		log_print("[INFO] Player disappeared: %s", e->name);
 		g_mutex_lock(entity_mutex);
 		g_hash_table_remove(entity_table, &id);
 		g_mutex_unlock(entity_mutex);
@@ -451,9 +451,9 @@ gpointer world_thread(gpointer data)
 			{
 				int new_vehicle = packet_int(packet, 1);
 				if (new_vehicle < 0)
-					log_print("[VEHICLE] Unmounted %d normally", entity_vehicle);
+					log_print("[INFO] Unmounted vehicle %d normally", entity_vehicle);
 				else
-					log_print("[VEHICLE] Mounted %d", new_vehicle);
+					log_print("[INFO] Mounted vehicle %d", new_vehicle);
 				entity_vehicle = packet_int(packet, 1);
 			}
 			break;
