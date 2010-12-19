@@ -26,30 +26,14 @@ void cmd_parse(unsigned char *cmd, int cmdlen)
 		if (cmdc == 3)
 			cmd_goto(atoi(cmdv[1]), atoi(cmdv[2]));
 		else
-			printf("[CMD] //goto: usage: //goto x z\n");
+			chat("//goto: usage: //goto x z");
 	}
 	else if (strcmp(cmdv[0], "coords") == 0)
 		cmd_coords();
 	else
-		printf("[CMD] unknown command: //%s\n", cmdv[0]);
+		chat("unknown command: //%s", cmdv[0]);
 
 	g_strfreev(cmdv);
-}
-
-/* FIXME: This function is horrible. */
-static void cmd_say(char *fmt, ...)
-{
-	char msg[1024]; /* I have a wonderful proof that this buffer is big
-	                 * enough, but this margin is too small to contain it. */
-	va_list ap;
-	va_start(ap, fmt);
-	vsnprintf(msg+3, sizeof(msg)-3, fmt, ap);
-	printf("[CMD] %s\n", msg+3);
-	msg[0] = '\xc2';
-	msg[1] = '\xa7';
-	msg[2] = 'b'; /* cyan */
-	inject_to_client(packet_new(PACKET_CHAT, msg));
-	va_end(ap);
 }
 
 void cmd_goto(int x, int z)
@@ -81,7 +65,7 @@ void cmd_goto(int x, int z)
 	{
 		if (!stacks[i])
 		{
-			cmd_say("//goto: impossible: jump from unloaded block");
+			chat("//goto: impossible: jump from unloaded block");
 			return;
 		}
 	}
@@ -94,7 +78,7 @@ void cmd_goto(int x, int z)
 		{
 			if (stacks[i][h])
 			{
-				cmd_say("//goto: blocked: the skies are not clear");
+				chat("//goto: blocked: the skies are not clear");
 				return;
 			}
 		}
@@ -116,10 +100,10 @@ void cmd_goto(int x, int z)
 	inject_to_client(pmove1);
 	inject_to_server(pmove2);
 
-	cmd_say("//goto: jumping to (%d,%d)", x, z);
+	chat("//goto: jumping to (%d,%d)", x, z);
 }
 
 void cmd_coords()
 {
-	cmd_say("//coords: x=%d, z=%d, y=%d", player_x, player_z, player_y);
+	chat("//coords: x=%d, z=%d, y=%d", player_x, player_z, player_y);
 }

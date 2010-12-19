@@ -429,14 +429,17 @@ void inject_to_server(packet_t *p)
 	g_async_queue_push(iq_server, p);
 }
 
-void chat_to_client(char *fmt, ...)
+void chat(char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
 	char *msg = g_strdup_vprintf(fmt, ap);
 	va_end(ap);
 
-	char *cmsg = g_strjoin("\xc2\xa7" "b", msg, NULL);
+	printf("[CMD] %s\n", msg);
+
+	static const char prefix[4] = { 0xc2, 0xa7, 'b', 0 };
+	char *cmsg = g_strjoin("", prefix, msg, NULL);
 
 	inject_to_client(packet_new(PACKET_CHAT, cmsg));
 

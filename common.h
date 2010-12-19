@@ -8,6 +8,8 @@
 void inject_to_client(packet_t *p);
 void inject_to_server(packet_t *p);
 
+void chat(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+
 /* fatal error handling */
 
 #define die(msg) do_die(__FILE__, __LINE__, 0, "%s", msg)
