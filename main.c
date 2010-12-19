@@ -429,6 +429,21 @@ void inject_to_server(packet_t *p)
 	g_async_queue_push(iq_server, p);
 }
 
+void chat_to_client(char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	char *msg = g_strdup_vprintf(fmt, ap);
+	va_end(ap);
+
+	char *cmsg = g_strjoin("\xc2\xa7" "b", msg, NULL);
+
+	inject_to_client(packet_new(PACKET_CHAT, cmsg));
+
+	g_free(cmsg);
+	g_free(msg);
+}
+
 void do_die(char *file, int line, int is_stop, char *fmt, ...)
 {
 	fprintf(stderr, "DIE: %s:%d: ", file, line);
