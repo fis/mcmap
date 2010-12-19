@@ -118,5 +118,5 @@ void cmd_coords()
 void cmd_slap(char *name)
 {
 	char *msg = g_strdup_printf("/me slaps %s around a bit with a large trout", name);
-	inject_to_server(packet_new(PACKET_CHAT, msg));
+	inject_to_server(packet_new(PACKET_TO_ANY, PACKET_CHAT, msg));
 }
