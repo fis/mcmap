@@ -25,9 +25,9 @@ enum packet_id
 	PACKET_INVENTORY_ADD = 0x11,
 	PACKET_ENTITY_ANIMATE = 0x12,
 	PACKET_ENTITY_SPAWN_NAMED = 0x14,
-	PACKET_ENTITY_SPAWN_TYPED = 0x15,
+	PACKET_ENTITY_SPAWN_PICKUP = 0x15,
 	PACKET_ENTITY_COLLECT = 0x16,
-	PACKET_ADD_OBJECT_OR_VEHICLE = 0x17,
+	PACKET_ENTITY_SPAWN_OBJECT = 0x17,
 	PACKET_MOB_SPAWN = 0x18,
 	PACKET_ENTITY_VELOCITY = 0x1c,
 	PACKET_ENTITY_DESTROY = 0x1d,
@@ -45,6 +45,13 @@ enum packet_id
 	PACKET_COMPLEX_ENTITY = 0x3b,
 	PACKET_EXPLOSION = 0x3c,
 	PACKET_DISCONNECT = 0xff
+};
+
+enum packet_dir
+{
+	PACKET_TO_ANY,
+	PACKET_TO_CLIENT,
+	PACKET_TO_SERVER
 };
 
 enum field_type
@@ -65,6 +72,7 @@ enum field_type
 
 struct packet
 {
+	enum packet_dir dir;
 	unsigned id;
 	unsigned size;
 	unsigned char *bytes;
@@ -86,7 +94,7 @@ struct packet_state
 
 typedef struct packet_state packet_state_t;
 
-#define PACKET_STATE_INIT { .buf_start = 0, .buf_pos = 0, .buf_end = 0 }
+#define PACKET_STATE_INIT(d) { .buf_start = 0, .buf_pos = 0, .buf_end = 0, .p = { .dir = d } }
 
 packet_t *packet_read(GSocket *sock, packet_state_t *state);
 
@@ -94,7 +102,7 @@ int packet_write(GSocket *sock, packet_t *packet);
 
 packet_t *packet_dup(packet_t *packet);
 
-packet_t *packet_new(enum packet_id type, ...);
+packet_t *packet_new(enum packet_dir dir, enum packet_id type, ...);
 
 void packet_free(gpointer packet);
 

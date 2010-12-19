@@ -23,6 +23,8 @@ void map_update(int x1, int x2, int z1, int z2);
 
 void map_update_player_pos(double x, double y, double z);
 void map_update_player_dir(double yaw, double pitch);
+void map_update_player_id(int id);
+
 void map_update_alt(int y, int relative);
 
 void map_getpos(SDL_Surface *screen, int sx, int sy, int *x, int *z);
