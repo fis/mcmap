@@ -81,6 +81,8 @@ Commands are prefixed with // -- chat packets starting with that
 prefix will be removed from the stream and considered by mcmap.
 
 * `//goto x z`: teleport into coordinates (x, z).
+* `//coords`: print your current coordinates.
+* `//slap name`: transport you to a magical world of faeries and unicorns.
 
 The teleporting works by first moving the player directly up to height
 y=128, then moving to (x, 128, z).  Passing through solid blocks is

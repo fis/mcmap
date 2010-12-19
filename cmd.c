@@ -26,10 +26,17 @@ void cmd_parse(unsigned char *cmd, int cmdlen)
 		if (cmdc == 3)
 			cmd_goto(atoi(cmdv[1]), atoi(cmdv[2]));
 		else
-			chat("//goto: usage: //goto x z");
+			chat("usage: //goto x z");
 	}
 	else if (strcmp(cmdv[0], "coords") == 0)
 		cmd_coords();
+	else if (strcmp(cmdv[0], "slap") == 0)
+	{
+		if (cmdc == 2)
+			cmd_slap(cmdv[1]);
+		else
+			chat("usage: //slap name");
+	}
 	else
 		chat("unknown command: //%s", cmdv[0]);
 
@@ -106,4 +113,10 @@ void cmd_goto(int x, int z)
 void cmd_coords()
 {
 	chat("//coords: x=%d, z=%d, y=%d", player_x, player_z, player_y);
+}
+
+void cmd_slap(char *name)
+{
+	char *msg = g_strdup_printf("/me slaps %s around a bit with a large trout", name);
+	inject_to_server(packet_new(PACKET_CHAT, msg));
 }

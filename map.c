@@ -340,9 +340,9 @@ void map_setmode(enum map_mode mode, unsigned flags)
 	if (mode == MAP_MODE_CROSS)
 		map_y = player_y;
 
-	printf("MODE: %s%s\n",
-	       modenames[mode],
-	       mode == MAP_MODE_CROSS && (flags & MAP_FLAG_FOLLOW_Y) ? " (follow player)" : "");
+	chat("MODE: %s%s",
+	     modenames[mode],
+	     mode == MAP_MODE_CROSS && (flags & MAP_FLAG_FOLLOW_Y) ? " (follow player)" : "");
 
 	map_update(map_min_x, map_max_x, map_min_z, map_max_z);
 }
