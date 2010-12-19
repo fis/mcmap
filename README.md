@@ -16,9 +16,10 @@ teleporting (though don't try it with health on).
 Building
 ========
 
-There's a Makefile; if you have SDL and glib dev packages installed,
-and pkg-config knows where to find them, a simple `make` should
-suffice.
+There's a Makefile; if you have SDL, glib and readline dev packages
+installed, and pkg-config knows where to find them, a simple `make`
+should suffice. (Although readline is actually just linked with
+`-lreadline`.)
 
 Usage
 =====
@@ -73,6 +74,18 @@ page-up makes blocks one pixel larger.
 
 Right-clicking a point on the map basically executes a //goto x z on
 the clicked coordinates (or nearby).
+
+Chatting
+--------
+
+Thanks to a resounding demand made by a total of 0 people, you can
+chat -- with fancy line editing, no less -- with everyone else
+on your server through the console. It works exactly like you'd
+expect, and requires no documentation. Although right now, if you
+type a line that just happens to be too long (100 characters or
+so), you'll get disconnected.
+
+But why would you do a thing like that?
 
 Commands
 --------
