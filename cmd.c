@@ -28,6 +28,8 @@ void cmd_parse(unsigned char *cmd, int cmdlen)
 		else
 			printf("[CMD] //goto: usage: //goto x z\n");
 	}
+	else if (strcmp(cmdv[0], "coords") == 0)
+		cmd_coords();
 	else
 		printf("[CMD] unknown command: //%s\n", cmdv[0]);
 
@@ -99,4 +101,9 @@ void cmd_goto(int x, int z)
 	inject_to_server(pmove2);
 
 	printf("[CMD] //goto: jumping to (%d,%d)\n", x, z);
+}
+
+void cmd_coords()
+{
+	printf("[CMD] //coords: x=%d, z=%d, y=%d\n", player_x, player_z, player_y);
 }
