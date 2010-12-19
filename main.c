@@ -1,8 +1,12 @@
 #include <stdarg.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <gio/gio.h>
 #include <SDL.h>
+
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #include "cmd.h"
 #include "common.h"
@@ -122,6 +126,31 @@ gpointer proxy_thread(gpointer data)
 			break;
 		}
 	}
+	return NULL;
+}
+
+void clean_up_terminal()
+{
+	rl_deprep_terminal();
+	putchar('\n');
+}
+
+gpointer chat_input_thread(gpointer data)
+{
+	atexit(clean_up_terminal);
+	rl_readline_name = "mcmap";
+
+	for (;;)
+	{
+		char *line = readline("> ");
+		if (!line) break;
+		if (*line) add_history(line);
+	        inject_to_server(packet_new(PACKET_TO_ANY, PACKET_CHAT, line));
+		free(line);
+	}
+
+	exit(0);
+	return NULL;
 }
 
 /* main application */
@@ -270,6 +299,9 @@ int main(int argc, char **argv)
 
 	map_init(screen);
 	map_setscale(opt.scale, 0);
+
+	if (isatty(0) && isatty(1))
+		g_thread_create(chat_input_thread, NULL, FALSE, 0);
 
 	while (1)
 	{
@@ -432,6 +464,9 @@ static void print_timestamp(void)
 	time_t now = time(NULL);
 	struct tm *tm = localtime(&now);
 	strftime(stamp, sizeof(stamp),  "%H:%M:%S ", tm);
+	/* This is, of course, the wrong place to put this, which is
+	 * why it is here. */
+	putchar('\r');
 	fwrite(stamp, sizeof(stamp)-1, 1, stdout);
 }
 
@@ -439,9 +474,12 @@ void log_print(char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
+	putchar('\r');
 	print_timestamp();
 	vprintf(fmt, ap);
 	putchar('\n');
+	if (isatty(0) && isatty(1))
+		rl_forced_update_display();
 	va_end(ap);
 }
 
