@@ -409,7 +409,9 @@ static void handle_chat(unsigned char *msg, int msglen)
 		msglen--;
 	}
 
-	log_print("[CHAT] %s\x1b[0m", g_string_free(s, FALSE));
+	gchar *str = g_string_free(s, FALSE);
+	log_print("[CHAT] %s\x1b[0m", str);
+	g_free(str);
 }
 
 /* common.h functions */
