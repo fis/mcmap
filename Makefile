@@ -34,11 +34,11 @@ ifdef DEBUG
 endif
 
 ifdef DEBUG
-	mcmap: $(objs)
-		$(CC) -o $@ $^ $(LDFLAGS)
+mcmap: $(objs)
+	$(CC) -o $@ $^ $(LDFLAGS)
 else
-	mcmap: $(sources)
-		$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(sources)
+mcmap: $(sources)
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(sources)
 endif
 
 clean:
