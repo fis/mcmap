@@ -12,22 +12,27 @@ CFLAGS := $(CFLAGS)
 CFLAGS += -Wall -Werror -std=gnu99
 CFLAGS += $(shell pkg-config --cflags $(libs))
 
-ifdef DEBUG
-	CFLAGS += -g
-else
-	CFLAGS += -O3 -combine -funroll-loops -fwhole-program
+ifndef EXTCFLAGS
+	ifdef DEBUG
+		EXTCFLAGS := -g
+	else
+		EXTCFLAGS := -O3 -combine -funroll-loops -fwhole-program
+	endif
 endif
 
 LDFLAGS := $(LDFLAGS)
 LDFLAGS += $(shell pkg-config --libs $(libs))
 LDFLAGS += -lreadline
 
-.PHONY: all debug clean
+.PHONY: all diet debug clean
 
 all: mcmap
 
 debug:
 	@$(MAKE) --no-print-directory DEBUG=1
+
+diet:
+	@$(MAKE) --no-print-directory CC="diet -Os $(CC)" EXTCFLAGS=""
 
 ifdef DEBUG
 	-include $(deps)
