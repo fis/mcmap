@@ -16,17 +16,25 @@ ifndef EXTCFLAGS
 	ifdef DEBUG
 		EXTCFLAGS := -g
 	else
-		EXTCFLAGS := -O3 -combine -funroll-loops -fwhole-program
+		EXTCFLAGS := -O3 -funroll-loops
 	endif
 endif
+
+CFLAGS += $(EXTCFLAGS)
 
 LDFLAGS := $(LDFLAGS)
 LDFLAGS += $(shell pkg-config --libs $(libs))
 LDFLAGS += -lreadline
 
-.PHONY: all diet debug clean
+.PHONY: all opt debug diet clean
 
 all: mcmap
+
+mcmap: $(objs)
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+opt: $(sources)
+	$(CC) -o mcmap $(CFLAGS) -combine -fwhole-program $(sources) $(LDFLAGS)
 
 debug:
 	@$(MAKE) --no-print-directory DEBUG=1
@@ -34,17 +42,7 @@ debug:
 diet:
 	@$(MAKE) --no-print-directory CC="diet -Os $(CC)" EXTCFLAGS=""
 
-ifdef DEBUG
-	-include $(deps)
-endif
-
-ifdef DEBUG
-mcmap: $(objs)
-	$(CC) -o $@ $^ $(LDFLAGS)
-else
-mcmap: $(sources)
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(sources)
-endif
+-include $(deps)
 
 clean:
 	$(RM) mcmap $(objs) $(deps)
