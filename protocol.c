@@ -618,18 +618,27 @@ int packet_int(packet_t *packet, unsigned field)
 double packet_double(packet_t *packet, unsigned field)
 {
 	unsigned char *p = &packet->bytes[packet->field_offset[field]];
-	unsigned char buf[8];
+
+	union {
+		float f;
+		unsigned char b[4];
+	} bfloat;
+
+	union {
+		double d;
+		unsigned char b[8];
+	} bdouble;
 
 	switch (packet_format[packet->id].ftype[field])
 	{
 	case FIELD_FLOAT:
-		buf[0] = p[3]; buf[1] = p[2]; buf[2] = p[1]; buf[3] = p[0];
-		return *(float *)buf;
+		bfloat.b[0] = p[3]; bfloat.b[1] = p[2]; bfloat.b[2] = p[1]; bfloat.b[3] = p[0];
+		return bfloat.f;
 
 	case FIELD_DOUBLE:
-		buf[0] = p[7]; buf[1] = p[6]; buf[2] = p[5]; buf[3] = p[4];
-		buf[4] = p[3]; buf[5] = p[2]; buf[6] = p[1]; buf[7] = p[0];
-		return *(double *)buf;
+		bdouble.b[0] = p[7]; bdouble.b[1] = p[6]; bdouble.b[2] = p[5]; bdouble.b[3] = p[4];
+		bdouble.b[4] = p[3]; bdouble.b[5] = p[2]; bdouble.b[6] = p[1]; bdouble.b[7] = p[0];
+		return bdouble.d;
 
 	default:
 		return packet_int(packet, field);
