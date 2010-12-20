@@ -68,6 +68,23 @@ gpointer proxy_thread(gpointer data)
 			return 0;
 		}
 
+#if DEBUG_PROTOCOL >= 2 /* use for packet dumping for protocol analysis */
+		log_print("%s packet 0x%02x size %u", desc, p->id, p->size);
+		{
+			unsigned left = p->size;
+			unsigned char *pb = p->bytes;
+			while (left > 0)
+			{
+				char buf[128] = {0};
+				for (int i = 0; i < 16 && left > 0; i++, left--)
+				{
+					sprintf(buf+strlen(buf), "%02x ", *pb++);
+				}
+				log_print("DATA %s", buf);
+			}
+		}
+#endif
+
 		/* either write it out or handle if it's a command to us */
 
 		if (cfg->client_to_server

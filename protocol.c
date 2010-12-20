@@ -47,7 +47,7 @@ enum field_type packet_format_use_entity[] = {
 };
 
 enum field_type packet_format_update_health[] = {
-	FIELD_UBYTE
+	FIELD_SHORT
 };
 
 enum field_type packet_format_player_ping[] = {
@@ -175,6 +175,38 @@ enum field_type packet_format_explosion[] = {
 	FIELD_DOUBLE, FIELD_DOUBLE, FIELD_DOUBLE, FIELD_FLOAT, FIELD_EXPLOSION_RECORDS
 };
 
+enum field_type packet_format_beta_inventory_close[] = {
+	FIELD_UBYTE /* unknown */
+};
+
+enum field_type packet_format_beta_inventory_click[] = {
+	FIELD_UBYTE,              /* unknown */
+	FIELD_SHORT,              /* inventory position index */
+	FIELD_UBYTE, FIELD_SHORT, /* unknown */
+	FIELD_IITEM               /* item that was clicked */
+};
+
+enum field_type packet_format_beta_unknown1[] = {
+	FIELD_SHORT, /* unknown */
+	FIELD_UBYTE, /* unknown */
+	FIELD_IITEM  /* unknown */
+};
+
+enum field_type packet_format_beta_inventory_data[] = {
+	FIELD_UBYTE, /* unknown */
+	FIELD_IARRAY /* inventory array */
+};
+
+enum field_type packet_format_beta_inventory_ack[] = {
+	FIELD_SHORT, FIELD_SHORT /* unknown */
+};
+
+enum field_type packet_format_beta_unknown2[] = {
+	FIELD_INT, FIELD_INT, FIELD_INT,
+	FIELD_DOUBLE, FIELD_FLOAT, FIELD_FLOAT,
+	FIELD_UBYTE
+};
+
 enum field_type packet_format_disconnect[] = {
 	FIELD_STRING
 };
@@ -228,6 +260,12 @@ struct packet_format_desc packet_format[] =
 	[PACKET_SET_BLOCK] = P(packet_format_set_block),
 	[PACKET_COMPLEX_ENTITY] = P(packet_format_complex_entity),
 	[PACKET_EXPLOSION] = P(packet_format_explosion),
+	[PACKET_BETA_INVENTORY_CLOSE] = P(packet_format_beta_inventory_close),
+	[PACKET_BETA_INVENTORY_CLICK] = P(packet_format_beta_inventory_click),
+	[PACKET_BETA_UNKNOWN1] = P(packet_format_beta_unknown1),
+	[PACKET_BETA_INVENTORY_DATA] = P(packet_format_beta_inventory_data),
+	[PACKET_BETA_INVENTORY_ACK] = P(packet_format_beta_inventory_ack),
+	[PACKET_BETA_UNKNOWN2] = P(packet_format_beta_unknown2),
 	[PACKET_DISCONNECT] = P(packet_format_disconnect)
 };
 #undef P
@@ -302,7 +340,16 @@ packet_t *packet_read(GSocket *sock, packet_state_t *state)
 	struct packet_format_desc *fmt;
 	if (t >= MAX_PACKET_FORMAT || !(fmt = &packet_format[t])->known)
 	{
-		dief("Unknown packet id: 0x%02x", t);
+#if DEBUG_PROTOCOL >= 1
+		log_print("IMMINENT CRASH, reading tail for log");
+		unsigned char buf[256];
+		for (int i = 0; i < sizeof buf; i++) buf[i] = buf_getc();
+		for (int i = 0; i < sizeof buf; i+=16)
+			log_print("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+			          buf[i+0],buf[i+1],buf[i+2],buf[i+3],buf[i+4],buf[i+5],buf[i+6],buf[i+7],
+			          buf[i+8],buf[i+9],buf[i+10],buf[i+11],buf[i+12],buf[i+13],buf[i+14],buf[i+15]);
+#endif
+		dief("Unknown packet id: 0x%02x (dir %d)", t, state->p.dir);
 	}
 
 	state->p.field_offset = state->offset;
@@ -350,6 +397,12 @@ packet_t *packet_read(GSocket *sock, packet_state_t *state)
 				if (itype != -1)
 					if (!buf_skip(3)) return 0;
 			}
+			break;
+
+		case FIELD_IITEM:
+			t = buf_get_i16();
+			if (t != -1)
+				if (!buf_skip(2)) return 0;
 			break;
 
 		case FIELD_SBBARRAY:
