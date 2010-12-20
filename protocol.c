@@ -201,12 +201,6 @@ enum field_type packet_format_beta_inventory_ack[] = {
 	FIELD_SHORT, FIELD_SHORT /* unknown */
 };
 
-enum field_type packet_format_beta_unknown2[] = {
-	FIELD_INT, FIELD_INT, FIELD_INT,
-	FIELD_DOUBLE, FIELD_FLOAT, FIELD_FLOAT,
-	FIELD_UBYTE
-};
-
 enum field_type packet_format_disconnect[] = {
 	FIELD_STRING
 };
@@ -265,7 +259,6 @@ struct packet_format_desc packet_format[] =
 	[PACKET_BETA_UNKNOWN1] = P(packet_format_beta_unknown1),
 	[PACKET_BETA_INVENTORY_DATA] = P(packet_format_beta_inventory_data),
 	[PACKET_BETA_INVENTORY_ACK] = P(packet_format_beta_inventory_ack),
-	[PACKET_BETA_UNKNOWN2] = P(packet_format_beta_unknown2),
 	[PACKET_DISCONNECT] = P(packet_format_disconnect)
 };
 #undef P
