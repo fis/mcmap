@@ -1,30 +1,45 @@
 # mcmap/Makefile
 
-CC := gcc
-
-LIBS := gio-2.0 sdl zlib
-
-CFLAGS := $(CFLAGS)
-CFLAGS += -Wall -Werror -std=gnu99
-CFLAGS += $(shell pkg-config --cflags $(LIBS))
-CFLAGS += -g
-
-LDFLAGS := $(LDFLAGS)
-LDFLAGS += $(shell pkg-config --libs $(LIBS)) -lreadline
-
 sources := cmd.c main.c map.c protocol.c world.c
+libs := gio-2.0 sdl zlib
 
 objs := $(sources:.c=.o)
 deps := $(sources:.c=.d)
 
-default: mcmap
+CC := gcc
 
--include $(deps)
+CFLAGS := $(CFLAGS)
+CFLAGS += -Wall -Werror -std=gnu99
+CFLAGS += $(shell pkg-config --cflags $(libs))
 
-.PHONY : default clean
+ifdef DEBUG
+	CFLAGS += -g
+else
+	CFLAGS += -O3 -combine -funroll-loops -fwhole-program
+endif
 
-mcmap: $(objs)
-	$(CC) -o $@ $^ $(LDFLAGS)
+LDFLAGS := $(LDFLAGS)
+LDFLAGS += $(shell pkg-config --libs $(libs))
+LDFLAGS += -lreadline
+
+.PHONY: all debug clean
+
+all: mcmap
+
+debug:
+	@$(MAKE) --no-print-directory DEBUG=1
+
+ifdef DEBUG
+	-include $(deps)
+endif
+
+ifdef DEBUG
+	mcmap: $(objs)
+		$(CC) -o $@ $^ $(LDFLAGS)
+else
+	mcmap: $(sources)
+		$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(sources)
+endif
 
 clean:
 	$(RM) mcmap $(objs) $(deps)
