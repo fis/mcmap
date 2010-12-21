@@ -104,7 +104,7 @@ cc.link = $(call cat, $(cc.invoke) $(ld.flags))
 define c-program-body
 to-install += $(1)
 to-clean += $(1) $(2:.c=.o) $(2:.c=.d)
-$(objdir)/$(1): $(2:%.c=$(objdir)/%.o) $(objdir) Makefile ; \
+$(objdir)/$(1): $(2:%.c=$(objdir)/%.o) | $(objdir) Makefile ; \
 	$(call do,LINK,$(objdir)/$(1),$(cc.link) -o $(objdir)/$(1) \
 		$(2:%.c=$(objdir)/%.o))
 $(if $(cleaning),,-include $(2:%.c=$(objdir)/%.d))
@@ -121,10 +121,10 @@ endef
 ## $(call c-object,foo.c) -- compiles foo.c into foo.o
 c-object = $(eval $(call c-object-body,$(strip $(1))))
 
-$(objdir)/%.o: %.c $(objdir) Makefile
+$(objdir)/%.o: %.c | $(objdir) Makefile
 	$(call do,CC,$<,$(cc.invoke) -c -o $@ $<)
 
-$(objdir)/%.d: %.c $(objdir) Makefile
+$(objdir)/%.d: %.c | $(objdir) Makefile
 	$(call do,DEP,$<,$(cc.invoke) -M -MG -MF $@ $<)
 
 #### End
