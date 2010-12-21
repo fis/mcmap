@@ -1,3 +1,4 @@
+#include <locale.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -149,6 +150,8 @@ gpointer proxy_thread(gpointer data)
 
 int main(int argc, char **argv)
 {
+	setlocale(LC_ALL, "");
+
 	/* command line option grokking */
 
 	static GOptionEntry gopt_entries[] = {

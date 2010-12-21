@@ -1,5 +1,4 @@
 #include <errno.h>
-#include <locale.h>
 #include <poll.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -38,11 +37,9 @@ void console_init(void)
 
 		/* initialize curses */
 
-		setlocale(LC_ALL, "");
-
 		initscr();
 		cbreak();
-		noecho();
+		//noecho();
 		nonl();
 		intrflush(stdscr, FALSE);
 
@@ -110,7 +107,8 @@ static gpointer console_thread(gpointer userdata)
 	};
 
 	//GString *input = g_string_new("");
-	int input_start = -2, input_cursor = 0;
+	//int input_start = 0, input_cursor = 0;
+	//int input_col = 2;
 
 	GIOChannel *och = g_io_channel_unix_new(opipe_read);
 
@@ -166,10 +164,12 @@ static gpointer console_thread(gpointer userdata)
 			while ((ch = wgetch(win_input)) != ERR)
 			{
 				log_print("[KEYP] ch = %d", ch);
+				//waddch(win_input, ch);
+				//waddstr(win_input, "ä");
 			}
 		}
 
-		wmove(win_input, 0, input_cursor - input_start);
+		//wmove(win_input, 0, input_col);
 		wnoutrefresh(win_input);
 		doupdate();
 	}
