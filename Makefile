@@ -24,7 +24,7 @@ CFLAGS += $(EXTCFLAGS)
 
 LDFLAGS := $(LDFLAGS)
 LDFLAGS += $(shell pkg-config --libs $(libs))
-LDFLAGS += -lncurses -lz
+LDFLAGS += -lreadline -lz
 
 .PHONY: all opt debug diet clean
 

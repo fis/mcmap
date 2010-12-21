@@ -204,18 +204,8 @@ int main(int argc, char **argv)
 	g_thread_init(0);
 	g_type_init();
 
-	console_init();
-
 	iq_client = g_async_queue_new_full(packet_free);
 	iq_server = g_async_queue_new_full(packet_free);
-
-	/* FIXME debugging */
-	while (1)
-	{
-		log_print("xxx");
-		int i = sleep(1);
-		if (i > 10000) break;
-	}
 
 	/* build up the world model */
 
@@ -285,6 +275,8 @@ int main(int argc, char **argv)
 	g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
 
 	/* start the user interface side */
+
+	console_init();
 
 	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
 	{
@@ -474,26 +466,4 @@ void chat(char *fmt, ...)
 
 	g_free(cmsg);
 	g_free(msg);
-}
-
-void do_die(char *file, int line, int is_stop, char *fmt, ...)
-{
-	//print_timestamp();
-	printf("[DIED] %s:%d: ", file, line);
-
-	va_list ap;
-	va_start(ap, fmt);
-	vprintf(fmt, ap);
-	va_end(ap);
-
-	putchar('\n');
-
-	if (is_stop)
-	{
-		world_running = 0;
-		g_thread_exit(0);
-		/* never reached */
-	}
-
-	exit(1);
 }
