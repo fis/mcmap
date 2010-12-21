@@ -76,7 +76,7 @@ enum field_type packet_format_place[] = {
 };
 
 enum field_type packet_format_entity_holding[] = {
-	FIELD_INT, FIELD_SHORT
+	FIELD_SHORT
 };
 
 enum field_type packet_format_entity_collect[] = {
@@ -89,10 +89,6 @@ enum field_type packet_format_entity_spawn_object[] = {
 
 enum field_type packet_format_mob_spawn[] = {
 	FIELD_INT, FIELD_UBYTE, FIELD_INT, FIELD_INT, FIELD_INT, FIELD_UBYTE, FIELD_BYTE
-};
-
-enum field_type packet_format_inventory_add[] = {
-	FIELD_SHORT, FIELD_BYTE, FIELD_SHORT
 };
 
 enum field_type packet_format_entity_animate[] = {
@@ -167,38 +163,53 @@ enum field_type packet_format_chunk[] = {
 	FIELD_ARRAY  /* blocks */
 };
 
-enum field_type packet_format_complex_entity[] = {
-	FIELD_INT, FIELD_SHORT, FIELD_INT, FIELD_STRING
-};
-
 enum field_type packet_format_explosion[] = {
 	FIELD_DOUBLE, FIELD_DOUBLE, FIELD_DOUBLE, FIELD_FLOAT, FIELD_EXPLOSION_RECORDS
 };
 
-enum field_type packet_format_beta_inventory_close[] = {
-	FIELD_UBYTE /* unknown */
+enum field_type packet_format_inventory_open[] = {
+	FIELD_UBYTE,  /* ID for the inventory */
+	FIELD_UBYTE,  /* type: 0 = basic, 1 = crafting, 2 = furnace */
+	FIELD_STRING, /* inventory title for UI */
+	FIELD_UBYTE   /* number of slots */
 };
 
-enum field_type packet_format_beta_inventory_click[] = {
-	FIELD_UBYTE,              /* unknown */
-	FIELD_SHORT,              /* inventory position index */
-	FIELD_UBYTE, FIELD_SHORT, /* unknown */
-	FIELD_IITEM               /* item that was clicked */
+enum field_type packet_format_inventory_close[] = {
+	FIELD_UBYTE /* inventory ID to close */
 };
 
-enum field_type packet_format_beta_unknown1[] = {
-	FIELD_SHORT, /* unknown */
-	FIELD_UBYTE, /* unknown */
-	FIELD_IITEM  /* unknown */
+enum field_type packet_format_inventory_click[] = {
+	FIELD_UBYTE, /* inventory ID (or 0 for player) */
+	FIELD_SHORT, /* inventory position index */
+	FIELD_UBYTE, /* 1 for right-click, 0 for left-click */
+	FIELD_SHORT, /* click sequence number */
+	FIELD_IITEM  /* item that was clicked */
 };
 
-enum field_type packet_format_beta_inventory_data[] = {
-	FIELD_UBYTE, /* unknown */
-	FIELD_IARRAY /* inventory array */
+enum field_type packet_format_inventory_update[] = {
+	FIELD_UBYTE, /* inventory ID (or 0 for player) */
+	FIELD_SHORT, /* inventory position index */
+	FIELD_IITEM  /* item to put there */
 };
 
-enum field_type packet_format_beta_inventory_ack[] = {
+enum field_type packet_format_inventory_data[] = {
+	FIELD_UBYTE, /* inventory ID */
+	FIELD_IARRAY /* full inventory contents */
+};
+
+enum field_type packet_format_inventory_unk1[] = {
+	FIELD_UBYTE, /* inventory ID */
 	FIELD_SHORT, FIELD_SHORT /* unknown */
+};
+
+enum field_type packet_format_inventory_ack[] = {
+	FIELD_UBYTE, /* inventory ID */
+	FIELD_SHORT, FIELD_UBYTE /* unknown */
+};
+
+enum field_type packet_format_sign_update[] = {
+	FIELD_INT, FIELD_SHORT, FIELD_INT,                     /* absolute X/Y/Z for block */
+	FIELD_STRING, FIELD_STRING, FIELD_STRING, FIELD_STRING /* 4 lines of text */
 };
 
 enum field_type packet_format_disconnect[] = {
@@ -232,7 +243,6 @@ struct packet_format_desc packet_format[] =
 	[PACKET_DIG] = P(packet_format_dig),
 	[PACKET_PLACE] = P(packet_format_place),
 	[PACKET_ENTITY_HOLDING] = P(packet_format_entity_holding),
-	[PACKET_INVENTORY_ADD] = P(packet_format_inventory_add),
 	[PACKET_ENTITY_ANIMATE] = P(packet_format_entity_animate),
 	[PACKET_ENTITY_SPAWN_NAMED] = P(packet_format_entity_spawn_named),
 	[PACKET_ENTITY_SPAWN_PICKUP] = P(packet_format_entity_spawn_pickup),
@@ -252,13 +262,15 @@ struct packet_format_desc packet_format[] =
 	[PACKET_CHUNK] = P(packet_format_chunk),
 	[PACKET_MULTI_SET_BLOCK] = P(packet_format_multi_set_block),
 	[PACKET_SET_BLOCK] = P(packet_format_set_block),
-	[PACKET_COMPLEX_ENTITY] = P(packet_format_complex_entity),
 	[PACKET_EXPLOSION] = P(packet_format_explosion),
-	[PACKET_BETA_INVENTORY_CLOSE] = P(packet_format_beta_inventory_close),
-	[PACKET_BETA_INVENTORY_CLICK] = P(packet_format_beta_inventory_click),
-	[PACKET_BETA_UNKNOWN1] = P(packet_format_beta_unknown1),
-	[PACKET_BETA_INVENTORY_DATA] = P(packet_format_beta_inventory_data),
-	[PACKET_BETA_INVENTORY_ACK] = P(packet_format_beta_inventory_ack),
+	[PACKET_INVENTORY_OPEN] = P(packet_format_inventory_open),
+	[PACKET_INVENTORY_CLOSE] = P(packet_format_inventory_close),
+	[PACKET_INVENTORY_CLICK] = P(packet_format_inventory_click),
+	[PACKET_INVENTORY_UPDATE] = P(packet_format_inventory_update),
+	[PACKET_INVENTORY_DATA] = P(packet_format_inventory_data),
+	[PACKET_INVENTORY_UNK1] = P(packet_format_inventory_unk1),
+	[PACKET_INVENTORY_ACK] = P(packet_format_inventory_ack),
+	[PACKET_SIGN_UPDATE] = P(packet_format_sign_update),
 	[PACKET_DISCONNECT] = P(packet_format_disconnect)
 };
 #undef P
