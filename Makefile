@@ -1,7 +1,7 @@
 # mcmap/Makefile
 
 sources := cmd.c main.c map.c protocol.c world.c
-libs := gio-2.0 sdl zlib
+libs := gio-2.0 gthread-2.0 sdl
 
 objs := $(sources:.c=.o)
 deps := $(sources:.c=.d)
@@ -24,7 +24,7 @@ CFLAGS += $(EXTCFLAGS)
 
 LDFLAGS := $(LDFLAGS)
 LDFLAGS += $(shell pkg-config --libs $(libs))
-LDFLAGS += -lreadline
+LDFLAGS += -lreadline -lz
 
 .PHONY: all opt debug diet clean
 

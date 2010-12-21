@@ -58,9 +58,17 @@ gpointer proxy_thread(gpointer data)
 
 	while (1)
 	{
-		/* read in one packet */
+		/* read in one packet from the injection queue or socket */
 
-		packet_t *p = packet_read(sfrom, &state);
+		int packet_must_free = 1;
+
+		packet_t *p = g_async_queue_try_pop(cfg->iq);
+		if (!p)
+		{
+			p = packet_read(sfrom, &state);
+			packet_must_free = 0;
+		}
+
 		if (!p)
 		{
 			SDL_Event e = { .type = SDL_QUIT };
@@ -99,16 +107,6 @@ gpointer proxy_thread(gpointer data)
 				dief("proxy thread (%s) write failed", desc);
 		}
 
-		/* write pending injected packets */
-
-		packet_t *ip;
-		while ((ip = g_async_queue_try_pop(cfg->iq)) != 0)
-		{
-			if (!packet_write(sto, ip))
-				dief("proxy thread (%s) inject failed", desc);
-			packet_free(ip);
-		}
-
 		/* communicate interesting chunks back */
 
 		if (!world_running)
@@ -142,6 +140,9 @@ gpointer proxy_thread(gpointer data)
 			}
 			break;
 		}
+
+		if (packet_must_free)
+			packet_free(p);
 	}
 	return NULL;
 }
@@ -506,8 +507,6 @@ void chat(char *fmt, ...)
 	va_start(ap, fmt);
 	char *msg = g_strdup_vprintf(fmt, ap);
 	va_end(ap);
-
-	log_print("[INFO] %s", msg);
 
 	static const char prefix[4] = { 0xc2, 0xa7, 'b', 0 };
 	char *cmsg = g_strjoin("", prefix, msg, NULL);

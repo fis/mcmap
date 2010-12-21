@@ -101,11 +101,11 @@ void cmd_goto(int x, int z)
 	                              (double)x, 128.0, 129.62, (double)z, 0);
 	packet_t *pmove2 = packet_dup(pmove1);
 
-	inject_to_client(pjump1);
-	inject_to_server(pjump2);
+	inject_to_server(pjump1);
+	inject_to_client(pjump2);
 
-	inject_to_client(pmove1);
-	inject_to_server(pmove2);
+	inject_to_server(pmove1);
+	inject_to_client(pmove2);
 
 	chat("//goto: jumping to (%d,%d)", x, z);
 }
