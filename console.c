@@ -106,11 +106,13 @@ void log_die(char *file, int line, int is_stop, char *fmt, ...)
 
 static void console_line_ready(char *line)
 {
-	if (line && *line)
+	if (line)
 	{
 		add_history(line);
 		inject_to_server(packet_new(PACKET_TO_SERVER, PACKET_CHAT, line));
 	}
+	else /* ^D */
+		exit(0);
 
 	free(line);
 
