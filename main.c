@@ -398,12 +398,6 @@ static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen)
 
 static void handle_chat(unsigned char *msg, int msglen)
 {
-	if (opt.noansi)
-	{
-		log_print("[CHAT] %*s", msglen, msg);
-		return;
-	}
-
 	static char *colormap[16] =
 	{
 		"30",   "34",   "32",   "36",   "31",   "35",   "33",   "37",
@@ -424,7 +418,8 @@ static void handle_chat(unsigned char *msg, int msglen)
 
 			if (c >= 0 && c <= 15)
 			{
-				g_string_append_printf(s, "\x1b[%sm", colormap[c]);
+				if (!opt.noansi)
+					g_string_append_printf(s, "\x1b[%sm", colormap[c]);
 				p += 3;
 				msglen -= 3;
 				continue;
@@ -436,7 +431,10 @@ static void handle_chat(unsigned char *msg, int msglen)
 	}
 
 	gchar *str = g_string_free(s, FALSE);
-	log_print("[CHAT] %s\x1b[0m", str);
+	if (opt.noansi)
+		log_print("[CHAT] %s\n", str);
+	else
+		log_print("[CHAT] %s\x1b[0m", str);
 	g_free(str);
 }
 
