@@ -400,7 +400,7 @@ static void handle_chat(unsigned char *msg, int msglen)
 {
 	if (opt.noansi)
 	{
-		log_print("[CHAT] %s", msg);
+		log_print("[CHAT] %*s", msglen, msg);
 		return;
 	}
 
