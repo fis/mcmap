@@ -1,52 +1,13 @@
-# mcmap/Makefile
+include useful.make
 
-sources := cmd.c console.c main.c map.c protocol.c world.c
-libs := gio-2.0 gthread-2.0 sdl
+libs := gio-2.0 sdl
 
-objs := $(sources:.c=.o)
-deps := $(sources:.c=.d)
+cc.flags := -Wall -Werror -std=gnu99
+cc.flags += $(shell pkg-config --cflags $(libs))
+ld.flags += $(shell pkg-config --libs $(libs)) -lz -lreadline
 
-CC := gcc
+cc.flags += $(if $(debug),-g,-O3)
 
-CFLAGS := $(CFLAGS)
-CFLAGS += -Wall -Werror -std=gnu99
-CFLAGS += $(shell pkg-config --cflags $(libs))
+all: $(objdir)/mcmap
 
-ifndef EXTCFLAGS
-	ifdef DEBUG
-		EXTCFLAGS := -g
-	else
-		EXTCFLAGS := -O3 -funroll-loops
-	endif
-endif
-
-CFLAGS += $(EXTCFLAGS)
-
-LDFLAGS := $(LDFLAGS)
-LDFLAGS += $(shell pkg-config --libs $(libs))
-LDFLAGS += -lreadline -lz
-
-.PHONY: all opt debug diet clean
-
-all: mcmap
-
-mcmap: $(objs)
-	$(CC) -o $@ $^ $(LDFLAGS)
-
-opt: $(sources)
-	$(CC) -o mcmap $(CFLAGS) -combine -fwhole-program $(sources) $(LDFLAGS)
-
-debug:
-	@$(MAKE) --no-print-directory DEBUG=1
-
-diet:
-	@$(MAKE) --no-print-directory CC="diet -Os $(CC)" EXTCFLAGS=""
-
--include $(deps)
-
-clean:
-	$(RM) mcmap $(objs) $(deps)
-
-%.d: %.c
-	@set -e; rm -f $@; \
-	 $(CC) -MM $(CFLAGS) $< | sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' > $@
+$(call c-program, mcmap, cmd.c console.c main.c map.c protocol.c world.c)
