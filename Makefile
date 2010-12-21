@@ -1,3 +1,9 @@
+ifeq ($(origin objdir), undefined)
+	ifeq ($(origin OBJDIR), undefined)
+		objdir := $(if $(debug),_debug,_build)
+	endif
+endif
+
 include useful.make
 
 libs := gio-2.0 sdl
