@@ -197,14 +197,16 @@ enum field_type packet_format_inventory_data[] = {
 	FIELD_IARRAY /* full inventory contents */
 };
 
-enum field_type packet_format_inventory_unk1[] = {
+enum field_type packet_format_inventory_progress[] = {
 	FIELD_UBYTE, /* inventory ID */
-	FIELD_SHORT, FIELD_SHORT /* unknown */
+	FIELD_SHORT, /* progress bar index */
+	FIELD_SHORT  /* progress bar value */
 };
 
 enum field_type packet_format_inventory_ack[] = {
 	FIELD_UBYTE, /* inventory ID */
-	FIELD_SHORT, FIELD_UBYTE /* unknown */
+	FIELD_SHORT, /* click sequence number from PACKET_INVENTORY_CLICK */
+	FIELD_UBYTE  /* true/false whether the click was accepted */
 };
 
 enum field_type packet_format_sign_update[] = {
@@ -268,7 +270,7 @@ struct packet_format_desc packet_format[] =
 	[PACKET_INVENTORY_CLICK] = P(packet_format_inventory_click),
 	[PACKET_INVENTORY_UPDATE] = P(packet_format_inventory_update),
 	[PACKET_INVENTORY_DATA] = P(packet_format_inventory_data),
-	[PACKET_INVENTORY_UNK1] = P(packet_format_inventory_unk1),
+	[PACKET_INVENTORY_PROGRESS] = P(packet_format_inventory_progress),
 	[PACKET_INVENTORY_ACK] = P(packet_format_inventory_ack),
 	[PACKET_SIGN_UPDATE] = P(packet_format_sign_update),
 	[PACKET_DISCONNECT] = P(packet_format_disconnect)
