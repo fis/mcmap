@@ -40,13 +40,26 @@ endif
 #### Command execution
 
 ifeq ($(findstring n,$(MAKEFLAGS)),n)
-	V := 1
+	ifndef debug-useful-make
+		V := 1
+	endif
 endif
 
 ifdef V
 	do = $(3)
+	do-template = $(3)
 else
+
 define do
+        @echo '$(SPACE)$(SPACE)$(1)$(TAB)$(2)'; \
+        $(strip $(3)) || ( \
+                exit=$$?; \
+                echo '  (command was: $(strip $(3)))'; \
+                exit $$exit \
+        )
+endef
+
+define do-template
 	@echo '$(SPACE)$(SPACE)$(1)$(TAB)$(2)'; \
 	$(strip $(3)) || ( \
 		exit=$$$$?; \
@@ -54,6 +67,7 @@ define do
 		exit $$$$exit \
 	)
 endef
+
 endif
 
 #### Generic configuration variables
@@ -71,7 +85,7 @@ $(objdir):
 .PHONY: clean
 
 define clean-recipe
-$(foreach x,$(to-clean),$(call do,RM,$(objdir)/$(x),rm -f $(objdir)/$(x))
+$(foreach x,$(to-clean),$(call do-template,RM,$(objdir)/$(x),rm -f $(objdir)/$(x))
 )
 $(call do,RMDIR,$(objdir),rmdir $(objdir) 2>/dev/null || true)
 endef
@@ -105,7 +119,7 @@ define c-program-body
 to-install += $(1)
 to-clean += $(1) $(2:.c=.o) $(2:.c=.d)
 $(objdir)/$(1): $(2:%.c=$(objdir)/%.o) Makefile | $(objdir) ; \
-	$(call do,LINK,$(objdir)/$(1),$(cc.link) -o $(objdir)/$(1) \
+	$(call do-template,LINK,$(objdir)/$(1),$(cc.link) -o $(objdir)/$(1) \
 		$(2:%.c=$(objdir)/%.o))
 $(if $(cleaning),,-include $(2:%.c=$(objdir)/%.d))
 endef
