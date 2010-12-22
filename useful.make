@@ -85,7 +85,7 @@ $(objdir):
 .PHONY: clean
 
 define clean-recipe
-$(foreach x,$(to-clean),$(call do-template,RM,$(objdir)/$(x),rm -f $(objdir)/$(x))
+$(foreach x,$(to-clean),$(call do,RM,$(objdir)/$(x),rm -f $(objdir)/$(x))
 )
 $(call do,RMDIR,$(objdir),rmdir $(objdir) 2>/dev/null || true)
 endef
