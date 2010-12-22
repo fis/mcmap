@@ -291,12 +291,6 @@ void map_update_alt(int y, int relative)
 	}
 }
 
-void map_getpos(SDL_Surface *screen, int sx, int sy, int *x, int *z)
-{
-	*x = player_x + (sx - screen->w/2)/map_scale;
-	*z = player_z + (sy - screen->h/2)/map_scale;
-}
-
 void map_setmode(enum map_mode mode, unsigned flags)
 {
 	static char *modenames[] = {
@@ -338,6 +332,38 @@ void map_setscale(int scale, int relative)
 	map_repaint();
 }
 
+/* screen-drawing related code */
+
+void map_s2w(SDL_Surface *screen, int sx, int sy, int *x, int *z, int *xo, int *zo)
+{
+	/* Pixel screen->w/2 equals middle (rounded down) of block player_x.
+	 * Pixel screen->w/2 - (map_scale-1)/2 equals left edge of block player_x.
+	 * Compute offset from there, divide by scale, round toward negative. */
+
+	int px = screen->w/2 - (map_scale-1)/2;
+	int py = screen->h/2 - (map_scale-1)/2;
+
+	int dx = sx - px, dy = sy - py;
+
+	dx = dx >= 0 ? dx/map_scale : (dx-(map_scale-1))/map_scale;
+	dy = dy >= 0 ? dy/map_scale : (dy-(map_scale-1))/map_scale;
+
+	*x = player_x + dx;
+	*z = player_z + dy;
+
+	if (xo) *xo = sx - (px + dx*map_scale);
+	if (zo) *zo = sy - (py + dy*map_scale);
+}
+
+void map_w2s(SDL_Surface *screen, int x, int z, int *sx, int *sy)
+{
+	int px = screen->w/2 - (map_scale-1)/2;
+	int py = screen->h/2 - (map_scale-1)/2;
+
+	*sx = px + (x - player_x)*map_scale;
+	*sy = py + (z - player_z)*map_scale;
+}
+
 static inline void map_draw_player_marker(SDL_Surface *screen)
 {
 	/* determine transform from player direction */
@@ -353,7 +379,11 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 	}
 
 	int s = map_scale_indicator;
-	int x0 = screen->w/2 - s/2, y0 = screen->h/2 - s/2;
+
+	int x0, y0;
+	map_w2s(screen, player_x, player_z, &x0, &y0);
+	x0 += (map_scale - s)/2;
+	y0 += (map_scale - s)/2;
 
 	if (txx < 0 || txy < 0) x0 += s-1;
 	if (tyx < 0 || tyy < 0) y0 += s-1;
@@ -401,13 +431,15 @@ static void map_draw_entity_marker(struct entity *e, void *userdata)
 {
 	SDL_Surface *screen = userdata;
 
-	int ex = screen->w/2 + map_scale*(e->x - player_x) - map_scale_indicator/2;
-	int ez = screen->h/2 + map_scale*(e->z - player_z) - map_scale_indicator/2;
+	int ex, ey;
+	map_w2s(screen, e->x, e->z, &ex, &ey);
+	ex += (map_scale - map_scale_indicator)/2;
+	ey += (map_scale - map_scale_indicator)/2;
 
-	if (ex < 0 || ez < 0 || ex+3 > screen->w || ez+3 > screen->h)
+	if (ex < 0 || ey < 0 || ex+map_scale_indicator > screen->w || ey+map_scale_indicator > screen->h)
 		return;
 
-	SDL_Rect r = { .x = ex, .y = ez, .w = map_scale_indicator, .h = map_scale_indicator };
+	SDL_Rect r = { .x = ex, .y = ey, .w = map_scale_indicator, .h = map_scale_indicator };
 	SDL_FillRect(screen, &r, special_colors[COLOR_PLAYER]);
 }
 
@@ -422,8 +454,9 @@ void map_draw(SDL_Surface *screen)
 
 	g_mutex_lock(map_mutex);
 
-	int scr_x0 = player_x - screen->w/2/map_scale;
-	int scr_z0 = player_z - screen->h/2/map_scale;
+	int scr_x0, scr_z0;
+	int scr_xo, scr_zo;
+	map_s2w(screen, 0, 0, &scr_x0, &scr_z0, &scr_xo, &scr_zo);
 
 	if (map_scale == 1)
 	{
@@ -478,18 +511,7 @@ void map_draw(SDL_Surface *screen)
 		int m_x0 = scr_x0 - map_min_x*CHUNK_XSIZE;
 		int m_z = scr_z0 - map_min_z*CHUNK_ZSIZE;
 
-		/* we want the player_x'th block have it's middle pixel at screen->w/2.
-		   (player_x - scr_x0)*map_scale - m_xo + map_scale/2 = screen->w/2
-		   m_xo = (player_x - scr_x0)*map_scale + map_scale/2 - screen->w/2 */
-
-		int m_xo0 = (player_x - scr_x0)*map_scale + map_scale/2 - screen->w/2;
-		int m_zo = (player_z - scr_z0)*map_scale + map_scale/2 - screen->h/2;
-
-		while (m_xo0 < 0) m_xo0 += map_scale, m_x0--;
-		while (m_zo < 0) m_zo += map_scale, m_z--;
-
-		m_x0 += m_xo0/map_scale; m_xo0 %= map_scale;
-		m_z += m_zo/map_scale; m_zo %= map_scale;
+		int m_xo0 = scr_xo, m_zo = scr_zo;
 
 		for (int s_y = 0; s_y < screen->h && m_z < map->h; s_y++)
 		{

@@ -27,10 +27,11 @@ void map_update_player_id(int id);
 
 void map_update_alt(int y, int relative);
 
-void map_getpos(SDL_Surface *screen, int sx, int sy, int *x, int *z);
-
 void map_setmode(enum map_mode mode, unsigned flags);
 void map_setscale(int scale, int relative);
+
+void map_s2w(SDL_Surface *screen, int sx, int sy, int *x, int *z, int *xo, int *zo);
+void map_w2s(SDL_Surface *screen, int x, int z, int *sx, int *sy);
 
 void map_repaint(void);
 
