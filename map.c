@@ -1,6 +1,8 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <GL/gl.h>
+
 #include "common.h"
 #include "map.h"
 #include "world.h"
@@ -73,8 +75,8 @@ static Uint32 block_colors[256] = {
 	[0x5b] = RGB(246, 156, 0),   /* pumpkin (lit) */
 };
 
-static Uint32 special_colors[COLOR_MAX_SPECIAL] = {
-	[COLOR_PLAYER] = RGB(255, 0, 255),
+static GLdouble special_colors[COLOR_MAX_SPECIAL][3] = {
+	[COLOR_PLAYER] = { 1.0, 0.0, 1.0 },
 };
 
 #undef RGB
@@ -83,19 +85,23 @@ static Uint32 special_colors[COLOR_MAX_SPECIAL] = {
 
 double player_dx = 0.0, player_dy = 0.0, player_dz = 0.0;
 int player_x = 0, player_y = 0, player_z = 0;
-
-static SDL_Surface *map = 0;
-static int map_min_x = 0, map_min_z = 0;
-static int map_max_x = 0, map_max_z = 0;
 static int map_y = 0;
 
+#if 0
+static SDL_Surface *map = 0;
+#endif
+static int map_min_x = 0, map_min_z = 0;
+static int map_max_x = 0, map_max_z = 0;
+static GMutex *map_mutex;
+
 static int map_scale = 1;
-static int map_scale_indicator = 3;
+
+static int map_pw, map_ph;
+static GLdouble map_w, map_h;
+static GLdouble map_isize = 1.0;
 
 static enum map_mode map_mode = MAP_MODE_SURFACE;
 static unsigned map_flags = 0;
-
-static GMutex *map_mutex;
 
 static int player_yaw = 0;
 
@@ -113,17 +119,23 @@ void map_init(SDL_Surface *screen)
 	{
 		for (int i = 0; i < 256; i++)
 			block_colors[i] = get_color(block_colors[i]);
-
-		for (int i = 0; i < COLOR_MAX_SPECIAL; i++)
-			special_colors[i] = get_color(special_colors[i]);
 	}
 
+	map_pw = screen->w;
+	map_ph = screen->h;
+
+	map_w = map_pw;
+	map_h = map_ph;
+
+	map_mutex = g_mutex_new();
+
+#if 0
 	map = SDL_CreateRGBSurface(SDL_SWSURFACE, CHUNK_XSIZE, CHUNK_ZSIZE, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
 
 	if (!map)
 		die("SDL map surface init");
 
-	map_mutex = g_mutex_new();
+#endif
 }
 
 inline void map_repaint(void)
@@ -134,6 +146,7 @@ inline void map_repaint(void)
 
 void map_update(int x1, int x2, int z1, int z2)
 {
+#if 0
 	g_mutex_lock(map_mutex);
 
 	if (map_min_x != chunk_min_x || map_max_x != chunk_max_x
@@ -231,6 +244,7 @@ void map_update(int x1, int x2, int z1, int z2)
 	g_mutex_unlock(map_mutex);
 
 	map_repaint();
+#endif
 }
 
 void map_update_player_pos(double x, double y, double z)
@@ -322,12 +336,10 @@ void map_setscale(int scale, int relative)
 
 	map_scale = s;
 
-	if (map_scale <= 5)
-		map_scale_indicator = map_scale+2;
-	else if (map_scale <= 9)
-		map_scale_indicator = map_scale;
-	else
-		map_scale_indicator = map_scale-2;
+	map_w = (GLdouble)map_pw / map_scale;
+	map_h = (GLdouble)map_ph / map_scale;
+
+	map_isize = 0.8 + 1.6/(1 + exp((GLdouble)s/2.0 - 3));
 
 	map_repaint();
 }
@@ -366,97 +378,62 @@ void map_w2s(SDL_Surface *screen, int x, int z, int *sx, int *sy)
 
 static inline void map_draw_player_marker(SDL_Surface *screen)
 {
-	/* determine transform from player direction */
+	glColor3dv(special_colors[COLOR_PLAYER]);
 
-	int txx, txy, tyx, tyy;
+	glPushMatrix();
+	glTranslated(player_x+0.5, -player_z-0.5, 0.0);
+	glRotated(player_yaw * 45.0, 0.0, 0.0, -1.0);
 
-	switch (player_yaw >> 1)
-	{
-	case 0: txx = 1,  txy = 0,  tyx = 0,  tyy = 1;  break;
-	case 1: txx = 0,  txy = -1, tyx = 1,  tyy = 0;  break;
-	case 2: txx = -1, txy = 0,  tyx = 0,  tyy = -1; break;
-	case 3: txx = 0,  txy = 1,  tyx = -1, tyy = 0;  break;
-	}
+	glBegin(GL_TRIANGLES);
+	glVertex2d(-map_isize/2, map_isize/2);
+	glVertex2d(0, -map_isize/2);
+	glVertex2d(map_isize/2, map_isize/2);
+	glEnd();
 
-	int s = map_scale_indicator;
-
-	int x0, y0;
-	map_w2s(screen, player_x, player_z, &x0, &y0);
-	x0 += (map_scale - s)/2;
-	y0 += (map_scale - s)/2;
-
-	if (txx < 0 || txy < 0) x0 += s-1;
-	if (tyx < 0 || tyy < 0) y0 += s-1;
-
-	/* mechanism for drawing points */
-
-	SDL_LockSurface(screen);
-
-	unsigned char *pixels = screen->pixels;
-	Uint16 pitch = screen->pitch;
-
-	void pt(int ix, int iy)
-	{
-		int sx = x0 + txx*ix + txy*iy;
-		int sy = y0 + tyx*ix + tyy*iy;
-		Uint32 *p = (Uint32 *)&pixels[sy*pitch + sx*4];
-		*p = special_colors[COLOR_PLAYER];
-	}
-
-	/* draw the triangle shape */
-
-	if (player_yaw & 1)
-	{
-		/* diagonal */
-		for (int iy = 0; iy < s; iy++)
-			for (int ix = 0; ix <= iy; ix++)
-				pt(ix, iy);
-	}
-	else
-	{
-		/* cardinal */
-		int gap = 0;
-		for (int iy = s == 3 ? 1 : s/4; iy < s; iy++)
-		{
-			for (int ix = gap; ix < s-gap; ix++)
-				pt(ix, iy);
-			gap++;
-		}
-	}
-
-	SDL_UnlockSurface(screen);
+	glPopMatrix();
 }
 
 static void map_draw_entity_marker(struct entity *e, void *userdata)
 {
-	SDL_Surface *screen = userdata;
+	glColor3dv(special_colors[COLOR_PLAYER]);
 
-	int ex, ey;
-	map_w2s(screen, e->x, e->z, &ex, &ey);
-	ex += (map_scale - map_scale_indicator)/2;
-	ey += (map_scale - map_scale_indicator)/2;
+	glPushMatrix();
+	glTranslated(e->x+0.5, -e->z-0.5, 0.0);
 
-	if (ex < 0 || ey < 0 || ex+map_scale_indicator > screen->w || ey+map_scale_indicator > screen->h)
-		return;
+	glBegin(GL_QUADS);
+	glVertex2d(-map_isize/2, -map_isize/2);
+	glVertex2d( map_isize/2, -map_isize/2);
+	glVertex2d( map_isize/2,  map_isize/2);
+	glVertex2d(-map_isize/2,  map_isize/2);
+	glEnd();
 
-	SDL_Rect r = { .x = ex, .y = ey, .w = map_scale_indicator, .h = map_scale_indicator };
-	SDL_FillRect(screen, &r, special_colors[COLOR_PLAYER]);
+	glPopMatrix();
 }
 
 void map_draw(SDL_Surface *screen)
 {
 	/* clear the window */
 
-	SDL_Rect rect_screen = { .x = 0, .y = 0, .w = screen->w, .h = screen->h };
-	SDL_FillRect(screen, &rect_screen, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	/* position the projection so we get the right tiles */
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(player_x - map_w/2, player_x + map_w/2,
+	        -player_z - map_h/2, -player_z + map_h/2,
+	        -1.0, 1.0);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
 
 	/* draw the map */
 
-	g_mutex_lock(map_mutex);
-
+#if 0
 	int scr_x0, scr_z0;
 	int scr_xo, scr_zo;
 	map_s2w(screen, 0, 0, &scr_x0, &scr_z0, &scr_xo, &scr_zo);
+
+	g_mutex_lock(map_mutex);
 
 	if (map_scale == 1)
 	{
@@ -541,6 +518,7 @@ void map_draw(SDL_Surface *screen)
 	}
 
 	g_mutex_unlock(map_mutex);
+#endif
 
 	/* player indicators and such */
 
@@ -549,5 +527,6 @@ void map_draw(SDL_Surface *screen)
 
 	/* update screen buffers */
 
-	SDL_UpdateRect(screen, 0, 0, screen->w, screen->h);
+	glFinish();
+	SDL_GL_SwapBuffers();
 }

@@ -284,7 +284,13 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	SDL_Surface *screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|(opt.wndsize ? 0 : SDL_RESIZABLE));
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+	SDL_Surface *screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_OPENGL|(opt.wndsize ? 0 : SDL_RESIZABLE));
 
 	if (!screen)
 	{
