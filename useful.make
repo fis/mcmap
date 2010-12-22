@@ -49,9 +49,9 @@ else
 define do
 	@echo '$(SPACE)$(SPACE)$(1)$(TAB)$(2)'; \
 	$(strip $(3)) || ( \
-		exit=$$?; \
+		exit=$$$$?; \
 		echo '  (command was: $(strip $(3)))'; \
-		exit $$exit \
+		exit $$$$exit \
 	)
 endef
 endif
