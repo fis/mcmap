@@ -26,19 +26,19 @@ static int entity_vehicle = -1;
 
 volatile int world_running = 1;
 
-struct chunk *world_chunk(guint64 coord, int gen)
+struct chunk *world_chunk(struct coord *coord, int gen)
 {
-	struct chunk *c = g_hash_table_lookup(chunk_table, &coord);
+	struct chunk *c = g_hash_table_lookup(chunk_table, coord);
 	if (c)
 		return c;
 	if (!gen)
 		return 0;
 
 	c = g_malloc0(sizeof *c);
-	c->key.i64 = coord;
-	g_hash_table_insert(chunk_table, &c->key.i64, c);
+	c->key = *coord;
+	g_hash_table_insert(chunk_table, &c->key, c);
 
-	int x = c->key.xz[0], z = c->key.xz[1];
+	int x = coord->x, z = coord->z;
 
 	if (x < chunk_min_x)
 		chunk_min_x = x;
@@ -55,11 +55,9 @@ struct chunk *world_chunk(guint64 coord, int gen)
 
 unsigned char *world_stack(int x, int z, int gen)
 {
-	union chunk_coord cc;
-	cc.xz[0] = CHUNK_XIDX(x);
-	cc.xz[1] = CHUNK_ZIDX(z);
+	struct coord cc = { .x = CHUNK_XIDX(x), .z = CHUNK_ZIDX(z) };
 
-	struct chunk *c = world_chunk(cc.i64, gen);
+	struct chunk *c = world_chunk(&cc, gen);
 	if (!c)
 		return 0;
 
@@ -68,11 +66,9 @@ unsigned char *world_stack(int x, int z, int gen)
 
 int world_getheight(int x, int z)
 {
-	union chunk_coord cc;
-	cc.xz[0] = CHUNK_XIDX(x);
-	cc.xz[1] = CHUNK_ZIDX(z);
+	struct coord cc = { .x = CHUNK_XIDX(x), .z = CHUNK_ZIDX(z) };
 
-	struct chunk *c = world_chunk(cc.i64, 0);
+	struct chunk *c = world_chunk(&cc, 0);
 	if (!c)
 		return -1;
 
@@ -111,7 +107,7 @@ static void handle_chunk(int x0, int y0, int z0,
 	if (zbuf_len != (5*xs*ys*zs+1)/2)
 		stopf("broken decompressed chunk length: %d != %d", (int)zbuf_len, (int)(5*xs*ys*zs+1)/2);
 
-	gint64 current_chunk = 0x7fffffffffffffffll;
+	struct coord current_chunk = { .x = -0x80000000, .z = -0x80000000 };
 	struct chunk *c = 0;
 
 	int yupds = ys;
@@ -130,13 +126,12 @@ static void handle_chunk(int x0, int y0, int z0,
 	{
 		for (int z = z0; z < z0+zs; z++)
 		{
-			union chunk_coord cc;
-			cc.xz[0] = CHUNK_XIDX(x); cc.xz[1] = CHUNK_ZIDX(z);
+			struct coord cc = { .x = CHUNK_XIDX(x), .z = CHUNK_ZIDX(z) };
 
-			if (cc.i64 != current_chunk)
+			if (!COORD_EQUAL(cc, current_chunk))
 			{
-				c = world_chunk(cc.i64, 1);
-				current_chunk = cc.i64;
+				c = world_chunk(&cc, 1);
+				current_chunk = cc;
 			}
 
 			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, yupds);
@@ -165,11 +160,10 @@ static void handle_chunk(int x0, int y0, int z0,
 				}
 			}
 
-			int cx = cc.xz[0], cz = cc.xz[1];
-			if (cx < c_min_x) c_min_x = cx;
-			if (cx > c_max_x) c_max_x = cx;
-			if (cz < c_min_z) c_min_z = cz;
-			if (cz > c_max_z) c_max_z = cz;
+			if (cc.x < c_min_x) c_min_x = cc.x;
+			if (cc.x > c_max_x) c_max_x = cc.x;
+			if (cc.z < c_min_z) c_min_z = cc.z;
+			if (cc.z > c_max_z) c_max_z = cc.z;
 		}
 	}
 
@@ -198,10 +192,8 @@ static inline void block_change(struct chunk *c, int x, int y, int z, unsigned c
 
 static void handle_multi_set_block(int cx, int cz, int size, unsigned char *coord, unsigned char *type)
 {
-	union chunk_coord cc;
-	cc.xz[0] = cx; cc.xz[1] = cz;
-
-	struct chunk *c = world_chunk(cc.i64, 0);
+	struct coord cc = { .x = cx, .z = cz };
+	struct chunk *c = world_chunk(&cc, 0);
 	if (!c)
 		return; /* edit in an unloaded chunk */
 
@@ -217,15 +209,13 @@ static void handle_multi_set_block(int cx, int cz, int size, unsigned char *coor
 
 static void handle_set_block(int x, int y, int z, int type)
 {	
-	union chunk_coord cc;
-	cc.xz[0] = CHUNK_XIDX(x); cc.xz[1] = CHUNK_ZIDX(z);
-
-	struct chunk *c = world_chunk(cc.i64, 0);
+	struct coord cc = { .x = CHUNK_XIDX(x), .z = CHUNK_ZIDX(z) };
+	struct chunk *c = world_chunk(&cc, 0);
 	if (!c)
 		return; /* edit in an unloaded chunk */
 
 	block_change(c, CHUNK_XOFF(x), y, CHUNK_ZOFF(z), type);
-	map_update(cc.xz[0], cc.xz[0], cc.xz[1], cc.xz[1]);
+	map_update(cc.x, cc.x, cc.z, cc.z);
 }
 
 static void entity_add(int id, unsigned char *name, int x, int y, int z)
@@ -341,7 +331,7 @@ void world_entities(void (*callback)(struct entity *e, void *userdata), void *us
 
 void world_init(void)
 {
-	chunk_table = g_hash_table_new_full(g_int64_hash, g_int64_equal, 0, g_free);
+	chunk_table = g_hash_table_new_full(coord_hash, coord_equal, 0, g_free);
 
 	entity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
 	entity_mutex = g_mutex_new();

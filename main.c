@@ -285,6 +285,7 @@ int main(int argc, char **argv)
 	}
 
 	SDL_Surface *screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|(opt.wndsize ? 0 : SDL_RESIZABLE));
+
 	if (!screen)
 	{
 		dief("Failed to set video mode: %s", SDL_GetError());
@@ -439,6 +440,18 @@ static void handle_chat(unsigned char *msg, int msglen)
 }
 
 /* common.h functions */
+
+guint coord_hash(gconstpointer key)
+{
+	const struct coord *c = key;
+	return c->x ^ ((c->z << 16) | (c->z >> 16));
+}
+
+gboolean coord_equal(gconstpointer a, gconstpointer b)
+{
+	const struct coord *ca = a, *cb = b;
+	return COORD_EQUAL(*ca, *cb);
+}
 
 void inject_to_client(packet_t *p)
 {

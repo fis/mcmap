@@ -171,9 +171,8 @@ void map_update(int x1, int x2, int z1, int z2)
 		{
 			int cxo = cx - map_min_x;
 
-			union chunk_coord cc;
-			cc.xz[0] = cx; cc.xz[1] = cz;
-			struct chunk *c = world_chunk(cc.i64, 0);
+			struct coord cc = { .x = cx, .z = cz };
+			struct chunk *c = world_chunk(&cc, 0);
 
 			if (!c)
 			{

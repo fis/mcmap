@@ -3,6 +3,20 @@
 
 #include "protocol.h"
 
+#include <glib.h>
+
+/* 2d points for hash table keys */
+
+struct coord
+{
+	int x, z;
+};
+
+#define COORD_EQUAL(a,b) ((a).x == (b).x && (a).z == (b).z)
+
+guint coord_hash(gconstpointer key);
+gboolean coord_equal(gconstpointer a, gconstpointer b);
+
 /* packet injection */
 
 void inject_to_client(packet_t *p);

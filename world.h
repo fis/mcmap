@@ -1,7 +1,7 @@
 #ifndef MCMAP_WORLD_H
 #define MCMAP_WORLD_H 1
 
-#include <glib.h>
+#include "common.h"
 
 #define CHUNK_XBITS 4
 #define CHUNK_ZBITS 4
@@ -16,15 +16,9 @@
 #define CHUNK_XOFF(coord) ((coord) & (CHUNK_XSIZE-1))
 #define CHUNK_ZOFF(coord) ((coord) & (CHUNK_ZSIZE-1))
 
-union chunk_coord
-{
-	gint xz[2];
-	gint64 i64;
-};
-
 struct chunk
 {
-	union chunk_coord key;
+	struct coord key;
 	unsigned char blocks[CHUNK_XSIZE][CHUNK_ZSIZE][CHUNK_YSIZE];
 	unsigned char height[CHUNK_XSIZE][CHUNK_ZSIZE];
 	unsigned char surface[CHUNK_XSIZE][CHUNK_ZSIZE];
@@ -47,7 +41,7 @@ void world_init(void);
 
 gpointer world_thread(gpointer data);
 
-struct chunk *world_chunk(guint64 coord, int gen);
+struct chunk *world_chunk(struct coord *coord, int gen);
 unsigned char *world_stack(int x, int z, int gen);
 
 int world_getheight(int x, int z);
