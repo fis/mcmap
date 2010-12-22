@@ -90,14 +90,14 @@ static int map_max_x = 0, map_max_z = 0;
 static int map_y = 0;
 
 static int map_scale = 1;
+static int map_scale_indicator = 3;
 
 static enum map_mode map_mode = MAP_MODE_SURFACE;
 static unsigned map_flags = 0;
 
 static GMutex *map_mutex;
 
-static SDL_Surface *player_surf = 0;
-static int player_yaw = -1;
+static int player_yaw = 0;
 
 void map_init(SDL_Surface *screen)
 {
@@ -119,12 +119,9 @@ void map_init(SDL_Surface *screen)
 	}
 
 	map = SDL_CreateRGBSurface(SDL_SWSURFACE, CHUNK_XSIZE, CHUNK_ZSIZE, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
-	player_surf = SDL_CreateRGBSurface(SDL_SWSURFACE, 3, 3, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
 
-	if (!map || !player_surf)
+	if (!map)
 		die("SDL map surface init");
-
-	SDL_SetColorKey(player_surf, SDL_SRCCOLORKEY, 0);
 
 	map_mutex = g_mutex_new();
 }
@@ -259,17 +256,6 @@ void map_update_player_pos(double x, double y, double z)
 
 void map_update_player_dir(double yaw, double pitch)
 {
-	static unsigned char bitmaps[8][9] = {
-		"   " "###" " # ",
-		"#  " "## " "###",
-		" # " "## " " # ",
-		"###" "## " "#  ",
-		" # " "###" "   ",
-		"###" " ##" "  #",
-		" # " " ##" " # ",
-		"  #" " ##" "###"
-	};
-
 	int new_yaw = 0;
 
 	yaw = fmod(yaw, 360.0);
@@ -284,20 +270,6 @@ void map_update_player_dir(double yaw, double pitch)
 		return;
 
 	player_yaw = new_yaw;
-
-	SDL_LockSurface(player_surf);
-
-	unsigned char *b = bitmaps[new_yaw];
-
-	for (int y = 0; y < 3; y++)
-	{
-		Uint32 *p = (Uint32*)((unsigned char *)player_surf->pixels + y*player_surf->pitch);
-
-		for (int x = 0; x < 3; x++)
-			*p++ = *b++ == ' ' ? 0 : special_colors[COLOR_PLAYER];
-	}
-
-	SDL_UnlockSurface(player_surf);
 
 	map_repaint();
 }
@@ -355,20 +327,87 @@ void map_setscale(int scale, int relative)
 		return;
 
 	map_scale = s;
+
+	if (map_scale <= 5)
+		map_scale_indicator = map_scale+2;
+	else if (map_scale <= 9)
+		map_scale_indicator = map_scale;
+	else
+		map_scale_indicator = map_scale-2;
+
 	map_repaint();
+}
+
+static inline void map_draw_player_marker(SDL_Surface *screen)
+{
+	/* determine transform from player direction */
+
+	int txx, txy, tyx, tyy;
+
+	switch (player_yaw >> 1)
+	{
+	case 0: txx = 1,  txy = 0,  tyx = 0,  tyy = 1;  break;
+	case 1: txx = 0,  txy = -1, tyx = 1,  tyy = 0;  break;
+	case 2: txx = -1, txy = 0,  tyx = 0,  tyy = -1; break;
+	case 3: txx = 0,  txy = 1,  tyx = -1, tyy = 0;  break;
+	}
+
+	int s = map_scale_indicator;
+	int x0 = screen->w/2 - s/2, y0 = screen->h/2 - s/2;
+
+	if (txx < 0 || txy < 0) x0 += s-1;
+	if (tyx < 0 || tyy < 0) y0 += s-1;
+
+	/* mechanism for drawing points */
+
+	SDL_LockSurface(screen);
+
+	unsigned char *pixels = screen->pixels;
+	Uint16 pitch = screen->pitch;
+
+	void pt(int ix, int iy)
+	{
+		int sx = x0 + txx*ix + txy*iy;
+		int sy = y0 + tyx*ix + tyy*iy;
+		Uint32 *p = (Uint32 *)&pixels[sy*pitch + sx*4];
+		*p = special_colors[COLOR_PLAYER];
+	}
+
+	/* draw the triangle shape */
+
+	if (player_yaw & 1)
+	{
+		/* diagonal */
+		for (int iy = 0; iy < s; iy++)
+			for (int ix = 0; ix <= iy; ix++)
+				pt(ix, iy);
+	}
+	else
+	{
+		/* cardinal */
+		int gap = 0;
+		for (int iy = s == 3 ? 1 : s/4; iy < s; iy++)
+		{
+			for (int ix = gap; ix < s-gap; ix++)
+				pt(ix, iy);
+			gap++;
+		}
+	}
+
+	SDL_UnlockSurface(screen);
 }
 
 static void map_draw_entity_marker(struct entity *e, void *userdata)
 {
 	SDL_Surface *screen = userdata;
 
-	int ex = screen->w/2 + map_scale*(e->x - player_x) - 1;
-	int ez = screen->h/2 + map_scale*(e->z - player_z) - 1;
+	int ex = screen->w/2 + map_scale*(e->x - player_x) - map_scale_indicator/2;
+	int ez = screen->h/2 + map_scale*(e->z - player_z) - map_scale_indicator/2;
 
 	if (ex < 0 || ez < 0 || ex+3 > screen->w || ez+3 > screen->h)
 		return;
 
-	SDL_Rect r = { .x = ex, .y = ez, .w = 3, .h = 3 };
+	SDL_Rect r = { .x = ex, .y = ez, .w = map_scale_indicator, .h = map_scale_indicator };
 	SDL_FillRect(screen, &r, special_colors[COLOR_PLAYER]);
 }
 
@@ -483,12 +522,7 @@ void map_draw(SDL_Surface *screen)
 
 	/* player indicators and such */
 
-	{
-		SDL_Rect rect_dst = { .x = screen->w/2 - 1, .y = screen->h/2 - 1, .w = 3, .h = 3 };
-		SDL_Rect rect_src = { .x = 0, .y = 0, .w = 3, .h = 3 };
-		SDL_BlitSurface(player_surf, &rect_src, screen, &rect_dst);
-	}
-
+	map_draw_player_marker(screen);
 	world_entities(map_draw_entity_marker, screen);
 
 	/* update screen buffers */
