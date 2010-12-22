@@ -139,7 +139,10 @@ $(objdir)/%.o: %.c Makefile | $(objdir)
 	$(call do,CC,$<,$(cc.invoke) -c -o $@ $<)
 
 $(objdir)/%.d: %.c Makefile | $(objdir)
-	$(call do,DEP,$<,$(cc.invoke) -M -MG -MT $(objdir)/$*.o -MF $@ $<)
+	$(call do,DEP,$<,$(cc.invoke) -M -MG \
+		-MT $(objdir)/$*.o \
+		-MT $(objdir)/$*.d \
+		-MF $@ $<)
 
 #### End
 
