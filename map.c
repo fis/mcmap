@@ -15,10 +15,10 @@ enum special_color_names
 	COLOR_MAX_SPECIAL
 };
 
-#define RGB(r,g,b) (((r)<<16)|((g)<<8)|(b))
+#define RGB(r,g,b) (((r)<<24)|((g)<<16)|(b)<<8)
 
 #define AIR_COLOR RGB(180, 255, 255)
-static Uint32 block_colors[256] = {
+static GLuint block_colors[256] = {
 	[0x00] = AIR_COLOR,          /* air */
 	[0x01] = RGB(180, 180, 180), /* stone */
 	[0x02] = RGB(34,  180, 0),   /* grass */
@@ -75,24 +75,46 @@ static Uint32 block_colors[256] = {
 	[0x5b] = RGB(246, 156, 0),   /* pumpkin (lit) */
 };
 
+#undef RGB
+
 static GLdouble special_colors[COLOR_MAX_SPECIAL][3] = {
 	[COLOR_PLAYER] = { 1.0, 0.0, 1.0 },
 };
 
-#undef RGB
-
 /* map graphics code */
+
+#define REG_BITS 2 /* 4x4 chunks per texture */
+
+#define REG_SIZE (1 << REG_BITS)
+#define REG_IDX(x) ((x) >> REG_BITS)
+#define REG_OFF(x) ((x) & (REG_SIZE-1))
+
+#define REG_BW (REG_SIZE*CHUNK_XSIZE)
+#define REG_BH (REG_SIZE*CHUNK_ZSIZE)
+
+#define REG_REDRAW_BITMAP  0x01
+#define REG_REDRAW_TEXTURE 0x02
+
+struct region_row
+{
+	int x0;
+	GArray *reg;
+};
+
+struct region
+{
+	GLuint *bitmap;
+	GLuint tex;
+	int flags;
+};
 
 double player_dx = 0.0, player_dy = 0.0, player_dz = 0.0;
 int player_x = 0, player_y = 0, player_z = 0;
 static int map_y = 0;
 
-#if 0
-static SDL_Surface *map = 0;
-#endif
-static int map_min_x = 0, map_min_z = 0;
-static int map_max_x = 0, map_max_z = 0;
-static GMutex *map_mutex;
+static GArray * volatile reg = 0;
+static int volatile reg_z0 = 0;
+static GMutex *reg_mutex;
 
 static int map_scale = 1;
 
@@ -107,35 +129,71 @@ static int player_yaw = 0;
 
 void map_init(SDL_Surface *screen)
 {
-	SDL_PixelFormat *fmt = screen->format;
-
-	Uint32 get_color(Uint32 c)
-	{
-		Uint32 r = c >> 16, g = (c >> 8) & 0xff, b = c & 0xff;
-		return (r << fmt->Rshift) | (g << fmt->Gshift) | (b << fmt->Bshift);
-	}
-
-	if (fmt->Rshift != 16 || fmt->Gshift != 8 || fmt->Bshift != 0)
-	{
-		for (int i = 0; i < 256; i++)
-			block_colors[i] = get_color(block_colors[i]);
-	}
-
 	map_pw = screen->w;
 	map_ph = screen->h;
 
 	map_w = map_pw;
 	map_h = map_ph;
 
-	map_mutex = g_mutex_new();
+	reg_mutex = g_mutex_new();
+}
 
-#if 0
-	map = SDL_CreateRGBSurface(SDL_SWSURFACE, CHUNK_XSIZE, CHUNK_ZSIZE, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
+static struct region *reg_get(int cx, int cz)
+{
+	/* locate the correct row in the region array */
 
-	if (!map)
-		die("SDL map surface init");
+	struct region_row *row = 0;
+	int rz = REG_IDX(cz) - reg_z0;
 
-#endif
+	if (!reg)
+	{
+		reg = g_array_new(FALSE, TRUE, sizeof(struct region_row));
+		g_array_set_size(reg, 1);
+		reg_z0 = rz;
+		rz = 0;
+	}
+	else if (rz < 0)
+	{
+		int olen = reg->len;
+		g_array_set_size(reg, olen + (-rz));
+		memmove(&g_array_index(reg, struct region_row, -rz),
+		        &g_array_index(reg, struct region_row, 0),
+		        olen * sizeof(struct region_row));
+		memset(&g_array_index(reg, struct region_row, 0), 0, (-rz) * sizeof(struct region_row));
+		reg_z0 += rz;
+		rz = 0;
+	}
+	else if (rz >= reg->len)
+		g_array_set_size(reg, rz+1);
+
+	row = &g_array_index(reg, struct region_row, rz);
+
+	/* handle row region array creation/resize */
+
+	int rx = REG_IDX(cx) - row->x0;
+
+	if (!row->reg)
+	{
+		row->reg = g_array_new(FALSE, TRUE, sizeof(struct region));
+		g_array_set_size(row->reg, 1);
+		row->x0 = rx;
+		rx = 0;
+	}
+	else if (rx < 0)
+	{
+		int olen = row->reg->len;
+		g_array_set_size(row->reg, olen + (-rx));
+		memmove(&g_array_index(row->reg, struct region, -rx),
+		        &g_array_index(row->reg, struct region, 0),
+		        olen * sizeof(struct region));
+		memset(&g_array_index(row->reg, struct region, 0), 0, (-rx) * sizeof(struct region));
+		row->x0 += rx;
+		rx = 0;
+	}
+	else if (rx >= row->reg->len)
+		g_array_set_size(row->reg, rx+1);
+
+	return &g_array_index(row->reg, struct region, rx);
 }
 
 inline void map_repaint(void)
@@ -144,107 +202,108 @@ inline void map_repaint(void)
 	SDL_PushEvent(&e);
 }
 
-void map_update(int x1, int x2, int z1, int z2)
+void map_change(int x, int z)
 {
-#if 0
-	g_mutex_lock(map_mutex);
+	g_mutex_lock(reg_mutex);
+	reg_get(x, z)->flags |= REG_REDRAW_BITMAP;
+	g_mutex_unlock(reg_mutex);
+}
 
-	if (map_min_x != chunk_min_x || map_max_x != chunk_max_x
-	    || map_min_z != chunk_min_z || map_max_z != chunk_max_z)
+void map_update(int forced)
+{
+	g_mutex_lock(reg_mutex);
+
+	int changes = 0;
+
+	void draw(int x, int z, GLuint *bitmap)
 	{
-		x1 = chunk_min_x; x2 = chunk_max_x;
-		z1 = chunk_min_z; z2 = chunk_max_z;
-
-		map_min_x = x1; map_max_x = x2;
-		map_min_z = z1; map_max_z = z2;
-
-		int xs = x2 - x1 + 1, zs = z2 - z1 + 1;
-
-		Uint32 rmask = map->format->Rmask, gmask = map->format->Gmask, bmask = map->format->Bmask;
-
-		SDL_FreeSurface(map);
-		map = SDL_CreateRGBSurface(SDL_SWSURFACE, xs*CHUNK_XSIZE, zs*CHUNK_ZSIZE, 32, rmask, gmask, bmask, 0);
-		if (!map)
-			die("SDL map resize");
-	}
-
-	SDL_LockSurface(map);
-	Uint32 pitch = map->pitch;
-
-	Uint32 rshift = map->format->Rshift, gshift = map->format->Gshift, bshift = map->format->Bshift;
-
-	for (int cz = z1; cz <= z2; cz++)
-	{
-		int czo = cz - map_min_z;
-
-		for (int cx = x1; cx <= x2; cx++)
+		for (int zo = 0; zo < REG_SIZE; zo++)
 		{
-			int cxo = cx - map_min_x;
-
-			struct coord cc = { .x = cx, .z = cz };
-			struct chunk *c = world_chunk(&cc, 0);
-
-			if (!c)
+			for (int xo = 0; xo < REG_SIZE; xo++)
 			{
-				SDL_Rect r = { .x = cxo*CHUNK_XSIZE, .y = czo*CHUNK_ZSIZE, .w = CHUNK_XSIZE, .h = CHUNK_ZSIZE };
-				SDL_FillRect(map, &r, block_colors[0]);
-				continue;
-			}
+				struct coord cc = { .x = x+xo, .z = z+zo };
+				struct chunk *c = world_chunk(&cc, 0);
 
-			unsigned char *pixels = (unsigned char *)map->pixels + czo*CHUNK_ZSIZE*pitch + cxo*CHUNK_XSIZE*4;
-			unsigned char *blocks;
-			unsigned blocks_pitch;
-
-			if (map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_TOPO)
-			{
-				blocks = map_mode == MAP_MODE_SURFACE ? &c->surface[0][0] : &c->height[0][0];
-				blocks_pitch = 1;
-			}
-			else if (map_mode == MAP_MODE_CROSS)
-			{
-				int y0 = map_y;
-				if (y0 < 0) y0 = 0;
-				else if (y0 >= CHUNK_YSIZE) y0 = CHUNK_YSIZE - 1;
-				blocks = &c->blocks[0][0][y0];
-				blocks_pitch = CHUNK_YSIZE;
-			}
-			else
-				dief("unrecognized map mode: %d", map_mode);
-
-			unsigned blocks_xpitch = CHUNK_ZSIZE*blocks_pitch;
-
-			for (int bz = 0; bz < CHUNK_ZSIZE; bz++)
-			{
-				Uint32 *p = (Uint32*)pixels;
-				unsigned char *b = blocks;
-
-				for (int bx = 0; bx < CHUNK_XSIZE; bx++)
+				if (!c)
 				{
-					if (map_mode == MAP_MODE_TOPO)
-					{
-						Uint32 v = *b;
-						if (v < 64)
-							*p++ = ((4*v) << rshift) | ((4*v) << gshift) | ((255-4*v) << bshift);
-						else
-							*p++ = (255 << rshift) | ((255-4*(v-64)) << gshift);
-					}
-					else
-						*p++ = block_colors[*b];
-					b += blocks_xpitch;
+					for (int bz = 0; bz < CHUNK_ZSIZE; bz++)
+						memset(&bitmap[(zo*CHUNK_ZSIZE+bz)*REG_BW], 0, REG_BW*sizeof(GLuint));
+					continue;
 				}
 
-				pixels += pitch;
-				blocks += blocks_pitch;
+				unsigned char *blocks;
+				unsigned blocks_pitch;
+
+				if (map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_TOPO)
+				{
+					blocks = map_mode == MAP_MODE_SURFACE ? &c->surface[0][0] : &c->height[0][0];
+					blocks_pitch = 1;
+				}
+				else if (map_mode == MAP_MODE_CROSS)
+				{
+					int y0 = map_y;
+					if (y0 < 0) y0 = 0;
+					else if (y0 >= CHUNK_YSIZE) y0 = CHUNK_YSIZE - 1;
+					blocks = &c->blocks[0][0][y0];
+					blocks_pitch = CHUNK_YSIZE;
+				}
+				else
+					dief("unrecognized map mode: %d", map_mode);
+
+				unsigned blocks_xpitch = CHUNK_ZSIZE*blocks_pitch;
+
+				for (int bz = 0; bz < CHUNK_ZSIZE; bz++)
+				{
+					GLuint *p = &bitmap[(zo*CHUNK_ZSIZE+bz)*REG_BW + xo*CHUNK_XSIZE];
+					unsigned char *b = blocks;
+
+					for (int bx = 0; bx < CHUNK_XSIZE; bx++)
+					{
+						if (map_mode == MAP_MODE_TOPO)
+						{
+							GLuint v = *b;
+							if (v < 64)
+								*p++ = ((4*v) << 24) | ((4*v) << 16) | ((255-4*v) << 8);
+							else
+								*p++ = (255 << 24) | ((255-4*(v-64)) << 16);
+						}
+						else
+							*p++ = block_colors[*b];
+						b += blocks_xpitch;
+					}
+
+					blocks += blocks_pitch;
+				}
 			}
 		}
 	}
 
-	SDL_UnlockSurface(map);
+	for (int row = 0; row < reg->len; row++)
+	{
+		struct region_row *rr = &g_array_index(reg, struct region_row, row);
+		if (!rr->reg)
+			continue;
 
-	g_mutex_unlock(map_mutex);
+		for (int col = 0; col < rr->reg->len; col++)
+		{
+			struct region *r = &g_array_index(rr->reg, struct region, col);
 
-	map_repaint();
-#endif
+			if ((r->flags & REG_REDRAW_BITMAP) || (r->bitmap && forced))
+			{
+				if (!r->bitmap)
+					r->bitmap = g_malloc(REG_BW * REG_BH * sizeof(GLuint));
+				draw((rr->x0 + col)*REG_SIZE, (reg_z0 + row)*REG_SIZE, r->bitmap);
+				r->flags &= ~REG_REDRAW_BITMAP;
+				r->flags |= REG_REDRAW_TEXTURE;
+				changes = 1;
+			}
+		}
+	}
+
+	g_mutex_unlock(reg_mutex);
+
+	if (changes)
+		map_repaint();
 }
 
 void map_update_player_pos(double x, double y, double z)
@@ -299,10 +358,7 @@ void map_update_alt(int y, int relative)
 	map_y = new_y;
 
 	if (map_mode == MAP_MODE_CROSS)
-	{
-		map_update(map_min_x, map_max_x, map_min_z, map_max_z);
-		map_repaint();
-	}
+		map_update(1);
 }
 
 void map_setmode(enum map_mode mode, unsigned flags)
@@ -323,7 +379,9 @@ void map_setmode(enum map_mode mode, unsigned flags)
 	     modenames[mode],
 	     mode == MAP_MODE_CROSS && (flags & MAP_FLAG_FOLLOW_Y) ? " (follow player)" : "");
 
+#if 0
 	map_update(map_min_x, map_max_x, map_min_z, map_max_z);
+#endif
 }
 
 void map_setscale(int scale, int relative)
@@ -346,34 +404,24 @@ void map_setscale(int scale, int relative)
 
 /* screen-drawing related code */
 
-void map_s2w(SDL_Surface *screen, int sx, int sy, int *x, int *z, int *xo, int *zo)
+void map_s2w(int sx, int sy, int *x, int *z)
 {
-	/* Pixel screen->w/2 equals middle (rounded down) of block player_x.
-	 * Pixel screen->w/2 - (map_scale-1)/2 equals left edge of block player_x.
+	/* Pixel screen->w/2 equals left edge of block player_x.
 	 * Compute offset from there, divide by scale, round toward negative. */
 
-	int px = screen->w/2 - (map_scale-1)/2;
-	int py = screen->h/2 - (map_scale-1)/2;
-
-	int dx = sx - px, dy = sy - py;
+	int dx = sx - map_pw/2, dy = sy - map_ph/2;
 
 	dx = dx >= 0 ? dx/map_scale : (dx-(map_scale-1))/map_scale;
 	dy = dy >= 0 ? dy/map_scale : (dy-(map_scale-1))/map_scale;
 
 	*x = player_x + dx;
 	*z = player_z + dy;
-
-	if (xo) *xo = sx - (px + dx*map_scale);
-	if (zo) *zo = sy - (py + dy*map_scale);
 }
 
-void map_w2s(SDL_Surface *screen, int x, int z, int *sx, int *sy)
+void map_w2s(int x, int z, int *sx, int *sy)
 {
-	int px = screen->w/2 - (map_scale-1)/2;
-	int py = screen->h/2 - (map_scale-1)/2;
-
-	*sx = px + (x - player_x)*map_scale;
-	*sy = py + (z - player_z)*map_scale;
+	*sx = map_pw/2 + (x - player_x)*map_scale;
+	*sy = map_ph/2 + (z - player_z)*map_scale;
 }
 
 static inline void map_draw_player_marker(SDL_Surface *screen)
@@ -428,97 +476,94 @@ void map_draw(SDL_Surface *screen)
 
 	/* draw the map */
 
+	glEnable(GL_TEXTURE_2D);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	int scr_row1, scr_row2;
+	int scr_col1, scr_col2;
+
+	{
+		int scr_x1, scr_z1;
+		map_s2w(0, 0, &scr_x1, &scr_z1);
+
+		scr_row1 = REG_IDX(CHUNK_ZIDX(scr_z1));
+		scr_col1 = REG_IDX(CHUNK_XIDX(scr_x1));
+
+		int scr_x2 = scr_x1 + ceil(map_w), scr_z2 = scr_z1 + ceil(map_h);
+
+		scr_row2 = REG_IDX(CHUNK_ZIDX(scr_z2+CHUNK_ZSIZE-1)+REG_SIZE-1);
+		scr_col2 = REG_IDX(CHUNK_XIDX(scr_x2+CHUNK_XSIZE-1)+REG_SIZE-1);
+	}
+
+	g_mutex_lock(reg_mutex);
+
+	if (scr_row1 < reg_z0) scr_row1 = reg_z0;
+
+	for (int row = scr_row1; row <= scr_row2; row++)
+	{
+		int rowo = row - reg_z0;
+		if (!reg || rowo >= reg->len)
+			break;
+
+		struct region_row *rr = &g_array_index(reg, struct region_row, rowo);
+		if (!rr->reg)
+			continue;
+
+		int col1 = scr_col1;
+		if (col1 < rr->x0) col1 = rr->x0;
+
+		for (int col = col1; col <= scr_col2; col++)
+		{
+			int colo = col - rr->x0;
+			if (colo >= rr->reg->len)
+				break;
+
+			struct region *r = &g_array_index(rr->reg, struct region, colo);
+			if (!r->bitmap)
+				continue;
+
 #if 0
-	int scr_x0, scr_z0;
-	int scr_xo, scr_zo;
-	map_s2w(screen, 0, 0, &scr_x0, &scr_z0, &scr_xo, &scr_zo);
-
-	g_mutex_lock(map_mutex);
-
-	if (map_scale == 1)
-	{
-		SDL_Rect rect_dst = { .x = 0, .y = 0, .w = screen->w, .h = screen->h };
-		SDL_Rect rect_src = {
-			.x = scr_x0 - map_min_x*CHUNK_XSIZE,
-			.y = scr_z0 - map_min_z*CHUNK_ZSIZE,
-			.w = screen->w,
-			.h = screen->h
-		};
-
-		if (rect_src.x < 0)
-		{
-			int d = -rect_src.x;
-			rect_dst.x += d;
-			rect_src.w -= d;
-			rect_dst.w -= d;
-			rect_src.x = 0;
-		}
-
-		if (rect_src.y < 0)
-		{
-			int d = -rect_src.y;
-			rect_dst.y += d;
-			rect_src.h -= d;
-			rect_dst.h -= d;
-			rect_src.y = 0;
-		}
-
-		if (rect_src.x + rect_src.w > map->w)
-		{
-			int d = map->w - (rect_src.x + rect_src.w);
-			rect_src.w -= d;
-			rect_dst.w -= d;
-		}
-
-		if (rect_src.y + rect_src.h > map->h)
-		{
-			int d = map->h - (rect_src.y + rect_src.h);
-			rect_src.h -= d;
-			rect_dst.h -= d;
-		}
-
-		if (rect_dst.w > 0 && rect_dst.h > 0)
-			SDL_BlitSurface(map, &rect_src, screen, &rect_dst);
-	}
-	else
-	{
-		SDL_LockSurface(screen);
-		SDL_LockSurface(map);
-
-		int m_x0 = scr_x0 - map_min_x*CHUNK_XSIZE;
-		int m_z = scr_z0 - map_min_z*CHUNK_ZSIZE;
-
-		int m_xo0 = scr_xo, m_zo = scr_zo;
-
-		for (int s_y = 0; s_y < screen->h && m_z < map->h; s_y++)
-		{
-			if (m_z >= 0)
+			if (!r->tex || (r->flags & REG_REDRAW_TEXTURE))
 			{
-				int m_x = m_x0, m_xo = m_xo0;
-				for (int s_x = 0; s_x < screen->w && m_x < map->w; s_x++)
-				{
-					if (m_x >= 0)
-					{
-						void *s = (unsigned char *)screen->pixels + s_y*screen->pitch + 4*s_x;
-						void *m = (unsigned char *)map->pixels + m_z*map->pitch + 4*m_x;
-						*(Uint32 *)s = *(Uint32 *)m;
-					}
-
-					if (++m_xo == map_scale)
-						m_xo = 0, m_x++;
-				}
+				if (!r->tex)
+					glGenTextures(1, &r->tex);
+				glBindTexture(GL_TEXTURE_2D, r->tex);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+				             REG_BW, REG_BH, 0,
+				             GL_RGBA, GL_UNSIGNED_INT_8_8_8_8,
+				             r->bitmap);
+				r->flags &= ~REG_REDRAW_TEXTURE;
 			}
+			else
+				glBindTexture(GL_TEXTURE_2D, r->tex);
+#else
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+			             REG_BW, REG_BH, 0,
+			             GL_RGBA, GL_UNSIGNED_INT_8_8_8_8,
+			             r->bitmap);
+#endif
 
-			if (++m_zo == map_scale)
-				m_zo = 0, m_z++;
+			glBegin(GL_QUADS);
+			glTexCoord2f(0, 0);
+			glVertex2d(col*REG_BW,     -row*REG_BH);
+			glTexCoord2f(0, 1);
+			glVertex2d(col*REG_BW,     -(row+1)*REG_BH);
+			glTexCoord2f(1, 1);
+			glVertex2d((col+1)*REG_BW, -(row+1)*REG_BH);
+			glTexCoord2f(1, 0);
+			glVertex2d((col+1)*REG_BW, -row*REG_BH);
+			glEnd();
 		}
-
-		SDL_UnlockSurface(map);
-		SDL_UnlockSurface(screen);
 	}
 
-	g_mutex_unlock(map_mutex);
-#endif
+	g_mutex_unlock(reg_mutex);
+
+	glDisable(GL_TEXTURE_2D);
 
 	/* player indicators and such */
 

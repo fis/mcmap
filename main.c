@@ -31,7 +31,7 @@ struct
 /* miscellaneous helper routines */
 
 static void handle_key(SDL_KeyboardEvent *e, int *repaint);
-static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen);
+static void handle_mouse(SDL_MouseButtonEvent *e);
 static void handle_chat(unsigned char *msg, int msglen);
 
 /* proxying thread function to pass packets */
@@ -248,33 +248,9 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	/* start the proxying threads */
+	/* set up the user interface side */
 
 	log_print("[INFO] Starting up...");
-
-	GSocket *sock_cli = g_socket_connection_get_socket(conn_cli);
-	GSocket *sock_srv = g_socket_connection_get_socket(conn_srv);
-
-	struct proxy_config proxy_client_server = {
-		.sock_from = sock_cli,
-		.sock_to = sock_srv,
-		.client_to_server = 1,
-		.q = packetq,
-		.iq = iq_server
-	};
-
-	struct proxy_config proxy_server_client = {
-		.sock_from = sock_srv,
-		.sock_to = sock_cli,
-		.client_to_server = 0,
-		.q = packetq,
-		.iq = iq_client
-	};
-
-	g_thread_create(proxy_thread, &proxy_client_server, FALSE, 0);
-	g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
-
-	/* start the user interface side */
 
 	console_init();
 
@@ -304,6 +280,32 @@ int main(int argc, char **argv)
 	map_init(screen);
 	map_setscale(opt.scale, 0);
 
+	/* start the proxying threads to start handling packets */
+
+	GSocket *sock_cli = g_socket_connection_get_socket(conn_cli);
+	GSocket *sock_srv = g_socket_connection_get_socket(conn_srv);
+
+	struct proxy_config proxy_client_server = {
+		.sock_from = sock_cli,
+		.sock_to = sock_srv,
+		.client_to_server = 1,
+		.q = packetq,
+		.iq = iq_server
+	};
+
+	struct proxy_config proxy_server_client = {
+		.sock_from = sock_srv,
+		.sock_to = sock_cli,
+		.client_to_server = 0,
+		.q = packetq,
+		.iq = iq_client
+	};
+
+	g_thread_create(proxy_thread, &proxy_client_server, FALSE, 0);
+	g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
+
+	/* enter SDL main loop with main thread */
+
 	while (1)
 	{
 		int repaint = 0;
@@ -325,7 +327,7 @@ int main(int argc, char **argv)
 				break;
 
 			case SDL_MOUSEBUTTONDOWN:
-				handle_mouse(&e.button, screen);
+				handle_mouse(&e.button);
 				break;
 
 			case MCMAP_EVENT_REPAINT:
@@ -392,13 +394,13 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 	}
 }
 
-static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen)
+static void handle_mouse(SDL_MouseButtonEvent *e)
 {
 	if (e->button == SDL_BUTTON_RIGHT)
 	{
 		/* teleport */
 		int x, z;
-		map_s2w(screen, e->x, e->y, &x, &z, 0, 0);
+		map_s2w(e->x, e->y, &x, &z);
 		cmd_goto(x, z);
 	}
 }

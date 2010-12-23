@@ -117,9 +117,6 @@ static void handle_chunk(int x0, int y0, int z0,
 	else if (y0 + ys > CHUNK_YSIZE)
 		yupds = CHUNK_YSIZE - y0;
 
-	int c_min_x = INT_MAX, c_min_z = INT_MAX;
-	int c_max_x = INT_MIN, c_max_z = INT_MIN;
-
 	unsigned char *zb = zbuf;
 
 	for (int x = x0; x < x0+xs; x++)
@@ -132,6 +129,7 @@ static void handle_chunk(int x0, int y0, int z0,
 			{
 				c = world_chunk(&cc, 1);
 				current_chunk = cc;
+				map_change(cc.x, cc.z);
 			}
 
 			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, yupds);
@@ -159,15 +157,8 @@ static void handle_chunk(int x0, int y0, int z0,
 					c->surface[CHUNK_XOFF(x)][CHUNK_ZOFF(z)] = surfblock;
 				}
 			}
-
-			if (cc.x < c_min_x) c_min_x = cc.x;
-			if (cc.x > c_max_x) c_max_x = cc.x;
-			if (cc.z < c_min_z) c_min_z = cc.z;
-			if (cc.z > c_max_z) c_max_z = cc.z;
 		}
 	}
-
-	map_update(c_min_x, c_max_x, c_min_z, c_max_z);
 }
 
 static inline void block_change(struct chunk *c, int x, int y, int z, unsigned char type)
@@ -204,7 +195,7 @@ static void handle_multi_set_block(int cx, int cz, int size, unsigned char *coor
 		block_change(c, x, y, z, *type++);
 	}
 
-	map_update(cx, cx, cz, cz);
+	map_change(cx, cz);
 }
 
 static void handle_set_block(int x, int y, int z, int type)
@@ -215,7 +206,7 @@ static void handle_set_block(int x, int y, int z, int type)
 		return; /* edit in an unloaded chunk */
 
 	block_change(c, CHUNK_XOFF(x), y, CHUNK_ZOFF(z), type);
-	map_update(cc.x, cc.x, cc.z, cc.z);
+	map_change(cc.x, cc.z);
 }
 
 static void entity_add(int id, unsigned char *name, int x, int y, int z)
@@ -340,12 +331,10 @@ void world_init(void)
 
 gpointer world_thread(gpointer data)
 {
-	GAsyncQueue *q = data;
+	/* packet handling code */
 
-	while (1)
+	void handle_packet(packet_t *packet, int *mupd)
 	{
-		packet_t *packet = g_async_queue_pop(q);
-
 		unsigned char *p;
 		int t;
 
@@ -356,6 +345,7 @@ gpointer world_thread(gpointer data)
 			handle_chunk(packet_int(packet, 0), packet_int(packet, 1), packet_int(packet, 2),
 			             packet_int(packet, 3)+1, packet_int(packet, 4)+1, packet_int(packet, 5)+1,
 			             (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3], &p[4]);
+			*mupd = 1;
 			break;
 
 		case PACKET_MULTI_SET_BLOCK:
@@ -363,6 +353,7 @@ gpointer world_thread(gpointer data)
 			t = (p[0] << 8) | p[1];
 			handle_multi_set_block(packet_int(packet, 0), packet_int(packet, 1),
 			                       t, p+2, p+2+t*2);
+			*mupd = 1;
 			break;
 
 		case PACKET_SET_BLOCK:
@@ -370,6 +361,7 @@ gpointer world_thread(gpointer data)
 			                 packet_int(packet, 1),
 			                 packet_int(packet, 2),
 			                 packet_int(packet, 3));
+			*mupd = 1;
 			break;
 
 		case PACKET_LOGIN:
@@ -454,7 +446,21 @@ gpointer world_thread(gpointer data)
 				cmd_parse(p+2, t-2);
 			break;
 		}
+	}
 
+	/* main loop */
+
+	GAsyncQueue *q = data;
+
+	while (1)
+	{
+		int mupd = 0;
+
+		packet_t *packet = g_async_queue_pop(q);
+		handle_packet(packet, &mupd);
 		packet_free(packet);
+
+		if (mupd)
+			map_update(0);
 	}
 }

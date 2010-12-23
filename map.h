@@ -19,7 +19,8 @@ extern int player_x, player_y, player_z;
 
 void map_init(SDL_Surface *screen);
 
-void map_update(int x1, int x2, int z1, int z2);
+void map_change(int x, int z);
+void map_update(int forced);
 
 void map_update_player_pos(double x, double y, double z);
 void map_update_player_dir(double yaw, double pitch);
@@ -30,8 +31,8 @@ void map_update_alt(int y, int relative);
 void map_setmode(enum map_mode mode, unsigned flags);
 void map_setscale(int scale, int relative);
 
-void map_s2w(SDL_Surface *screen, int sx, int sy, int *x, int *z, int *xo, int *zo);
-void map_w2s(SDL_Surface *screen, int x, int z, int *sx, int *sy);
+void map_s2w(int sx, int sy, int *x, int *z);
+void map_w2s(int x, int z, int *sx, int *sy);
 
 void map_repaint(void);
 
