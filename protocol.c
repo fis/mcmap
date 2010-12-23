@@ -34,8 +34,10 @@ enum field_type packet_format_time[] = {
 	FIELD_LONG
 };
 
-enum field_type packet_format_inventory[] = {
-	FIELD_INT, FIELD_IARRAY
+enum field_type packet_format_entity_equipment[] = {
+	FIELD_INT,   /* entity id */
+	FIELD_SHORT, /* equipment slot: 0 = held, 1..4 = armor */
+	FIELD_SHORT  /* block/item ID */
 };
 
 enum field_type packet_format_spawn_position[] = {
@@ -233,7 +235,7 @@ struct packet_format_desc packet_format[] =
 	[PACKET_HANDSHAKE] = P(packet_format_handshake),
 	[PACKET_CHAT] = P(packet_format_chat),
 	[PACKET_TIME] = P(packet_format_time),
-	[PACKET_INVENTORY] = P(packet_format_inventory),
+	[PACKET_ENTITY_EQUIPMENT] = P(packet_format_entity_equipment),
 	[PACKET_SPAWN_POSITION] = P(packet_format_spawn_position),
 	[PACKET_USE_ENTITY] = P(packet_format_use_entity),
 	[PACKET_UPDATE_HEALTH] = P(packet_format_update_health),
