@@ -164,6 +164,8 @@ static gpointer console_thread(gpointer userdata)
 
 			fputs(line, stdout);
 
+			g_free(line);
+
 			/* restore the readline prompt and contents */
 
 			rl_insert_text(old_text);

@@ -95,7 +95,7 @@ static int map_scale_indicator = 3;
 static enum map_mode map_mode = MAP_MODE_SURFACE;
 static unsigned map_flags = 0;
 
-static GMutex *map_mutex;
+static GMutex * volatile map_mutex = 0;
 
 static int player_yaw = 0;
 

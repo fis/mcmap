@@ -248,6 +248,30 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	/* start the user interface side */
+
+	console_init();
+
+	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
+	{
+		die("Failed to initialize SDL.");
+		return 1;
+	}
+
+	SDL_Surface *screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|(opt.wndsize ? 0 : SDL_RESIZABLE));
+
+	if (!screen)
+	{
+		dief("Failed to set video mode: %s", SDL_GetError());
+		return 1;
+	}
+
+	SDL_WM_SetCaption("mcmap", "mcmap");
+	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+
+	map_init(screen);
+	map_setscale(opt.scale, 0);
+
 	/* start the proxying threads */
 
 	log_print("[INFO] Starting up...");
@@ -274,29 +298,7 @@ int main(int argc, char **argv)
 	g_thread_create(proxy_thread, &proxy_client_server, FALSE, 0);
 	g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
 
-	/* start the user interface side */
-
-	console_init();
-
-	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
-	{
-		die("Failed to initialize SDL.");
-		return 1;
-	}
-
-	SDL_Surface *screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|(opt.wndsize ? 0 : SDL_RESIZABLE));
-
-	if (!screen)
-	{
-		dief("Failed to set video mode: %s", SDL_GetError());
-		return 1;
-	}
-
-	SDL_WM_SetCaption("mcmap", "mcmap");
-	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-
-	map_init(screen);
-	map_setscale(opt.scale, 0);
+	/* enter SDL main loop */
 
 	while (1)
 	{
