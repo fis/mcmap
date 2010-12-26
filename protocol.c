@@ -74,7 +74,11 @@ enum field_type packet_format_dig[] = {
 };
 
 enum field_type packet_format_place[] = {
-	FIELD_SHORT, FIELD_INT, FIELD_UBYTE, FIELD_INT, FIELD_UBYTE
+	FIELD_INT,   /* X coordinate */
+	FIELD_UBYTE, /* Y coordinate */
+	FIELD_INT,   /* Z coordinate */
+	FIELD_UBYTE, /* direction flag */
+	FIELD_IITEM  /* block/item being placed */
 };
 
 enum field_type packet_format_entity_holding[] = {
