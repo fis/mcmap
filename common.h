@@ -37,4 +37,15 @@ void chat(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 #define stop(msg) log_die(__FILE__, __LINE__, 1, "%s", msg)
 #define stopf(fmt, ...) log_die(__FILE__, __LINE__, 1, fmt, __VA_ARGS__)
 
+/* options */
+
+struct options
+{
+	gint localport;
+	gboolean noansi;
+	gboolean nomap;
+	gint scale;
+	gchar *wndsize;
+} opt;
+
 #endif /* MCMAP_COMMON_H */

@@ -15,15 +15,10 @@
 
 /* default command-line options */
 
-struct
-{
-	gint localport;
-	gboolean noansi;
-	gint scale;
-	gchar *wndsize;
-} opt = {
+struct options opt = {
 	.localport = 25565,
 	.noansi = FALSE,
+	.nomap = FALSE,
 	.scale = 1,
 	.wndsize = 0,
 };
@@ -127,7 +122,8 @@ gpointer proxy_thread(gpointer data)
 		case PACKET_ENTITY_REL_MOVE_LOOK:
 		case PACKET_ENTITY_MOVE:
 		case PACKET_ENTITY_ATTACH:
-			g_async_queue_push(cfg->q, packet_dup(p));
+			if (!opt.nomap)
+				g_async_queue_push(cfg->q, packet_dup(p));
 			break;
 
 		case PACKET_CHAT:
@@ -156,6 +152,7 @@ int main(int argc, char **argv)
 
 	static GOptionEntry gopt_entries[] = {
 		{ "nocolor", 'c', 0, G_OPTION_ARG_NONE, &opt.noansi, "Disable ANSI color escapes" },
+		{ "nomap", 'm', 0, G_OPTION_ARG_NONE, &opt.nomap, "Disable the map" },
 		{ "port", 'p', 0, G_OPTION_ARG_INT, &opt.localport, "Local port to listen at", "P" },
 		{ "size", 's', 0, G_OPTION_ARG_STRING, &opt.wndsize, "Fixed-size window size", "WxH" },
 		{ "scale", 'x', 0, G_OPTION_ARG_INT, &opt.scale, "Zoom factor", "N" },
@@ -252,25 +249,30 @@ int main(int argc, char **argv)
 
 	console_init();
 
-	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
+	SDL_Surface *screen = NULL;
+
+	if (!opt.nomap)
 	{
-		die("Failed to initialize SDL.");
-		return 1;
+		if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
+		{
+			die("Failed to initialize SDL.");
+			return 1;
+		}
+
+		screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|(opt.wndsize ? 0 : SDL_RESIZABLE));
+
+		if (!screen)
+		{
+			dief("Failed to set video mode: %s", SDL_GetError());
+			return 1;
+		}
+
+		SDL_WM_SetCaption("mcmap", "mcmap");
+		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+
+		map_init(screen);
+		map_setscale(opt.scale, 0);
 	}
-
-	SDL_Surface *screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|(opt.wndsize ? 0 : SDL_RESIZABLE));
-
-	if (!screen)
-	{
-		dief("Failed to set video mode: %s", SDL_GetError());
-		return 1;
-	}
-
-	SDL_WM_SetCaption("mcmap", "mcmap");
-	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-
-	map_init(screen);
-	map_setscale(opt.scale, 0);
 
 	/* start the proxying threads */
 
@@ -297,6 +299,9 @@ int main(int argc, char **argv)
 
 	g_thread_create(proxy_thread, &proxy_client_server, FALSE, 0);
 	g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
+
+	if (opt.nomap)
+		while (1);
 
 	/* enter SDL main loop */
 
