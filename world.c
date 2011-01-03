@@ -173,6 +173,9 @@ static void handle_chunk(int x0, int y0, int z0,
 
 static inline void block_change(struct chunk *c, int x, int y, int z, unsigned char type)
 {
+	if (y < 0 || y >= CHUNK_YSIZE)
+		return; /* sometimes server sends Y=CHUNK_YSIZE block-to-air "updates" */
+
 	c->blocks[x][z][y] = type;
 	if (y >= c->height[x][z])
 	{
