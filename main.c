@@ -297,12 +297,11 @@ int main(int argc, char **argv)
 		.iq = iq_client
 	};
 
-	if (opt.nomap)
-	{
-		g_thread_create(proxy_thread, &proxy_client_server, FALSE, 0);
+	g_thread_create(proxy_thread, &proxy_client_server, FALSE, 0);
+	if (!opt.nomap)
+		g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
+	else
 		proxy_thread(&proxy_server_client);
-		return 0;
-	}
 	
 	/* enter SDL main loop */
 
