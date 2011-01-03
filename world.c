@@ -457,4 +457,6 @@ gpointer world_thread(gpointer data)
 
 		packet_free(packet);
 	}
+
+	return NULL;
 }
