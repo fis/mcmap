@@ -104,8 +104,9 @@ static void handle_chunk(int x0, int y0, int z0,
 	int zbuf_len = (sizeof zbuf) - zstr.avail_out;
 	inflateEnd(&zstr);
 
-	if (zbuf_len != (5*xs*ys*zs+1)/2)
-		stopf("broken decompressed chunk length: %d != %d", (int)zbuf_len, (int)(5*xs*ys*zs+1)/2);
+	if (zbuf_len < xs*ys*zs)
+		stopf("broken decompressed chunk length: %d != %d and < %d",
+		      (int)zbuf_len, (int)(5*xs*ys*zs+1)/2, xs*ys*zs);
 
 	struct coord current_chunk = { .x = -0x80000000, .z = -0x80000000 };
 	struct chunk *c = 0;
@@ -163,6 +164,9 @@ static void handle_chunk(int x0, int y0, int z0,
 
 static inline void block_change(struct chunk *c, int x, int y, int z, unsigned char type)
 {
+	if (y < 0 || y >= CHUNK_YSIZE)
+		return; /* sometimes server sends Y=CHUNK_YSIZE block-to-air "updates" */
+
 	c->blocks[x][z][y] = type;
 	if (y >= c->height[x][z])
 	{
@@ -463,4 +467,6 @@ gpointer world_thread(gpointer data)
 		if (mupd)
 			map_update(0);
 	}
+
+	return NULL;
 }

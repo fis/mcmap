@@ -12,6 +12,11 @@ cc.flags := -Wall -Werror -std=gnu99
 cc.flags += $(shell pkg-config --cflags $(libs))
 ld.flags += $(shell pkg-config --libs $(libs)) -lz -lreadline -lGL
 
+# Fuck Apple.
+ifeq ($(shell uname),Darwin)
+	cc.flags += -fnested-functions
+endif
+
 cc.flags += $(if $(debug),-g,-O3)
 
 all: $(objdir)/mcmap

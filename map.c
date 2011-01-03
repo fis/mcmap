@@ -125,6 +125,8 @@ static GLdouble map_isize = 1.0;
 static enum map_mode map_mode = MAP_MODE_SURFACE;
 static unsigned map_flags = 0;
 
+static GMutex * volatile map_mutex = 0;
+
 static int player_yaw = 0;
 
 void map_init(SDL_Surface *screen)
