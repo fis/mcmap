@@ -249,16 +249,16 @@ int main(int argc, char **argv)
 
 	console_init();
 
+	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
+	{
+		die("Failed to initialize SDL.");
+		return 1;
+	}
+
 	SDL_Surface *screen = NULL;
 
 	if (!opt.nomap)
 	{
-		if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
-		{
-			die("Failed to initialize SDL.");
-			return 1;
-		}
-
 		screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|(opt.wndsize ? 0 : SDL_RESIZABLE));
 
 		if (!screen)
@@ -298,10 +298,7 @@ int main(int argc, char **argv)
 	};
 
 	g_thread_create(proxy_thread, &proxy_client_server, FALSE, 0);
-	if (!opt.nomap)
-		g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
-	else
-		proxy_thread(&proxy_server_client);
+	g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
 	
 	/* enter SDL main loop */
 
@@ -337,7 +334,7 @@ int main(int argc, char **argv)
 
 		/* repaint dirty bits if necessary */
 
-		if (repaint)
+		if (repaint && !opt.nomap)
 			map_draw(screen);
 
 		/* wait for something interesting to happen */
