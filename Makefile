@@ -8,9 +8,14 @@ include useful.make
 
 libs := gio-2.0 gthread-2.0 sdl
 
-cc.flags := -Wall -Werror -std=gnu99 -fnested-functions
+cc.flags := -Wall -Werror -std=gnu99
 cc.flags += $(shell pkg-config --cflags $(libs))
 ld.flags += $(shell pkg-config --libs $(libs)) -lz -lreadline
+
+# Fuck Apple.
+ifeq ($(shell uname),Darwin)
+	cc.flags += -fnested-functions
+endif
 
 cc.flags += $(if $(debug),-g,-O3)
 
