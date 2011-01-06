@@ -1,30 +1,38 @@
 #include <errno.h>
-#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include <glib.h>
+
+#ifndef WIN32
+#include <poll.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
 
 #include "common.h"
 #include "console.h"
 #include "protocol.h"
 #include "world.h"
 
-static int console_readline = 0;
 static int console_outfd = 1;
 
+#ifndef WIN32
+static int console_readline = 0;
 static int opipe_read, opipe_write;
+#endif
 
 /* setting up */
 
+#ifndef WIN32
 static gpointer console_thread(gpointer userdata);
 static void console_cleanup(void);
+#endif
 
 void console_init(void)
 {
+#ifndef WIN32
 	if (isatty(0) && isatty(1))
 	{
 		int pipefd[2];
@@ -44,6 +52,7 @@ void console_init(void)
 	}
 
 no_terminal:
+#endif
 	return;
 }
 
@@ -81,8 +90,10 @@ void log_print(char *fmt, ...)
 
 void log_die(char *file, int line, int is_stop, char *fmt, ...)
 {
+#ifndef WIN32
 	if (console_readline && !is_stop)
 		console_cleanup();
+#endif
 
 	GString *msg = tstamp();
 	g_string_append_printf(msg, "[DIED] %s: %d: ", file, line);
@@ -104,6 +115,7 @@ void log_die(char *file, int line, int is_stop, char *fmt, ...)
 
 /* readline input and log output interlacing */
 
+#ifndef WIN32
 static void console_line_ready(char *line)
 {
 	if (line)
@@ -199,3 +211,4 @@ static void console_cleanup(void)
 	console_readline = 0;
 	console_outfd = 1;
 }
+#endif
