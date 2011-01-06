@@ -6,6 +6,7 @@
 #include <gio/gio.h>
 #include <SDL.h>
 #ifdef WIN32
+#undef main
 #include <windows.h>
 #endif
 
@@ -150,23 +151,11 @@ gpointer proxy_thread(gpointer data)
 
 /* main application */
 
-#ifdef WIN32
-int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
-#else
 int main(int argc, char **argv)
-#endif
 {
 	setlocale(LC_ALL, "");
 
 	/* command line option grokking */
-
-#ifdef WIN32
-	char **argv = g_strsplit((gchar*)GetCommandLine(), " ", 0);
-
-	int argc = 0;
-	for (char **p = argv; *p; p++)
-		argc++;
-#endif
 
 	static GOptionEntry gopt_entries[] = {
 		{ "nocolor", 'c', 0, G_OPTION_ARG_NONE, &opt.noansi, "Disable ANSI color escapes" },
