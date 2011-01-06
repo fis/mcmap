@@ -108,10 +108,14 @@ gpointer proxy_thread(gpointer data)
 
 		switch (p->id)
 		{
-		case PACKET_LOGIN:
 		case PACKET_CHUNK:
 		case PACKET_MULTI_SET_BLOCK:
 		case PACKET_SET_BLOCK:
+			if (opt.nomap)
+				break;
+			/* fall-through to processing */
+
+		case PACKET_LOGIN:
 		case PACKET_PLAYER_MOVE:
 		case PACKET_PLAYER_ROTATE:
 		case PACKET_PLAYER_MOVE_ROTATE:
@@ -122,8 +126,7 @@ gpointer proxy_thread(gpointer data)
 		case PACKET_ENTITY_REL_MOVE_LOOK:
 		case PACKET_ENTITY_MOVE:
 		case PACKET_ENTITY_ATTACH:
-			if (!opt.nomap)
-				g_async_queue_push(cfg->q, packet_dup(p));
+			g_async_queue_push(cfg->q, packet_dup(p));
 			break;
 
 		case PACKET_CHAT:
