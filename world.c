@@ -11,6 +11,7 @@
 #include "cmd.h"
 #include "common.h"
 #include "map.h"
+#include "nbt.h"
 #include "protocol.h"
 #include "world.h"
 
@@ -525,21 +526,6 @@ static char *base36_encode(int value, char *buf, int bufsize)
 	return buf + bufsize + 1;
 }
 
-static void gzwri32(gzFile f, int v)
-{
-	unsigned char buf[4] = { v >> 24, v >> 16, v >> 8, v };
-	gzwrite(f, buf, 4);
-}
-
-static void gzwri64(gzFile f, long long v)
-{
-	unsigned char buf[8] = {
-		v >> 56, v >> 48, v >> 40, v >> 32,
-		v >> 24, v >> 16, v >> 8, v
-	};
-	gzwrite(f, buf, 8);
-}
-
 static void world_save_block(gpointer key, gpointer value, gpointer userdata)
 {
 	struct chunk *c = value;
@@ -569,48 +555,27 @@ static void world_save_block(gpointer key, gpointer value, gpointer userdata)
 
 	g_snprintf(pathbuf, pathbufsize, "%s/%s/%s/c.%s.%s.dat", dir, dir_x, dir_z, file_x, file_z);
 
-	gzFile blockf = gzopen(pathbuf, "wb9");
-
 	/* dump the chunk data */
 
-	gzwrite(blockf, "\x0a\x00\x00", 3);            /* top level unnamed tag */
-	gzwrite(blockf, "\x0a\x00\x05" "Level", 8);       /* level data container */
+	struct nbt_tag *data = nbt_new_struct("Level");
 
-	gzwrite(blockf, "\x07\x00\x06" "Blocks", 9);      /* chunk block-type data */
-	gzwri32(blockf, CHUNK_NBLOCKS);
-	gzwrite(blockf, c->blocks, CHUNK_NBLOCKS);
+	nbt_struct_add(data, nbt_new_blob("Blocks", NBT_TAG_BLOB, c->blocks, CHUNK_NBLOCKS));
+	nbt_struct_add(data, nbt_new_blob("Data", NBT_TAG_BLOB, c->meta, CHUNK_NBLOCKS/2));
+	nbt_struct_add(data, nbt_new_blob("BlockLight", NBT_TAG_BLOB, c->light_blocks, CHUNK_NBLOCKS/2));
+	nbt_struct_add(data, nbt_new_blob("SkyLight", NBT_TAG_BLOB, c->light_sky, CHUNK_NBLOCKS/2));
+	nbt_struct_add(data, nbt_new_blob("HeightMap", NBT_TAG_BLOB, c->height, CHUNK_XSIZE*CHUNK_ZSIZE)); /* TODO FIXME: indexing X/Z */
 
-	gzwrite(blockf, "\x07\x00\x04" "Data", 7);     /* chunk metadata */
-	gzwri32(blockf, CHUNK_NBLOCKS/2);
-	gzwrite(blockf, c->meta, CHUNK_NBLOCKS/2);
+	/* TODO: Entities, TileEntities */
 
-	gzwrite(blockf, "\x07\x00\x0a" "BlockLight", 13); /* chunk light levels (blocks) */
-	gzwri32(blockf, CHUNK_NBLOCKS/2);
-	gzwrite(blockf, c->light_blocks, CHUNK_NBLOCKS/2);
+	nbt_struct_add(data, nbt_new_long("LastUpdate", 0));
 
-	gzwrite(blockf, "\x07\x00\x08" "SkyLight", 11);   /* chunk light levels (sky) */
-	gzwri32(blockf, CHUNK_NBLOCKS/2);
-	gzwrite(blockf, c->light_sky, CHUNK_NBLOCKS/2);
+	nbt_struct_add(data, nbt_new_int("xPos", NBT_TAG_INT, c->key.x));
+	nbt_struct_add(data, nbt_new_int("zPos", NBT_TAG_INT, c->key.z));
 
-	gzwrite(blockf, "\x07\x00\x09" "HeightMap", 12);  /* chunk heightmap */
-	gzwri32(blockf, CHUNK_XSIZE*CHUNK_ZSIZE);
-	gzwrite(blockf, c->height, CHUNK_XSIZE*CHUNK_ZSIZE); /* TODO FIXME: indexing in different order */
+	nbt_struct_add(data, nbt_new_int("TerrainPopulated", NBT_TAG_BYTE, 1));
 
-	gzwrite(blockf, "\x09\x00\x08" "Entities" "\x0a\x00\x00\x00\x00", 16);
-	gzwrite(blockf, "\x09\x00\x0c" "TileEntities" "\x0a\x00\x00\x00\x00", 20);
-
-	gzwrite(blockf, "\x04\x00\x0a" "LastUpdate" "\x00\x00\x00\x00\x00\x00\x00\x00", 21);
-
-	gzwrite(blockf, "\x03\x00\x04" "xPos", 7);
-	gzwri32(blockf, c->key.x);
-	gzwrite(blockf, "\x03\x00\x04" "zPos", 7);
-	gzwri32(blockf, c->key.z);
-
-	gzwrite(blockf, "\x01\x00\x10" "TerrainPopulated" "\x01", 20);
-
-	gzwrite(blockf, "\x00\x00\x00\x00", 4);        /* close level data and top-level */
-
-	gzclose(blockf);
+	nbt_save(pathbuf, data);
+	nbt_free(data);
 }
 
 int world_save(char *dir)
@@ -622,28 +587,22 @@ int world_save(char *dir)
 
 	g_snprintf(pathbuf, pathbufsize, "%s/level.dat", dir);
 
-	gzFile levelf = gzopen(pathbuf, "wb9");
-	if (!levelf)
+	struct nbt_tag *data = nbt_new_struct("Data");
+
+	nbt_struct_add(data, nbt_new_long("Time", 0));
+	nbt_struct_add(data, nbt_new_long("LastPlayed", 0));
+
+	nbt_struct_add(data, nbt_new_int("SpawnX", NBT_TAG_INT, spawn_x));
+	nbt_struct_add(data, nbt_new_int("SpawnY", NBT_TAG_INT, spawn_y));
+	nbt_struct_add(data, nbt_new_int("SpawnZ", NBT_TAG_INT, spawn_z));
+
+	nbt_struct_add(data, nbt_new_long("RandomSeed", world_seed));
+
+	int ret = nbt_save(pathbuf, data);
+	nbt_free(data);
+
+	if (!ret)
 		return 0;
-
-	gzwrite(levelf, "\x0a\x00\x00", 3);
-	gzwrite(levelf, "\x0a\x00\x04" "Data", 7);
-
-	gzwrite(levelf, "\x04\x00\x04" "Time" "\x00\x00\x00\x00\x00\x00\x00\x00", 15);
-	gzwrite(levelf, "\x04\x00\x0a" "LastPlayed" "\x00\x00\x00\x00\x00\x00\x00\x00", 21);
-
-	gzwrite(levelf, "\x03\x00\x06" "SpawnX", 9);
-	gzwri32(levelf, spawn_x);
-	gzwrite(levelf, "\x03\x00\x06" "SpawnY", 9);
-	gzwri32(levelf, spawn_y);
-	gzwrite(levelf, "\x03\x00\x06" "SpawnZ", 9);
-	gzwri32(levelf, spawn_z);
-
-	gzwrite(levelf, "\x04\x00\x0a" "RandomSeed", 13);
-	gzwri64(levelf, world_seed);
-
-	gzwrite(levelf, "\x00\x00\x00\x00", 4);
-	gzclose(levelf);
 
 	/* write the chunk files */
 

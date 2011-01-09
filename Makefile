@@ -21,4 +21,4 @@ cc.flags += $(if $(debug),-g,-O3)
 
 all: $(objdir)/mcmap
 
-$(call c-program, mcmap, cmd.c console.c main.c map.c protocol.c world.c)
+$(call c-program, mcmap, cmd.c console.c main.c map.c nbt.c protocol.c world.c)
