@@ -1,7 +1,11 @@
+#include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <glib.h>
 
@@ -21,15 +25,15 @@ void cmd_parse(unsigned char *cmd, int cmdlen)
 	while (cmdv[cmdc])
 		cmdc++;
 
-	if (strcmp(cmdv[0], "goto") == 0)
+	if (strcmp(cmdv[0], "coords") == 0)
+		cmd_coords();
+	else if (strcmp(cmdv[0], "goto") == 0)
 	{
 		if (cmdc == 3)
 			cmd_goto(atoi(cmdv[1]), atoi(cmdv[2]));
 		else
 			chat("usage: //goto x z");
 	}
-	else if (strcmp(cmdv[0], "coords") == 0)
-		cmd_coords();
 	else if (strcmp(cmdv[0], "slap") == 0)
 	{
 		if (cmdc == 2)
@@ -37,10 +41,26 @@ void cmd_parse(unsigned char *cmd, int cmdlen)
 		else
 			chat("usage: //slap name");
 	}
+#ifdef FEAT_FULLCHUNK
+	else if (strcmp(cmdv[0], "save") == 0)
+	{
+		if (cmdc == 1)
+			cmd_save(0);
+		else if (cmdc == 2)
+			cmd_save(cmdv[1]);
+		else
+			chat("usage: //save [dir]");
+	}
+#endif /* FEAT_FULLCHUNK */
 	else
 		chat("unknown command: //%s", cmdv[0]);
 
 	g_strfreev(cmdv);
+}
+
+void cmd_coords()
+{
+	chat("//coords: x=%d, z=%d, y=%d", player_x, player_z, player_y);
 }
 
 void cmd_goto(int x, int z)
@@ -113,10 +133,63 @@ void cmd_goto(int x, int z)
 	chat("//goto: jumping to (%d,%d)", x, z);
 }
 
-void cmd_coords()
+#ifdef FEAT_FULLCHUNK
+void cmd_save(char *dir)
 {
-	chat("//coords: x=%d, z=%d, y=%d", player_x, player_z, player_y);
+	/* construct the target directory */
+
+	char dirbuf[PATH_MAX+1];
+
+	if (!dir || *dir != '/')
+	{
+		if (!getcwd(dirbuf, sizeof dirbuf))
+			g_snprintf(dirbuf, sizeof dirbuf, ".");
+
+		g_strlcat(dirbuf, "/", sizeof dirbuf);
+
+		if (dir)
+			g_strlcat(dirbuf, dir, sizeof dirbuf);
+		else
+			g_strlcat(dirbuf, "world", sizeof dirbuf);
+
+		dir = dirbuf;
+	}
+
+	/* check the target dir for suitability */
+
+	struct stat sbuf;
+
+	int t = stat(dir, &sbuf);
+
+	if (t != 0 && errno == ENOENT)
+	{
+		if (mkdir(dir, 0777) != 0)
+		{
+			chat("//save: can't create dir: %s", dir);
+			return;
+		}
+	}
+	else if (t != 0)
+	{
+		chat("//save: can't stat: %s", dir);
+		return;
+	}
+	else if (!S_ISDIR(sbuf.st_mode))
+	{
+		chat("//save: not a directory: %s", dir);
+		return;
+	}
+
+	/* dump the world */
+
+	chat("//save: dumping world to: %s", dir);
+
+	if (!world_save(dir))
+		chat("//save: failed");
+	else
+		chat("//save: successful");
 }
+#endif /* FEAT_FULLCHUNK */
 
 void cmd_slap(char *name)
 {

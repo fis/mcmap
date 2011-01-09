@@ -114,6 +114,7 @@ packet_t *packet_new(enum packet_dir dir, enum packet_id type, ...);
 void packet_free(gpointer packet);
 
 int packet_int(packet_t *packet, unsigned field);
+long long packet_long(packet_t *packet, unsigned field);
 double packet_double(packet_t *packet, unsigned field);
 unsigned char *packet_string(packet_t *packet, unsigned field, int *len);
 

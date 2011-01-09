@@ -635,6 +635,21 @@ int packet_int(packet_t *packet, unsigned field)
 	}
 }
 
+long long packet_long(packet_t *packet, unsigned field)
+{
+	if (packet_format[packet->id].ftype[field] == FIELD_LONG)
+	{
+		unsigned char *p = &packet->bytes[packet->field_offset[field]];
+		return
+			((long long)p[0] << 56) | ((long long)p[1] << 48) |
+			((long long)p[2] << 40) | ((long long)p[3] << 32) |
+			((long long)p[4] << 24) | ((long long)p[5] << 16) |
+			((long long)p[6] << 8) | p[7];
+	}
+	else
+		return packet_int(packet, field);
+}
+
 double packet_double(packet_t *packet, unsigned field)
 {
 	unsigned char *p = &packet->bytes[packet->field_offset[field]];

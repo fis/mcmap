@@ -1,6 +1,8 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <SDL.h>
 #include <glib.h>
@@ -23,6 +25,10 @@ static GMutex *entity_mutex = 0;
 
 static int entity_player = -1;
 static int entity_vehicle = -1;
+
+static long long world_seed = 0;
+static int spawn_known = 0;
+static int spawn_x = 0, spawn_y = 0, spawn_z = 0;
 
 volatile int world_running = 1;
 
@@ -122,6 +128,11 @@ static void handle_chunk(int x0, int y0, int z0,
 	int c_max_x = INT_MIN, c_max_z = INT_MIN;
 
 	unsigned char *zb = zbuf;
+#ifdef FEAT_FULLCHUNK
+	unsigned char *zb_meta = zbuf + xs*ys*zs;
+	unsigned char *zb_light_blocks = zb_meta + (xs*ys*zs+1)/2;
+	unsigned char *zb_light_sky = zb_light_blocks + (xs*ys*zs+1)/2;
+#endif
 
 	for (int x = x0; x < x0+xs; x++)
 	{
@@ -137,6 +148,18 @@ static void handle_chunk(int x0, int y0, int z0,
 
 			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, yupds);
 			zb += ys;
+
+#ifdef FEAT_FULLCHUNK
+			if (zb_meta + (ys+1)/2 - zbuf <= zbuf_len)
+				memcpy(&c->meta[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_meta, (yupds+1)/2);
+			if (zb_light_blocks + (ys+1)/2 - zbuf <= zbuf_len)
+				memcpy(&c->light_blocks[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_blocks, (yupds+1)/2);
+			if (zb_light_sky + (ys+1)/2 - zbuf <= zbuf_len)
+				memcpy(&c->light_sky[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_sky, (yupds+1)/2);
+			zb_meta += (ys+1)/2;
+			zb_light_blocks += (ys+1)/2;
+			zb_light_sky += (ys+1)/2;
+#endif
 
 			int h = c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
 
@@ -378,14 +401,10 @@ gpointer world_thread(gpointer data)
 
 		case PACKET_LOGIN:
 			if (packet->dir == PACKET_TO_CLIENT)
+			{
 				entity_player = packet_int(packet, 0);
-			break;
-
-		case PACKET_PLAYER_MOVE:
-			if (entity_vehicle < 0)
-				map_update_player_pos(packet_double(packet, 0),
-				                      packet_double(packet, 1),
-				                      packet_double(packet, 3));
+				world_seed = packet_long(packet, 3);
+			}
 			break;
 
 		case PACKET_PLAYER_ROTATE:
@@ -394,13 +413,27 @@ gpointer world_thread(gpointer data)
 			break;
 
 		case PACKET_PLAYER_MOVE_ROTATE:
+			map_update_player_dir(packet_double(packet, 4),
+			                      packet_double(packet, 5));
+
+			/* fall-thru to PACKET_PLAYER_MOVE */
+
+		case PACKET_PLAYER_MOVE:
 			if (entity_vehicle < 0)
 				map_update_player_pos(packet_double(packet, 0),
 				                      packet_double(packet, 1),
 				                      packet_double(packet, 3));
-			map_update_player_dir(packet_double(packet, 4),
-			                      packet_double(packet, 5));
+
+			if (packet->dir == PACKET_TO_CLIENT && !spawn_known)
+			{
+				spawn_known = 1;
+				spawn_x = packet_double(packet, 0);
+				spawn_y = packet_double(packet, 1);
+				spawn_z = packet_double(packet, 3);
+			}
+
 			break;
+
 
 		case PACKET_ENTITY_SPAWN_NAMED:
 			p = packet_string(packet, 1, &t);
@@ -464,3 +497,159 @@ gpointer world_thread(gpointer data)
 
 	return NULL;
 }
+
+/* world file IO routines */
+
+#ifdef FEAT_FULLCHUNK
+
+static const char base36_chars[36] = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+static char *base36_encode(int value, char *buf, int bufsize)
+{
+	buf[bufsize-1] = 0;
+	bufsize -= 2;
+
+	int neg = 0;
+	if (value < 0)
+		neg = 1, value = -value;
+
+	while (value && bufsize >= 0)
+	{
+		buf[bufsize--] = base36_chars[value % 36];
+		value /= 36;
+	}
+
+	if (neg && bufsize >= 0)
+		buf[bufsize--] = '-';
+
+	return buf + bufsize + 1;
+}
+
+static void gzwri32(gzFile f, int v)
+{
+	unsigned char buf[4] = { v >> 24, v >> 16, v >> 8, v };
+	gzwrite(f, buf, 4);
+}
+
+static void gzwri64(gzFile f, long long v)
+{
+	unsigned char buf[8] = {
+		v >> 56, v >> 48, v >> 40, v >> 32,
+		v >> 24, v >> 16, v >> 8, v
+	};
+	gzwrite(f, buf, 8);
+}
+
+static void world_save_block(gpointer key, gpointer value, gpointer userdata)
+{
+	struct chunk *c = value;
+	char *dir = userdata;
+
+	int pathbufsize = strlen(dir) + 64;
+	char pathbuf[pathbufsize];
+
+	/* compute and create directory part of chunk path */
+
+	char dir_x_buf[3], dir_z_buf[3];
+
+	char *dir_x = base36_encode(c->key.x & 63, dir_x_buf, sizeof dir_x_buf);
+	char *dir_z = base36_encode(c->key.z & 63, dir_z_buf, sizeof dir_z_buf);
+
+	g_snprintf(pathbuf, pathbufsize, "%s/%s", dir, dir_x);
+	mkdir(pathbuf, 0777);
+	g_snprintf(pathbuf, pathbufsize, "%s/%s/%s", dir, dir_x, dir_z);
+	mkdir(pathbuf, 0777);
+
+	/* construct and open the chunk file */
+
+	char file_x_buf[16], file_z_buf[16];
+
+	char *file_x = base36_encode(c->key.x, file_x_buf, sizeof file_x_buf);
+	char *file_z = base36_encode(c->key.z, file_z_buf, sizeof file_z_buf);
+
+	g_snprintf(pathbuf, pathbufsize, "%s/%s/%s/c.%s.%s.dat", dir, dir_x, dir_z, file_x, file_z);
+
+	gzFile blockf = gzopen(pathbuf, "wb9");
+
+	/* dump the chunk data */
+
+	gzwrite(blockf, "\x0a\x00\x00", 3);            /* top level unnamed tag */
+	gzwrite(blockf, "\x0a\x00\x05" "Level", 8);       /* level data container */
+
+	gzwrite(blockf, "\x07\x00\x06" "Blocks", 9);      /* chunk block-type data */
+	gzwri32(blockf, CHUNK_NBLOCKS);
+	gzwrite(blockf, c->blocks, CHUNK_NBLOCKS);
+
+	gzwrite(blockf, "\x07\x00\x04" "Data", 7);     /* chunk metadata */
+	gzwri32(blockf, CHUNK_NBLOCKS/2);
+	gzwrite(blockf, c->meta, CHUNK_NBLOCKS/2);
+
+	gzwrite(blockf, "\x07\x00\x0a" "BlockLight", 13); /* chunk light levels (blocks) */
+	gzwri32(blockf, CHUNK_NBLOCKS/2);
+	gzwrite(blockf, c->light_blocks, CHUNK_NBLOCKS/2);
+
+	gzwrite(blockf, "\x07\x00\x08" "SkyLight", 11);   /* chunk light levels (sky) */
+	gzwri32(blockf, CHUNK_NBLOCKS/2);
+	gzwrite(blockf, c->light_sky, CHUNK_NBLOCKS/2);
+
+	gzwrite(blockf, "\x07\x00\x09" "HeightMap", 12);  /* chunk heightmap */
+	gzwri32(blockf, CHUNK_XSIZE*CHUNK_ZSIZE);
+	gzwrite(blockf, c->height, CHUNK_XSIZE*CHUNK_ZSIZE); /* TODO FIXME: indexing in different order */
+
+	gzwrite(blockf, "\x09\x00\x08" "Entities" "\x0a\x00\x00\x00\x00", 16);
+	gzwrite(blockf, "\x09\x00\x0c" "TileEntities" "\x0a\x00\x00\x00\x00", 20);
+
+	gzwrite(blockf, "\x04\x00\x0a" "LastUpdate" "\x00\x00\x00\x00\x00\x00\x00\x00", 21);
+
+	gzwrite(blockf, "\x03\x00\x04" "xPos", 7);
+	gzwri32(blockf, c->key.x);
+	gzwrite(blockf, "\x03\x00\x04" "zPos", 7);
+	gzwri32(blockf, c->key.z);
+
+	gzwrite(blockf, "\x01\x00\x10" "TerrainPopulated" "\x01", 20);
+
+	gzwrite(blockf, "\x00\x00\x00\x00", 4);        /* close level data and top-level */
+
+	gzclose(blockf);
+}
+
+int world_save(char *dir)
+{
+	/* write the top-level level.dat */
+
+	int pathbufsize = strlen(dir) + 16;
+	char pathbuf[pathbufsize];
+
+	g_snprintf(pathbuf, pathbufsize, "%s/level.dat", dir);
+
+	gzFile levelf = gzopen(pathbuf, "wb9");
+	if (!levelf)
+		return 0;
+
+	gzwrite(levelf, "\x0a\x00\x00", 3);
+	gzwrite(levelf, "\x0a\x00\x04" "Data", 7);
+
+	gzwrite(levelf, "\x04\x00\x04" "Time" "\x00\x00\x00\x00\x00\x00\x00\x00", 15);
+	gzwrite(levelf, "\x04\x00\x0a" "LastPlayed" "\x00\x00\x00\x00\x00\x00\x00\x00", 21);
+
+	gzwrite(levelf, "\x03\x00\x06" "SpawnX", 9);
+	gzwri32(levelf, spawn_x);
+	gzwrite(levelf, "\x03\x00\x06" "SpawnY", 9);
+	gzwri32(levelf, spawn_y);
+	gzwrite(levelf, "\x03\x00\x06" "SpawnZ", 9);
+	gzwri32(levelf, spawn_z);
+
+	gzwrite(levelf, "\x04\x00\x0a" "RandomSeed", 13);
+	gzwri64(levelf, world_seed);
+
+	gzwrite(levelf, "\x00\x00\x00\x00", 4);
+	gzclose(levelf);
+
+	/* write the chunk files */
+
+	g_hash_table_foreach(chunk_table, world_save_block, dir);
+
+	return 1;
+}
+
+#endif /* FEAT_FULLCHUNK */
