@@ -511,8 +511,14 @@ static char *base36_encode(int value, char *buf, int bufsize)
 	bufsize -= 2;
 
 	int neg = 0;
+
 	if (value < 0)
 		neg = 1, value = -value;
+	else if (value == 0)
+	{
+		buf[bufsize] = '0';
+		return buf+bufsize;
+	}
 
 	while (value && bufsize >= 0)
 	{
