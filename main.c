@@ -5,10 +5,6 @@
 
 #include <gio/gio.h>
 #include <SDL.h>
-#ifdef WIN32
-#undef main
-#include <windows.h>
-#endif
 
 #include "cmd.h"
 #include "common.h"
@@ -16,6 +12,12 @@
 #include "map.h"
 #include "protocol.h"
 #include "world.h"
+
+#ifdef WIN32
+#undef main
+#include <windows.h>
+#include "win32.h"
+#endif
 
 /* default command-line options */
 
@@ -156,6 +158,11 @@ int main(int argc, char **argv)
 	setlocale(LC_ALL, "");
 
 	/* command line option grokking */
+
+#ifdef WIN32
+	if (argc <= 1)
+		win32_splash(&argc, &argv);
+#endif
 
 	static GOptionEntry gopt_entries[] = {
 		{ "nocolor", 'c', 0, G_OPTION_ARG_NONE, &opt.noansi, "Disable ANSI color escapes" },
