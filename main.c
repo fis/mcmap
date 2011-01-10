@@ -400,6 +400,12 @@ int main(int argc, char **argv)
 				handle_mouse(&e.button, screen);
 				break;
 
+			case SDL_VIDEORESIZE:
+				screen = SDL_SetVideoMode(e.resize.w, e.resize.h, 32, SDL_SWSURFACE|SDL_RESIZABLE);
+				repaint = 1;
+				break;
+
+			case SDL_VIDEOEXPOSE:
 			case MCMAP_EVENT_REPAINT:
 				repaint = 1;
 				break;
