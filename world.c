@@ -6,6 +6,7 @@
 
 #include <SDL.h>
 #include <glib.h>
+#include <glib/gstdio.h>
 #include <zlib.h>
 
 #include "cmd.h"
@@ -548,9 +549,9 @@ static void world_save_block(gpointer key, gpointer value, gpointer userdata)
 	char *dir_z = base36_encode(c->key.z & 63, dir_z_buf, sizeof dir_z_buf);
 
 	g_snprintf(pathbuf, pathbufsize, "%s/%s", dir, dir_x);
-	mkdir(pathbuf, 0777);
+	g_mkdir(pathbuf, 0777);
 	g_snprintf(pathbuf, pathbufsize, "%s/%s/%s", dir, dir_x, dir_z);
-	mkdir(pathbuf, 0777);
+	g_mkdir(pathbuf, 0777);
 
 	/* construct and open the chunk file */
 

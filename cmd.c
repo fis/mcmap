@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <glib.h>
+#include <glib/gstdio.h>
 
 #include "cmd.h"
 #include "common.h"
@@ -163,7 +164,7 @@ void cmd_save(char *dir)
 
 	if (t != 0 && errno == ENOENT)
 	{
-		if (mkdir(dir, 0777) != 0)
+		if (g_mkdir(dir, 0777) != 0)
 		{
 			chat("//save: can't create dir: %s", dir);
 			return;
