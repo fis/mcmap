@@ -8,13 +8,15 @@ deps := $(sources:.c=.d)
 CC := i586-mingw32msvc-gcc
 WINDRES := i586-mingw32msvc-windres
 
-CFLAGS := $(CFLAGS)
+CFLAGS := -DWINVER=0x0501 $(CFLAGS)
 CFLAGS += -Wall -Werror -std=gnu99
 CFLAGS += -Iwin/glib/include -Iwin/glib/include/glib-2.0 -Iwin/glib/lib/glib-2.0/include
 CFLAGS += -Iwin/SDL-1.2.14/include/SDL
-CFLAGS += -O2
+#CFLAGS += -O2
+CFLAGS += -g
 
 LDFLAGS := $(LDFLAGS)
+LDFLAGS += -lws2_32
 LDFLAGS += -Lwin/glib/lib -lglib-2.0 -lgobject-2.0 -lgthread-2.0 -lgio-2.0 -lz
 LDFLAGS += -Lwin/SDL-1.2.14/lib -lSDL
 

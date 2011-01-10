@@ -13,6 +13,10 @@ enum special_color_names
 	COLOR_MAX_SPECIAL
 };
 
+#ifdef RGB
+#undef RGB
+#endif
+
 #define RGB(r,g,b) (((r)<<16)|((g)<<8)|(b))
 
 #define AIR_COLOR RGB(180, 255, 255)

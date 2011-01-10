@@ -286,7 +286,7 @@ struct packet_format_desc packet_format[] =
 
 /* packet reading/writing */
 
-packet_t *packet_read(GSocket *sock, packet_state_t *state)
+packet_t *packet_read(SOCKET sock, packet_state_t *state)
 {
 	unsigned char *buf = state->buf;
 	unsigned buf_start = state->buf_start, buf_pos = state->buf_pos, buf_end = state->buf_end;
@@ -301,7 +301,11 @@ packet_t *packet_read(GSocket *sock, packet_state_t *state)
 			buf_start = 0;
 		}
 
+#ifdef WIN32
+		int got = recv(sock, (char*)(buf+buf_end), MAX_PACKET_SIZE - buf_end, 0);
+#else
 		gssize got = g_socket_receive(sock, (gchar*)(buf+buf_end), MAX_PACKET_SIZE - buf_end, 0, 0);
+#endif
 		if (got <= 0)
 		{
 			buf_pos = buf_start = buf_end = 0;
@@ -440,14 +444,18 @@ packet_t *packet_read(GSocket *sock, packet_state_t *state)
 	return &state->p;
 }
 
-int packet_write(GSocket *sock, packet_t *packet)
+int packet_write(SOCKET sock, packet_t *packet)
 {
 	gsize left = packet->size;
 	gchar *p = (gchar*)packet->bytes;
 
 	while (left)
 	{
+#ifdef WIN32
+		int sent = send(sock, p, left, 0);
+#else
 		gssize sent = g_socket_send(sock, p, left, 0, 0);
+#endif
 		if (sent < 0)
 			return 0;
 		left -= sent;
