@@ -1,6 +1,6 @@
 # mcmap/Makefile.win  -*- mode: makefile -*-
 
-sources := cmd.c console.c main.c map.c protocol.c world.c win32.c
+sources := cmd.c console.c main.c map.c nbt.c protocol.c world.c win32.c
 
 objs := $(sources:.c=.o) win32-res.o
 deps := $(sources:.c=.d)
