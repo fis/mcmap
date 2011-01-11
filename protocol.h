@@ -6,8 +6,9 @@
 #ifdef WIN32
 #include <winsock2.h>
 #else
-#include <gio/gio.h>
-typedef GSocket *SOCKET;
+typedef int SOCKET;
+#include <sys/types.h>
+#include <sys/socket.h>
 #endif
 
 enum packet_id

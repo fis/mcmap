@@ -301,11 +301,7 @@ packet_t *packet_read(SOCKET sock, packet_state_t *state)
 			buf_start = 0;
 		}
 
-#ifdef WIN32
 		int got = recv(sock, (char*)(buf+buf_end), MAX_PACKET_SIZE - buf_end, 0);
-#else
-		gssize got = g_socket_receive(sock, (gchar*)(buf+buf_end), MAX_PACKET_SIZE - buf_end, 0, 0);
-#endif
 		if (got <= 0)
 		{
 			buf_pos = buf_start = buf_end = 0;
@@ -451,11 +447,7 @@ int packet_write(SOCKET sock, packet_t *packet)
 
 	while (left)
 	{
-#ifdef WIN32
 		int sent = send(sock, p, left, 0);
-#else
-		gssize sent = g_socket_send(sock, p, left, 0, 0);
-#endif
 		if (sent < 0)
 			return 0;
 		left -= sent;

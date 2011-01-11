@@ -17,7 +17,7 @@ CFLAGS += -g
 
 LDFLAGS := $(LDFLAGS)
 LDFLAGS += -lws2_32
-LDFLAGS += -Lwin/glib/lib -lglib-2.0 -lgobject-2.0 -lgthread-2.0 -lgio-2.0 -lz
+LDFLAGS += -Lwin/glib/lib -lglib-2.0 -lgobject-2.0 -lgthread-2.0 -lz
 LDFLAGS += -Lwin/SDL-1.2.14/lib -lSDL
 
 .PHONY: all clean

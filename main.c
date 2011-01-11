@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <gio/gio.h>
 #include <SDL.h>
 
 #include "cmd.h"
@@ -19,6 +18,11 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include "win32.h"
+#else
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #endif
 
 /* default command-line options */
@@ -215,7 +219,6 @@ int main(int argc, char **argv)
 	/* initialization stuff */
 
 	g_thread_init(0);
-	g_type_init();
 
 	iq_client = g_async_queue_new_full(packet_free);
 	iq_server = g_async_queue_new_full(packet_free);
@@ -233,11 +236,14 @@ int main(int argc, char **argv)
 
 #ifdef WIN32
 	SOCKET listener = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, 0);
-	if (listener == INVALID_SOCKET)
+#else
+	SOCKET listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+#endif
+	if (listener < 0)
 		die("network setup: socket() for listener");
 
 	{
-		BOOL b = TRUE;
+		int b = 1;
 		setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&b, sizeof b);
 	}
 
@@ -245,38 +251,20 @@ int main(int argc, char **argv)
 	listener_in.sin_family = AF_INET;
 	listener_in.sin_addr.s_addr = htonl(INADDR_ANY);
 	listener_in.sin_port = htons(opt.localport);
-	if (bind(listener, (struct sockaddr *)&listener_in, sizeof listener_in) == SOCKET_ERROR)
+	if (bind(listener, (struct sockaddr *)&listener_in, sizeof listener_in) != 0)
 		die("network setup: bind() for listener");
 
-	if (listen(listener, SOMAXCONN) == SOCKET_ERROR)
+	if (listen(listener, SOMAXCONN) != 0)
 		die("network setup: listen() for listener");
 
 	SOCKET sock_cli = accept(listener, 0, 0);
-	if (sock_cli == INVALID_SOCKET)
+	if (sock_cli < 0)
 		die("network setup: accept() for listener");
-#else /* WIN32 */
-	GSocketListener *listener = g_socket_listener_new();
-
-	if (!g_socket_listener_add_inet_port(listener, opt.localport, 0, 0))
-	{
-		die("Unable to set up sockets.");
-		return 1;
-	}
-
-	GSocketConnection *conn_cli = g_socket_listener_accept(listener, 0, 0, 0);
-
-	if (!conn_cli)
-	{
-		die("Client never connected.");
-		return 1;
-	}
-#endif /* WIN32 */
 
 	/* connect to the minecraft server side */
 
 	log_print("[INFO] Connecting to %s...", argv[1]);
 
-#ifdef WIN32
 	struct addrinfo hints = { 0 }, *serveraddr;
 
 	hints.ai_family = AF_UNSPEC;
@@ -297,25 +285,18 @@ int main(int argc, char **argv)
 	if (aires != 0)
 		die("network setup: getaddrinfo() for server");
 
+#ifdef WIN32
 	SOCKET sock_srv = WSASocket(serveraddr->ai_family, serveraddr->ai_socktype, serveraddr->ai_protocol, 0, 0, 0);
-	if (sock_srv == INVALID_SOCKET)
+#else
+	SOCKET sock_srv = socket(serveraddr->ai_family, serveraddr->ai_socktype, serveraddr->ai_protocol);
+#endif
+	if (sock_srv < 0)
 		die("network setup: socket() for server");
 
-	if (connect(sock_srv, serveraddr->ai_addr, serveraddr->ai_addrlen) == SOCKET_ERROR)
+	if (connect(sock_srv, serveraddr->ai_addr, serveraddr->ai_addrlen) != 0)
 		die("network setup: connect() for server");
 
 	freeaddrinfo(serveraddr);
-#else /* WIN32 */
-	GSocketClient *client = g_socket_client_new();
-
-	GSocketConnection *conn_srv = g_socket_client_connect_to_host(client, argv[1], 25565, 0, 0);
-
-	if (!conn_srv)
-	{
-		die("Unable to connect to server.");
-		return 1;
-	}
-#endif /* WIN32 */
 
 	/* start the user interface side */
 
@@ -349,11 +330,6 @@ int main(int argc, char **argv)
 	/* start the proxying threads */
 
 	log_print("[INFO] Starting up...");
-
-#ifndef WIN32
-	GSocket *sock_cli = g_socket_connection_get_socket(conn_cli);
-	GSocket *sock_srv = g_socket_connection_get_socket(conn_srv);
-#endif
 
 	struct proxy_config proxy_client_server = {
 		.sock_from = sock_cli,

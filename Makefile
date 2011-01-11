@@ -6,7 +6,7 @@ endif
 
 include useful.make
 
-libs := gio-2.0 gthread-2.0 sdl
+libs := gthread-2.0 sdl
 
 cc.flags := -Wall -Werror -std=gnu99
 cc.flags += $(shell pkg-config --cflags $(libs))
