@@ -37,7 +37,8 @@ enum field_type packet_format_time[] = {
 enum field_type packet_format_entity_equipment[] = {
 	FIELD_INT,   /* entity id */
 	FIELD_SHORT, /* equipment slot: 0 = held, 1..4 = armor */
-	FIELD_SHORT  /* block/item ID */
+	FIELD_SHORT, /* block/item ID */
+	FIELD_SHORT  /* damage? */
 };
 
 enum field_type packet_format_spawn_position[] = {
@@ -94,7 +95,23 @@ enum field_type packet_format_entity_spawn_object[] = {
 };
 
 enum field_type packet_format_mob_spawn[] = {
-	FIELD_INT, FIELD_UBYTE, FIELD_INT, FIELD_INT, FIELD_INT, FIELD_UBYTE, FIELD_BYTE
+	FIELD_INT,                       /* entity ID */
+	FIELD_UBYTE,                     /* entity type */
+	FIELD_INT, FIELD_INT, FIELD_INT, /* pos X/Y/Z */
+	FIELD_UBYTE, FIELD_BYTE,         /* dir yaw/pitch */
+	FIELD_ENTITY_DATA                /* metadata */
+};
+
+enum field_type packet_format_entity_painting[] = {
+	FIELD_INT,                       /* entity ID */
+	FIELD_STRING,                    /* painting name */
+	FIELD_INT, FIELD_INT, FIELD_INT, /* hanging block X/Y/Z */
+	FIELD_INT                        /* something */
+};
+
+enum field_type packet_format_entity_action[] = {
+	FIELD_INT,  /* entity ID */
+	FIELD_UBYTE /* action id: 1 = crouch, 2 = uncrouch */
 };
 
 enum field_type packet_format_entity_animate[] = {
@@ -107,8 +124,10 @@ enum field_type packet_format_entity_spawn_named[] = {
 };
 
 enum field_type packet_format_entity_spawn_pickup[] = {
-	FIELD_INT, FIELD_SHORT, FIELD_UBYTE, FIELD_INT, FIELD_INT, FIELD_INT,
-	FIELD_UBYTE, FIELD_BYTE, FIELD_BYTE
+	FIELD_INT,                             /* entity ID for new entity */
+	FIELD_SHORT, FIELD_UBYTE, FIELD_SHORT, /* item ID/count/damage */
+	FIELD_INT, FIELD_INT, FIELD_INT,       /* position X/Y/Z */
+	FIELD_UBYTE, FIELD_BYTE, FIELD_BYTE    /* rotation yaw/pitch/roll */
 };
 
 enum field_type packet_format_entity_velocity[] = {
@@ -147,6 +166,11 @@ enum field_type packet_format_entity_attach[] = {
 	FIELD_INT, FIELD_INT
 };
 
+enum field_type packet_format_entity_metadata[] = {
+	FIELD_INT,        /* entity ID */
+	FIELD_ENTITY_DATA /* metadata */
+};
+
 enum field_type packet_format_prechunk[] = {
 	FIELD_INT, FIELD_INT, FIELD_UBYTE
 };
@@ -167,6 +191,11 @@ enum field_type packet_format_chunk[] = {
 	FIELD_UBYTE, /* chunk Y-size */
 	FIELD_UBYTE, /* chunk Z-size */
 	FIELD_ARRAY  /* blocks */
+};
+
+enum field_type packet_format_play_block[] = {
+	FIELD_INT, FIELD_SHORT, FIELD_INT, /* X/Y/Z coordinate */
+	FIELD_UBYTE, FIELD_UBYTE           /* instrument type and pitch */
 };
 
 enum field_type packet_format_explosion[] = {
@@ -252,11 +281,13 @@ struct packet_format_desc packet_format[] =
 	[PACKET_PLACE] = P(packet_format_place),
 	[PACKET_ENTITY_HOLDING] = P(packet_format_entity_holding),
 	[PACKET_ENTITY_ANIMATE] = P(packet_format_entity_animate),
+	[PACKET_ENTITY_ACTION] = P(packet_format_entity_action),
 	[PACKET_ENTITY_SPAWN_NAMED] = P(packet_format_entity_spawn_named),
 	[PACKET_ENTITY_SPAWN_PICKUP] = P(packet_format_entity_spawn_pickup),
 	[PACKET_ENTITY_COLLECT] = P(packet_format_entity_collect),
 	[PACKET_ENTITY_SPAWN_OBJECT] = P(packet_format_entity_spawn_object),
 	[PACKET_MOB_SPAWN] = P(packet_format_mob_spawn),
+	[PACKET_ENTITY_PAINTING] = P(packet_format_entity_painting),
 	[PACKET_ENTITY_VELOCITY] = P(packet_format_entity_velocity),
 	[PACKET_ENTITY_DESTROY] = P(packet_format_entity_destroy),
 	[PACKET_ENTITY] = P(packet_format_entity),
@@ -266,10 +297,12 @@ struct packet_format_desc packet_format[] =
 	[PACKET_ENTITY_MOVE] = P(packet_format_entity_move),
 	[PACKET_ENTITY_DAMAGE] = P(packet_format_entity_damage),
 	[PACKET_ENTITY_ATTACH] = P(packet_format_entity_attach),
+	[PACKET_ENTITY_METADATA] = P(packet_format_entity_metadata),
 	[PACKET_PRECHUNK] = P(packet_format_prechunk),
 	[PACKET_CHUNK] = P(packet_format_chunk),
 	[PACKET_MULTI_SET_BLOCK] = P(packet_format_multi_set_block),
 	[PACKET_SET_BLOCK] = P(packet_format_set_block),
+	[PACKET_PLAY_BLOCK] = P(packet_format_play_block),
 	[PACKET_EXPLOSION] = P(packet_format_explosion),
 	[PACKET_INVENTORY_OPEN] = P(packet_format_inventory_open),
 	[PACKET_INVENTORY_CLOSE] = P(packet_format_inventory_close),
@@ -415,7 +448,7 @@ packet_t *packet_read(SOCKET sock, packet_state_t *state)
 		case FIELD_IITEM:
 			t = buf_get_i16();
 			if (t != -1)
-				if (!buf_skip(2)) return 0;
+				if (!buf_skip(3)) return 0;
 			break;
 
 		case FIELD_SBBARRAY:
@@ -426,6 +459,23 @@ packet_t *packet_read(SOCKET sock, packet_state_t *state)
 		case FIELD_EXPLOSION_RECORDS:
 			t = buf_get_i32();
 			if (!buf_skip(3*t)) return 0;
+			break;
+
+		case FIELD_ENTITY_DATA:
+			while (1)
+			{
+				t = buf_getc();
+				if (t == 127)
+					break;
+				switch (t >> 5)
+				{
+				case 0: if (!buf_skip(1)) return 0; break;
+				case 1: if (!buf_skip(2)) return 0; break;
+				case 2: case 3: if (!buf_skip(4)) return 0; break;
+				case 4: t = buf_get_i16(); if (!buf_skip(t)) return 0; break;
+				case 5: if (!buf_skip(5)) return 0; break;
+				}
+			}
 			break;
 		}
 	}
