@@ -5,7 +5,7 @@ libs := gthread-2.0 sdl
 
 include Makefile.common
 
-CFLAGS += -DPLATFORM=posix
+CFLAGS += -DPLATFORM_POSIX
 CFLAGS += $(shell pkg-config --cflags $(libs))
 
 # Apple's gcc is braindead by default.
