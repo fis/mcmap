@@ -20,7 +20,7 @@ CFLAGS += -Wall -Werror -std=gnu99
 all: $(OBJDIR)/mcmap$(EXE)
 
 $(OBJDIR)/mcmap$(EXE): $(objs)
-	$(CC) $(LDFLAGS) -o $@ $(objs)
+	$(CC) -o $@ $(objs) $(LDFLAGS)
 
 $(OBJDIR):
 	mkdir $@

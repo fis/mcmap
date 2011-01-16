@@ -80,6 +80,8 @@ static INT_PTR CALLBACK splash_proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	return FALSE;
 }
 
+int mcmap_main(int argc, char **argv);
+
 int main(int argc, char **argv)
 {
 	if (argc <= 1)
