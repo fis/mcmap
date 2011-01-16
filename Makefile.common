@@ -25,7 +25,7 @@ $(OBJDIR)/mcmap$(EXE): $(objs)
 $(OBJDIR):
 	mkdir $@
 
-$(OBJDIR)/%.o: %.c $(OBJDIR)
+$(OBJDIR)/%.o: %.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 -include $(deps)
