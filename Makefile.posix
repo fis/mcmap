@@ -1,0 +1,16 @@
+# mcmap/Makefile.posix  -*- mode: makefile -*-
+
+sources = posix.c
+libs := gthread-2.0 sdl
+
+include Makefile.common
+
+CFLAGS += -DPLATFORM=posix
+CFLAGS += $(shell pkg-config --cflags $(libs))
+
+# Apple's gcc is braindead by default.
+ifeq ($(shell uname),Darwin)
+        CFLAGS += -fnested-functions
+endif
+
+LDFLAGS ?= $(shell pkg-config --libs $(libs)) -lz -lreadline

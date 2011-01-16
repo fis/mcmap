@@ -1,6 +1,7 @@
 #ifndef MCMAP_COMMON_H
 #define MCMAP_COMMON_H
 
+#include "platform.h"
 #include "protocol.h"
 
 #include <glib.h>

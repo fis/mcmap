@@ -286,7 +286,7 @@ struct packet_format_desc packet_format[] =
 
 /* packet reading/writing */
 
-packet_t *packet_read(SOCKET sock, packet_state_t *state)
+packet_t *packet_read(socket_t sock, packet_state_t *state)
 {
 	unsigned char *buf = state->buf;
 	unsigned buf_start = state->buf_start, buf_pos = state->buf_pos, buf_end = state->buf_end;
@@ -440,7 +440,7 @@ packet_t *packet_read(SOCKET sock, packet_state_t *state)
 	return &state->p;
 }
 
-int packet_write(SOCKET sock, packet_t *packet)
+int packet_write(socket_t sock, packet_t *packet)
 {
 	gsize left = packet->size;
 	gchar *p = (gchar*)packet->bytes;

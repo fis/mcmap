@@ -3,14 +3,6 @@
 
 #include <glib.h>
 
-#ifdef WIN32
-#include <winsock2.h>
-#else
-typedef int SOCKET;
-#include <sys/types.h>
-#include <sys/socket.h>
-#endif
-
 enum packet_id
 {
 	PACKET_KEEPALIVE = 0x00,
@@ -111,9 +103,9 @@ typedef struct packet_state packet_state_t;
 
 #define PACKET_STATE_INIT(d) { .buf_start = 0, .buf_pos = 0, .buf_end = 0, .p = { .dir = d } }
 
-packet_t *packet_read(SOCKET sock, packet_state_t *state);
+packet_t *packet_read(socket_t sock, packet_state_t *state);
 
-int packet_write(SOCKET sock, packet_t *packet);
+int packet_write(socket_t sock, packet_t *packet);
 
 packet_t *packet_dup(packet_t *packet);
 

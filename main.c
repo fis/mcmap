@@ -12,19 +12,6 @@
 #include "protocol.h"
 #include "world.h"
 
-#ifdef WIN32
-#undef main
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include "win32.h"
-#else
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#endif
-
 /* default command-line options */
 
 struct options opt = {
@@ -45,7 +32,7 @@ static void handle_chat(unsigned char *msg, int msglen);
 
 struct proxy_config
 {
-	SOCKET sock_from, sock_to;
+	socket_t sock_from, sock_to;
 	int client_to_server;
 	GAsyncQueue *q;
 	GAsyncQueue *iq;
@@ -57,7 +44,7 @@ static GAsyncQueue *iq_server = 0;
 gpointer proxy_thread(gpointer data)
 {
 	struct proxy_config *cfg = data;
-	SOCKET sfrom = cfg->sock_from, sto = cfg->sock_to;
+	socket_t sfrom = cfg->sock_from, sto = cfg->sock_to;
 	char *desc = cfg->client_to_server ? "client -> server" : "server -> client";
 
 	packet_state_t state = PACKET_STATE_INIT(cfg->client_to_server ? PACKET_TO_SERVER : PACKET_TO_CLIENT);
@@ -159,16 +146,11 @@ gpointer proxy_thread(gpointer data)
 
 /* main application */
 
-int main(int argc, char **argv)
+int mcmap_main(int argc, char **argv)
 {
 	setlocale(LC_ALL, "");
 
 	/* command line option grokking */
-
-#ifdef WIN32
-	if (argc <= 1)
-		win32_splash(&argc, &argv);
-#endif
 
 	static GOptionEntry gopt_entries[] = {
 		{ "nocolor", 'c', 0, G_OPTION_ARG_NONE, &opt.noansi, "Disable ANSI color escapes" },
@@ -234,11 +216,8 @@ int main(int argc, char **argv)
 
 	log_print("[INFO] Waiting for connection...");
 
-#ifdef WIN32
-	SOCKET listener = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, 0);
-#else
-	SOCKET listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-#endif
+	socket_t listener = make_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
 	if (listener < 0)
 		die("network setup: socket() for listener");
 
@@ -257,7 +236,7 @@ int main(int argc, char **argv)
 	if (listen(listener, SOMAXCONN) != 0)
 		die("network setup: listen() for listener");
 
-	SOCKET sock_cli = accept(listener, 0, 0);
+	socket_t sock_cli = accept(listener, 0, 0);
 	if (sock_cli < 0)
 		die("network setup: accept() for listener");
 
@@ -285,11 +264,8 @@ int main(int argc, char **argv)
 	if (aires != 0)
 		die("network setup: getaddrinfo() for server");
 
-#ifdef WIN32
-	SOCKET sock_srv = WSASocket(serveraddr->ai_family, serveraddr->ai_socktype, serveraddr->ai_protocol, 0, 0, 0);
-#else
-	SOCKET sock_srv = socket(serveraddr->ai_family, serveraddr->ai_socktype, serveraddr->ai_protocol);
-#endif
+	socket_t sock_srv = make_socket(serveraddr->ai_family, serveraddr->ai_socktype, serveraddr->ai_protocol);
+
 	if (sock_srv < 0)
 		die("network setup: socket() for server");
 

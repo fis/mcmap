@@ -1,11 +1,19 @@
 #include <windows.h>
 #include <glib.h>
 
-#include "win32.h"
+#include "platform.h"
 #include "win32-res.h"
 
 static int splash_argc = 0;
 static char** splash_argv = 0;
+
+socket_t make_socket(int domain, int type, int protocol)
+{
+	return WSASocket(domain, type, protocol, 0, 0, 0);
+}
+
+void console_init() { }
+void console_cleanup() { }
 
 static void splash_setargs(HWND hWnd)
 {
@@ -72,13 +80,17 @@ static INT_PTR CALLBACK splash_proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	return FALSE;
 }
 
-void win32_splash(int *argc, char ***argv)
+int main(int argc, char **argv)
 {
-	INT_PTR ret = DialogBox(NULL, MAKEINTRESOURCE(IDD_SPLASH), NULL, splash_proc);
+	if (argc <= 1)
+	{
+		INT_PTR ret = DialogBox(NULL, MAKEINTRESOURCE(IDD_SPLASH), NULL, splash_proc);
 
-	if (ret <= 0)
-		exit(0);
+		if (ret <= 0)
+			return 0;
 
-	*argc = splash_argc;
-	*argv = splash_argv;
+		return mcmap_main(splash_argc, splash_argv);
+	}
+
+	return mcmap_main(argc, argv);
 }
