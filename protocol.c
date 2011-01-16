@@ -12,247 +12,6 @@
  * http://mc.kev009.com/wiki/Protocol
  */
 
-/* packet formats */
-
-enum field_type packet_format_login[] = {
-	FIELD_INT,    /* cli->srv: protocol version; srv->cli: entity id */
-	FIELD_STRING, /* cli->srv: nickname */
-	FIELD_STRING, /* cli->srv: password */
-	FIELD_LONG,
-	FIELD_UBYTE
-};
-
-enum field_type packet_format_handshake[] = {
-	FIELD_STRING
-};
-
-enum field_type packet_format_chat[] = {
-	FIELD_STRING
-};
-
-enum field_type packet_format_time[] = {
-	FIELD_LONG
-};
-
-enum field_type packet_format_entity_equipment[] = {
-	FIELD_INT,   /* entity id */
-	FIELD_SHORT, /* equipment slot: 0 = held, 1..4 = armor */
-	FIELD_SHORT, /* block/item ID */
-	FIELD_SHORT  /* damage? */
-};
-
-enum field_type packet_format_spawn_position[] = {
-	FIELD_INT, FIELD_INT, FIELD_INT
-};
-
-enum field_type packet_format_use_entity[] = {
-	FIELD_INT, FIELD_INT, FIELD_BYTE
-};
-
-enum field_type packet_format_update_health[] = {
-	FIELD_SHORT
-};
-
-enum field_type packet_format_player_ping[] = {
-	FIELD_BYTE
-};
-
-enum field_type packet_format_player_move[] = {
-	FIELD_DOUBLE, FIELD_DOUBLE, FIELD_DOUBLE, FIELD_DOUBLE, FIELD_BYTE
-};
-
-enum field_type packet_format_player_rotate[] = {
-	FIELD_FLOAT, FIELD_FLOAT, FIELD_BYTE
-};
-
-enum field_type packet_format_player_move_rotate[] = {
-	FIELD_DOUBLE, FIELD_DOUBLE, FIELD_DOUBLE, FIELD_DOUBLE,
-	FIELD_FLOAT, FIELD_FLOAT, FIELD_BYTE
-};
-
-enum field_type packet_format_dig[] = {
-	FIELD_UBYTE, FIELD_INT, FIELD_UBYTE, FIELD_INT, FIELD_UBYTE
-};
-
-enum field_type packet_format_place[] = {
-	FIELD_INT,   /* X coordinate */
-	FIELD_UBYTE, /* Y coordinate */
-	FIELD_INT,   /* Z coordinate */
-	FIELD_UBYTE, /* direction flag */
-	FIELD_IITEM  /* block/item being placed */
-};
-
-enum field_type packet_format_entity_holding[] = {
-	FIELD_SHORT
-};
-
-enum field_type packet_format_entity_collect[] = {
-	FIELD_INT, FIELD_INT
-};
-
-enum field_type packet_format_entity_spawn_object[] = {
-	FIELD_INT, FIELD_UBYTE, FIELD_INT, FIELD_INT, FIELD_INT
-};
-
-enum field_type packet_format_mob_spawn[] = {
-	FIELD_INT,                       /* entity ID */
-	FIELD_UBYTE,                     /* entity type */
-	FIELD_INT, FIELD_INT, FIELD_INT, /* pos X/Y/Z */
-	FIELD_UBYTE, FIELD_BYTE,         /* dir yaw/pitch */
-	FIELD_ENTITY_DATA                /* metadata */
-};
-
-enum field_type packet_format_entity_painting[] = {
-	FIELD_INT,                       /* entity ID */
-	FIELD_STRING,                    /* painting name */
-	FIELD_INT, FIELD_INT, FIELD_INT, /* hanging block X/Y/Z */
-	FIELD_INT                        /* something */
-};
-
-enum field_type packet_format_entity_action[] = {
-	FIELD_INT,  /* entity ID */
-	FIELD_UBYTE /* action id: 1 = crouch, 2 = uncrouch */
-};
-
-enum field_type packet_format_entity_animate[] = {
-	FIELD_INT, FIELD_UBYTE
-};
-
-enum field_type packet_format_entity_spawn_named[] = {
-	FIELD_INT, FIELD_STRING, FIELD_INT, FIELD_INT, FIELD_INT,
-	FIELD_UBYTE, FIELD_BYTE, FIELD_SHORT
-};
-
-enum field_type packet_format_entity_spawn_pickup[] = {
-	FIELD_INT,                             /* entity ID for new entity */
-	FIELD_SHORT, FIELD_UBYTE, FIELD_SHORT, /* item ID/count/damage */
-	FIELD_INT, FIELD_INT, FIELD_INT,       /* position X/Y/Z */
-	FIELD_UBYTE, FIELD_BYTE, FIELD_BYTE    /* rotation yaw/pitch/roll */
-};
-
-enum field_type packet_format_entity_velocity[] = {
-	FIELD_INT, FIELD_SHORT, FIELD_SHORT, FIELD_SHORT
-};
-
-enum field_type packet_format_entity_destroy[] = {
-	FIELD_INT
-};
-
-enum field_type packet_format_entity[] = {
-	FIELD_INT
-};
-
-enum field_type packet_format_entity_rel_move[] = {
-	FIELD_INT, FIELD_BYTE, FIELD_BYTE, FIELD_BYTE
-};
-
-enum field_type packet_format_entity_look[] = {
-	FIELD_INT, FIELD_UBYTE, FIELD_BYTE
-};
-
-enum field_type packet_format_entity_rel_move_look[] = {
-	FIELD_INT, FIELD_BYTE, FIELD_BYTE, FIELD_BYTE, FIELD_UBYTE, FIELD_BYTE
-};
-
-enum field_type packet_format_entity_move[] = {
-	FIELD_INT, FIELD_INT, FIELD_INT, FIELD_INT, FIELD_UBYTE, FIELD_BYTE
-};
-
-enum field_type packet_format_entity_damage[] = {
-	FIELD_INT, FIELD_BYTE
-};
-
-enum field_type packet_format_entity_attach[] = {
-	FIELD_INT, FIELD_INT
-};
-
-enum field_type packet_format_entity_metadata[] = {
-	FIELD_INT,        /* entity ID */
-	FIELD_ENTITY_DATA /* metadata */
-};
-
-enum field_type packet_format_prechunk[] = {
-	FIELD_INT, FIELD_INT, FIELD_UBYTE
-};
-
-enum field_type packet_format_multi_set_block[] = {
-	FIELD_INT, FIELD_INT, FIELD_SBBARRAY
-};
-
-enum field_type packet_format_set_block[] = {
-	FIELD_INT, FIELD_UBYTE, FIELD_INT, FIELD_UBYTE, FIELD_UBYTE
-};
-
-enum field_type packet_format_chunk[] = {
-	FIELD_INT,   /* lowest X coordinate */
-	FIELD_SHORT, /* lowest Y coordinate (height) */
-	FIELD_INT,   /* lowest Z coordinate */
-	FIELD_UBYTE, /* chunk X-size */
-	FIELD_UBYTE, /* chunk Y-size */
-	FIELD_UBYTE, /* chunk Z-size */
-	FIELD_ARRAY  /* blocks */
-};
-
-enum field_type packet_format_play_block[] = {
-	FIELD_INT, FIELD_SHORT, FIELD_INT, /* X/Y/Z coordinate */
-	FIELD_UBYTE, FIELD_UBYTE           /* instrument type and pitch */
-};
-
-enum field_type packet_format_explosion[] = {
-	FIELD_DOUBLE, FIELD_DOUBLE, FIELD_DOUBLE, FIELD_FLOAT, FIELD_EXPLOSION_RECORDS
-};
-
-enum field_type packet_format_inventory_open[] = {
-	FIELD_UBYTE,  /* ID for the inventory */
-	FIELD_UBYTE,  /* type: 0 = basic, 1 = crafting, 2 = furnace */
-	FIELD_STRING, /* inventory title for UI */
-	FIELD_UBYTE   /* number of slots */
-};
-
-enum field_type packet_format_inventory_close[] = {
-	FIELD_UBYTE /* inventory ID to close */
-};
-
-enum field_type packet_format_inventory_click[] = {
-	FIELD_UBYTE, /* inventory ID (or 0 for player) */
-	FIELD_SHORT, /* inventory position index */
-	FIELD_UBYTE, /* 1 for right-click, 0 for left-click */
-	FIELD_SHORT, /* click sequence number */
-	FIELD_IITEM  /* item that was clicked */
-};
-
-enum field_type packet_format_inventory_update[] = {
-	FIELD_UBYTE, /* inventory ID (or 0 for player) */
-	FIELD_SHORT, /* inventory position index */
-	FIELD_IITEM  /* item to put there */
-};
-
-enum field_type packet_format_inventory_data[] = {
-	FIELD_UBYTE, /* inventory ID */
-	FIELD_IARRAY /* full inventory contents */
-};
-
-enum field_type packet_format_inventory_progress[] = {
-	FIELD_UBYTE, /* inventory ID */
-	FIELD_SHORT, /* progress bar index */
-	FIELD_SHORT  /* progress bar value */
-};
-
-enum field_type packet_format_inventory_ack[] = {
-	FIELD_UBYTE, /* inventory ID */
-	FIELD_SHORT, /* click sequence number from PACKET_INVENTORY_CLICK */
-	FIELD_UBYTE  /* true/false whether the click was accepted */
-};
-
-enum field_type packet_format_sign_update[] = {
-	FIELD_INT, FIELD_SHORT, FIELD_INT,                     /* absolute X/Y/Z for block */
-	FIELD_STRING, FIELD_STRING, FIELD_STRING, FIELD_STRING /* 4 lines of text */
-};
-
-enum field_type packet_format_disconnect[] = {
-	FIELD_STRING
-};
-
 struct packet_format_desc
 {
 	unsigned nfields;
@@ -260,61 +19,7 @@ struct packet_format_desc
 	unsigned char known;
 };
 
-#define P(a) { ((sizeof a)/(sizeof *a)), a, 1 }
-struct packet_format_desc packet_format[] =
-{
-	[PACKET_KEEPALIVE] = { 0, 0, 1 },
-	[PACKET_LOGIN] = P(packet_format_login),
-	[PACKET_HANDSHAKE] = P(packet_format_handshake),
-	[PACKET_CHAT] = P(packet_format_chat),
-	[PACKET_TIME] = P(packet_format_time),
-	[PACKET_ENTITY_EQUIPMENT] = P(packet_format_entity_equipment),
-	[PACKET_SPAWN_POSITION] = P(packet_format_spawn_position),
-	[PACKET_USE_ENTITY] = P(packet_format_use_entity),
-	[PACKET_UPDATE_HEALTH] = P(packet_format_update_health),
-	[PACKET_RESPAWN] = { 0, 0, 1 },
-	[PACKET_PLAYER_PING] = P(packet_format_player_ping),
-	[PACKET_PLAYER_MOVE] = P(packet_format_player_move),
-	[PACKET_PLAYER_ROTATE] = P(packet_format_player_rotate),
-	[PACKET_PLAYER_MOVE_ROTATE] = P(packet_format_player_move_rotate),
-	[PACKET_DIG] = P(packet_format_dig),
-	[PACKET_PLACE] = P(packet_format_place),
-	[PACKET_ENTITY_HOLDING] = P(packet_format_entity_holding),
-	[PACKET_ENTITY_ANIMATE] = P(packet_format_entity_animate),
-	[PACKET_ENTITY_ACTION] = P(packet_format_entity_action),
-	[PACKET_ENTITY_SPAWN_NAMED] = P(packet_format_entity_spawn_named),
-	[PACKET_ENTITY_SPAWN_PICKUP] = P(packet_format_entity_spawn_pickup),
-	[PACKET_ENTITY_COLLECT] = P(packet_format_entity_collect),
-	[PACKET_ENTITY_SPAWN_OBJECT] = P(packet_format_entity_spawn_object),
-	[PACKET_MOB_SPAWN] = P(packet_format_mob_spawn),
-	[PACKET_ENTITY_PAINTING] = P(packet_format_entity_painting),
-	[PACKET_ENTITY_VELOCITY] = P(packet_format_entity_velocity),
-	[PACKET_ENTITY_DESTROY] = P(packet_format_entity_destroy),
-	[PACKET_ENTITY] = P(packet_format_entity),
-	[PACKET_ENTITY_REL_MOVE] = P(packet_format_entity_rel_move),
-	[PACKET_ENTITY_LOOK] = P(packet_format_entity_look),
-	[PACKET_ENTITY_REL_MOVE_LOOK] = P(packet_format_entity_rel_move_look),
-	[PACKET_ENTITY_MOVE] = P(packet_format_entity_move),
-	[PACKET_ENTITY_DAMAGE] = P(packet_format_entity_damage),
-	[PACKET_ENTITY_ATTACH] = P(packet_format_entity_attach),
-	[PACKET_ENTITY_METADATA] = P(packet_format_entity_metadata),
-	[PACKET_PRECHUNK] = P(packet_format_prechunk),
-	[PACKET_CHUNK] = P(packet_format_chunk),
-	[PACKET_MULTI_SET_BLOCK] = P(packet_format_multi_set_block),
-	[PACKET_SET_BLOCK] = P(packet_format_set_block),
-	[PACKET_PLAY_BLOCK] = P(packet_format_play_block),
-	[PACKET_EXPLOSION] = P(packet_format_explosion),
-	[PACKET_INVENTORY_OPEN] = P(packet_format_inventory_open),
-	[PACKET_INVENTORY_CLOSE] = P(packet_format_inventory_close),
-	[PACKET_INVENTORY_CLICK] = P(packet_format_inventory_click),
-	[PACKET_INVENTORY_UPDATE] = P(packet_format_inventory_update),
-	[PACKET_INVENTORY_DATA] = P(packet_format_inventory_data),
-	[PACKET_INVENTORY_PROGRESS] = P(packet_format_inventory_progress),
-	[PACKET_INVENTORY_ACK] = P(packet_format_inventory_ack),
-	[PACKET_SIGN_UPDATE] = P(packet_format_sign_update),
-	[PACKET_DISCONNECT] = P(packet_format_disconnect)
-};
-#undef P
+#include "protocol-data.c"
 #define MAX_PACKET_FORMAT ((sizeof packet_format)/(sizeof *packet_format))
 
 /* packet reading/writing */
@@ -407,7 +112,6 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 		switch (fmt->ftype[f])
 		{
 		case FIELD_BYTE:
-		case FIELD_UBYTE:
 			if (!buf_skip(1)) return 0;
 			break;
 
@@ -430,12 +134,23 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 			if (!buf_skip(t)) return 0;
 			break;
 
-		case FIELD_ARRAY:
+		case FIELD_ITEM:
+			t = buf_get_i16();
+			if (t != -1)
+				if (!buf_skip(3)) return 0;
+			break;
+
+		case FIELD_BYTE_ARRAY:
 			t = buf_get_i32();
 			if (!buf_skip(t)) return 0;
 			break;
 
-		case FIELD_IARRAY:
+		case FIELD_BLOCK_ARRAY:
+			t = buf_get_i16();
+			if (!buf_skip(4*t)) return 0;
+			break;
+
+		case FIELD_ITEM_ARRAY:
 			t = buf_get_i16();
 			for (int i = 0; i < t; i++)
 			{
@@ -445,18 +160,7 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 			}
 			break;
 
-		case FIELD_IITEM:
-			t = buf_get_i16();
-			if (t != -1)
-				if (!buf_skip(3)) return 0;
-			break;
-
-		case FIELD_SBBARRAY:
-			t = buf_get_i16();
-			if (!buf_skip(4*t)) return 0;
-			break;
-
-		case FIELD_EXPLOSION_RECORDS:
+		case FIELD_EXPLOSION_ARRAY:
 			t = buf_get_i32();
 			if (!buf_skip(3*t)) return 0;
 			break;
@@ -560,15 +264,6 @@ packet_t *packet_new(enum packet_dir dir, enum packet_id type, ...)
 			}
 			break;
 
-		case FIELD_UBYTE:
-			t = va_arg(ap, int);
-			{
-				unsigned char v = t;
-				g_byte_array_append(data, &v, 1);
-				offset++;
-			}
-			break;
-
 		case FIELD_SHORT:
 			t = va_arg(ap, int);
 			{
@@ -668,9 +363,6 @@ int packet_int(packet_t *packet, unsigned field)
 	{
 	case FIELD_BYTE:
 		return *(signed char *)p;
-
-	case FIELD_UBYTE:
-		return *p;
 
 	case FIELD_SHORT:
 		t = (p[0] << 8) | p[1];
