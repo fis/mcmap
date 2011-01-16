@@ -32,7 +32,7 @@ $(OBJDIR)/%.o: %.c $(OBJDIR)
 
 clean:
 	rm -f $(OBJDIR)/mcmap$(EXE) $(objs) $(deps)
-	rmdir $(OBJDIR); true
+	-rmdir $(OBJDIR)
 
 $(OBJDIR)/%.d: %.c $(OBJDIR)
 	@$(CC) -MM -MF $@ -MT $(@:.d=.o) -MT $@ $(CFLAGS) $<
