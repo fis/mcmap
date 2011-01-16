@@ -28,6 +28,9 @@ $(OBJDIR):
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+protocol-data.c protocol-data.h: protocol.txt | protocol.pl
+	perl protocol.pl
+
 -include $(deps)
 
 clean:
