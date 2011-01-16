@@ -13,6 +13,7 @@ enum map_mode
 };
 
 #define MAP_FLAG_FOLLOW_Y 0x01
+#define MAP_FLAG_LIGHTS 0x02
 
 extern double player_dx, player_dy, player_dz;
 extern int player_x, player_y, player_z;

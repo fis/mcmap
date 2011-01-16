@@ -97,7 +97,7 @@ static int map_scale = 1;
 static int map_scale_indicator = 3;
 
 static enum map_mode map_mode = MAP_MODE_SURFACE;
-static unsigned map_flags = 0;
+static unsigned map_flags = MAP_FLAG_LIGHTS;
 
 static GMutex * volatile map_mutex = 0;
 
@@ -218,6 +218,19 @@ void map_update(int x1, int x2, int z1, int z2)
 							*p++ = ((4*v) << rshift) | ((4*v) << gshift) | ((255-4*v) << bshift);
 						else
 							*p++ = (255 << rshift) | ((255-4*(v-64)) << gshift);
+					}
+					else if (map_flags & MAP_FLAG_LIGHTS)
+					{
+						int ly = c->height[bz][bx]+1;
+						if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
+						int lv = c->light_blocks[bz*CHUNK_XSIZE*CHUNK_YSIZE/2 + bx*CHUNK_YSIZE/2 + ly/2];
+						if (ly & 1) lv >>= 4; else lv &= 0xf;
+						if (lv > 14) lv = 14;
+
+						Uint32 rgb = block_colors[*b];
+						Uint32 r = (rgb >> rshift) & 0xff, g = (rgb >> gshift) & 0xff, b = (rgb >> bshift) & 0xff;
+						r = (lv+2)*r / 16; g = (lv+2)*g / 16; b = (lv+2)*b / 16;
+						*p++ = (r << rshift) | (g << gshift) | (b << bshift);
 					}
 					else
 						*p++ = block_colors[*b];
