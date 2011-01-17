@@ -16,6 +16,12 @@
 #include "protocol.h"
 #include "world.h"
 
+static struct { char *name; void (*run)(int, gchar **); } commands[] = {
+#define command(name) { #name, cmd_##name },
+#include "cmddefs.h"
+#undef command
+};
+
 void cmd_parse(unsigned char *cmd, int cmdlen)
 {
 	gchar *cmdstr = g_strndup((gchar *)cmd, cmdlen);
@@ -26,45 +32,45 @@ void cmd_parse(unsigned char *cmd, int cmdlen)
 	while (cmdv[cmdc])
 		cmdc++;
 
-	if (strcmp(cmdv[0], "coords") == 0)
-		cmd_coords();
-	else if (strcmp(cmdv[0], "goto") == 0)
+	for (int i = 0; i < sizeof(commands)/sizeof(commands[0]); i++) 
 	{
-		if (cmdc == 3)
-			cmd_goto(atoi(cmdv[1]), atoi(cmdv[2]));
-		else
-			chat("usage: //goto x z");
+		if (strcmp(cmdv[0], commands[i].name) == 0)
+		{
+			commands[i].run(cmdc, cmdv);
+			goto done;
+		}
 	}
-	else if (strcmp(cmdv[0], "slap") == 0)
-	{
-		if (cmdc == 2)
-			cmd_slap(cmdv[1]);
-		else
-			chat("usage: //slap name");
-	}
-#ifdef FEAT_FULLCHUNK
-	else if (strcmp(cmdv[0], "save") == 0)
-	{
-		if (cmdc == 1)
-			cmd_save(0);
-		else if (cmdc == 2)
-			cmd_save(cmdv[1]);
-		else
-			chat("usage: //save [dir]");
-	}
-#endif /* FEAT_FULLCHUNK */
-	else
-		chat("unknown command: //%s", cmdv[0]);
 
+	chat("unknown command: //%s", cmdv[0]);
+
+done:
 	g_strfreev(cmdv);
 }
 
-void cmd_coords()
+void cmd_coords(int cmdc, gchar **cmdv)
 {
-	chat("//coords: x=%d, z=%d, y=%d", player_x, player_z, player_y);
+	if (cmdc == 2 && strcmp(cmdv[1], "-say") == 0) {
+		char *msg = g_strdup_printf("/me is at (%d,%d) (y=%d)", player_x, player_z, player_y);
+		inject_to_server(packet_new(PACKET_TO_ANY, PACKET_CHAT, msg));
+		g_free(msg);
+	} else if (cmdc == 1)
+		chat("//coords: (%d,%d) (y=%d)", player_x, player_z, player_y);
+	else
+		chat("usage: //coords [-say]");
 }
 
-void cmd_goto(int x, int z)
+void cmd_goto(int cmdc, gchar **cmdv)
+{
+	if (cmdc != 3)
+	{
+		chat("usage //goto x z");
+		return;
+	}
+
+	return teleport(atoi(cmdv[1]), atoi(cmdv[2]));
+}
+
+void teleport(int x, int z)
 {
 	if (!opt.nomap)
 	{
@@ -135,8 +141,19 @@ void cmd_goto(int x, int z)
 }
 
 #ifdef FEAT_FULLCHUNK
-void cmd_save(char *dir)
+void cmd_save(int cmdc, gchar **cmdv)
 {
+	gchar *dir;
+
+	if (cmdc == 1)
+		dir = 0;
+	else if (cmdc == 2)
+		dir = cmdv[1];
+	else {
+		chat("usage: //save [dir]");
+		return;
+	}
+
 	/* construct the target directory */
 
 	char dirbuf[PATH_MAX+1];
@@ -192,9 +209,15 @@ void cmd_save(char *dir)
 }
 #endif /* FEAT_FULLCHUNK */
 
-void cmd_slap(char *name)
+void cmd_slap(int cmdc, gchar **cmdv)
 {
-	char *msg = g_strdup_printf("/me slaps %s around a bit with a large trout", name);
+	if (cmdc != 2)
+	{
+		chat("usage: //slap name");
+		return;
+	}
+
+	char *msg = g_strdup_printf("/me slaps %s around a bit with a large trout", cmdv[1]);
 	inject_to_server(packet_new(PACKET_TO_ANY, PACKET_CHAT, msg));
 	g_free(msg);
 }

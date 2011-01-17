@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <glib.h>
 #include <SDL.h>
 
 #include "cmd.h"
@@ -429,7 +430,7 @@ static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen)
 		/* teleport */
 		int x, z;
 		map_s2w(screen, e->x, e->y, &x, &z, 0, 0);
-		cmd_goto(x, z);
+		teleport(x, z);
 	}
 }
 

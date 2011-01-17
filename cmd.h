@@ -1,11 +1,13 @@
 #ifndef MCMAP_CMD_H
 #define MCMAP_CMD_H 1
 
-void cmd_parse(unsigned char *cmd, int cmdlen);
+#include "config.h"
 
-void cmd_coords(void);
-void cmd_goto(int x, int z);
-void cmd_save(char *dir);
-void cmd_slap(char *name);
+void cmd_parse(unsigned char *cmd, int cmdlen);
+void teleport(int x, int z);
+
+#define command(name) void cmd_##name (int, gchar **);
+#include "cmddefs.h"
+#undef command
 
 #endif /* MCMAP_CMD_H */
