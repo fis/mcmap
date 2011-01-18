@@ -221,9 +221,9 @@ void map_update(int x1, int x2, int z1, int z2)
 					}
 					else if (map_flags & MAP_FLAG_LIGHTS)
 					{
-						int ly = c->height[bz][bx]+1;
+						int ly = c->height[bx][bz]+1;
 						if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
-						int lv = c->light_blocks[bz*CHUNK_XSIZE*CHUNK_YSIZE/2 + bx*CHUNK_YSIZE/2 + ly/2];
+						int lv = c->light_blocks[bx*CHUNK_ZSIZE*CHUNK_YSIZE/2 + bz*CHUNK_YSIZE/2 + ly/2];
 						if (ly & 1) lv >>= 4; else lv &= 0xf;
 						if (lv > 14) lv = 14;
 
