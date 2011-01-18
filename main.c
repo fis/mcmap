@@ -383,22 +383,27 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 	switch (e->keysym.sym)
 	{
 	case SDLK_1:
-		map_setmode(MAP_MODE_SURFACE, 0);
+		map_setmode(MAP_MODE_SURFACE, 0, 0, 0);
 		*repaint = 1;
 		break;
 
 	case SDLK_2:
-		map_setmode(MAP_MODE_CROSS, MAP_FLAG_FOLLOW_Y);
+		map_setmode(MAP_MODE_CROSS, MAP_FLAG_FOLLOW_Y, 0, 0);
 		*repaint = 1;
 		break;
 
 	case SDLK_3:
-		map_setmode(MAP_MODE_CROSS, 0);
+		map_setmode(MAP_MODE_CROSS, 0, MAP_FLAG_FOLLOW_Y, 0);
 		*repaint = 1;
 		break;
 
 	case SDLK_4:
-		map_setmode(MAP_MODE_TOPO, 0);
+		map_setmode(MAP_MODE_TOPO, 0, 0, 0);
+		*repaint = 1;
+		break;
+
+	case SDLK_n:
+		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
 		*repaint = 1;
 		break;
 

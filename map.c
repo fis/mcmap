@@ -97,7 +97,7 @@ static int map_scale = 1;
 static int map_scale_indicator = 3;
 
 static enum map_mode map_mode = MAP_MODE_SURFACE;
-static unsigned map_flags = MAP_FLAG_LIGHTS;
+static unsigned map_flags = 0;
 
 static GMutex * volatile map_mutex = 0;
 
@@ -221,7 +221,7 @@ void map_update(int x1, int x2, int z1, int z2)
 					}
 					else if (map_flags & MAP_FLAG_LIGHTS)
 					{
-						int ly = c->height[bx][bz]+1;
+						int ly = (map_mode == MAP_MODE_CROSS ? map_y+1 : c->height[bx][bz]+1);
 						if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
 						int lv = c->light_blocks[bx*CHUNK_ZSIZE*CHUNK_YSIZE/2 + bz*CHUNK_YSIZE/2 + ly/2];
 						if (ly & 1) lv >>= 4; else lv &= 0xf;
@@ -229,7 +229,7 @@ void map_update(int x1, int x2, int z1, int z2)
 
 						Uint32 rgb = block_colors[*b];
 						Uint32 r = (rgb >> rshift) & 0xff, g = (rgb >> gshift) & 0xff, b = (rgb >> bshift) & 0xff;
-						r = (lv+2)*r / 16; g = (lv+2)*g / 16; b = (lv+2)*b / 16;
+						r = (lv+6)*r / 20; g = (lv+6)*g / 20; b = (lv+6)*b / 20;
 						*p++ = (r << rshift) | (g << gshift) | (b << bshift);
 					}
 					else
@@ -308,7 +308,7 @@ void map_update_alt(int y, int relative)
 	}
 }
 
-void map_setmode(enum map_mode mode, unsigned flags)
+void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsigned flags_toggle)
 {
 	static char *modenames[] = {
 		[MAP_MODE_SURFACE] = "surface",
@@ -316,15 +316,18 @@ void map_setmode(enum map_mode mode, unsigned flags)
 		[MAP_MODE_TOPO] = "topographic",
 	};
 
-	map_mode = mode;
-	map_flags = flags;
+	if (mode != MAP_MODE_NOCHANGE)
+		map_mode = mode;
+	map_flags |= flags_on;
+	map_flags &= ~flags_off;
+	map_flags ^= flags_toggle;
 
 	if (mode == MAP_MODE_CROSS)
 		map_y = player_y;
 
 	chat("MODE: %s%s",
 	     modenames[mode],
-	     mode == MAP_MODE_CROSS && (flags & MAP_FLAG_FOLLOW_Y) ? " (follow player)" : "");
+	     (mode == MAP_MODE_CROSS && map_flags & MAP_FLAG_FOLLOW_Y) ? " (follow player)" : "");
 
 	map_update(map_min_x, map_max_x, map_min_z, map_max_z);
 }
