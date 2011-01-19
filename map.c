@@ -10,6 +10,7 @@
 enum special_color_names
 {
 	COLOR_PLAYER,
+	COLOR_UNLOADED,
 	COLOR_MAX_SPECIAL
 };
 
@@ -79,6 +80,7 @@ static Uint32 block_colors[256] = {
 
 static Uint32 special_colors[COLOR_MAX_SPECIAL] = {
 	[COLOR_PLAYER] = RGB(255, 0, 255),
+	[COLOR_UNLOADED] = RGB(16, 16, 16),
 };
 
 #undef RGB
@@ -178,7 +180,7 @@ void map_update(int x1, int x2, int z1, int z2)
 			if (!c)
 			{
 				SDL_Rect r = { .x = cxo*CHUNK_XSIZE, .y = czo*CHUNK_ZSIZE, .w = CHUNK_XSIZE, .h = CHUNK_ZSIZE };
-				SDL_FillRect(map, &r, block_colors[0]);
+				SDL_FillRect(map, &r, special_colors[COLOR_UNLOADED]);
 				continue;
 			}
 
@@ -316,18 +318,24 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 		[MAP_MODE_TOPO] = "topographic",
 	};
 
+	enum map_mode old_mode = map_mode;
+	unsigned old_flags = map_flags;
+
 	if (mode != MAP_MODE_NOCHANGE)
 		map_mode = mode;
+
 	map_flags |= flags_on;
 	map_flags &= ~flags_off;
 	map_flags ^= flags_toggle;
 
-	if (mode == MAP_MODE_CROSS)
+	if (mode == MAP_MODE_CROSS && (old_mode != MAP_MODE_CROSS || (map_flags & MAP_FLAG_FOLLOW_Y)))
 		map_y = player_y;
 
-	chat("MODE: %s%s",
-	     modenames[mode],
-	     (mode == MAP_MODE_CROSS && map_flags & MAP_FLAG_FOLLOW_Y) ? " (follow player)" : "");
+	if (map_mode != old_mode || map_flags != old_flags)
+		chat("MODE: %s%s%s",
+		     modenames[map_mode],
+		     (mode == MAP_MODE_CROSS && map_flags & MAP_FLAG_FOLLOW_Y ? " (follow)" : ""),
+		     (map_flags & MAP_FLAG_LIGHTS ? " (lights)" : ""));
 
 	map_update(map_min_x, map_max_x, map_min_z, map_max_z);
 }

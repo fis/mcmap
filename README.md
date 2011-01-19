@@ -75,6 +75,9 @@ page-up makes blocks one pixel larger.
 Right-clicking a point on the map basically executes a //goto x z on
 the clicked coordinates (or nearby).
 
+Finally, the `n` key toggles "night mode" on: in this mode, blocks are
+shaded based on how well lit (excluding sunlight) they are.
+
 Chatting
 --------
 
