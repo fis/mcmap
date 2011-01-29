@@ -21,6 +21,7 @@ struct options opt = {
 	.nomap = FALSE,
 	.scale = 1,
 	.wndsize = 0,
+	.jumpfile = NULL,
 };
 
 /* miscellaneous helper routines */
@@ -159,6 +160,7 @@ int mcmap_main(int argc, char **argv)
 		{ "port", 'p', 0, G_OPTION_ARG_INT, &opt.localport, "Local port to listen at", "P" },
 		{ "size", 's', 0, G_OPTION_ARG_STRING, &opt.wndsize, "Fixed-size window size", "WxH" },
 		{ "scale", 'x', 0, G_OPTION_ARG_INT, &opt.scale, "Zoom factor", "N" },
+		{ "jumps", 'j', 0, G_OPTION_ARG_STRING, &opt.jumpfile, "File containing list of jumps", "FILENAME" },
 		{ NULL }
 	};
 
@@ -197,6 +199,30 @@ int mcmap_main(int argc, char **argv)
 		{
 			dief("Invalid window size: %s", opt.wndsize);
 		}
+	}
+
+	if (opt.jumpfile)
+	{
+		gchar *jumpfile;
+		gsize length;
+		GError *error;
+		struct Jump *ptr = jumps;
+		gchar *fileptr;
+		if (!g_file_get_contents(opt.jumpfile, &jumpfile, &length, &error))
+			dief("Opening %s: %s", opt.jumpfile, error->message);
+		fileptr = jumpfile;
+		#define NEXT while (isspace(*fileptr)) fileptr++; start = fileptr; while (!isspace(*fileptr)) fileptr++; *fileptr++ = 0
+		while (fileptr+1 < jumpfile+length)
+		{
+			gchar *start;
+			NEXT; ptr->name = start;
+			NEXT; ptr->x = atoi(start);
+			NEXT; ptr->z = atoi(start);
+			ptr++;
+			if (ptr == jumps+256)
+				die("THAT'S TOO MANY JUMPS FOR ONE EVENING.");
+		}
+		ptr->name = NULL;
 	}
 
 	/* initialization stuff */

@@ -47,6 +47,7 @@ struct options
 	gboolean nomap;
 	gint scale;
 	gchar *wndsize;
+	gchar *jumpfile;
 } opt;
 
 #endif /* MCMAP_COMMON_H */

@@ -22,6 +22,8 @@ static struct { char *name; void (*run)(int, gchar **); } commands[] = {
 #undef command
 };
 
+struct Jump jumps[256] = {{NULL, 0, 0}};
+
 void cmd_parse(unsigned char *cmd, int cmdlen)
 {
 	gchar *cmdstr = g_strndup((gchar *)cmd, cmdlen);
@@ -49,11 +51,13 @@ done:
 
 void cmd_coords(int cmdc, gchar **cmdv)
 {
-	if (cmdc == 2 && strcmp(cmdv[1], "-say") == 0) {
+	if (cmdc == 2 && strcmp(cmdv[1], "-say") == 0)
+	{
 		char *msg = g_strdup_printf("/me is at (%d,%d) (y=%d)", player_x, player_z, player_y);
 		inject_to_server(packet_new(PACKET_TO_ANY, PACKET_CHAT, msg));
 		g_free(msg);
-	} else if (cmdc == 1)
+	}
+	else if (cmdc == 1)
 		chat("//coords: (%d,%d) (y=%d)", player_x, player_z, player_y);
 	else
 		chat("usage: //coords [-say]");
@@ -61,13 +65,35 @@ void cmd_coords(int cmdc, gchar **cmdv)
 
 void cmd_goto(int cmdc, gchar **cmdv)
 {
-	if (cmdc != 3)
+	if (cmdc == 2)
 	{
-		chat("usage //goto x z");
+		for (int i = 0; jumps[i].name; i++)
+			if (strcmp(jumps[i].name, cmdv[1]) == 0)
+			{
+				teleport(jumps[i].x, jumps[i].z);
+				return;
+			}
+		chat("//goto: no such jump (try //jumps)");
+	}
+	else if (cmdc == 3)
+	{
+		teleport(atoi(cmdv[1]), atoi(cmdv[2]));
+	}
+	else
+	{
+		chat("usage: //goto x z or //goto name (try //jumps)");
+	}
+}
+
+void cmd_jumps(int cmdc, gchar **argv)
+{
+	if (!jumps[0].name)
+	{
+		chat("//jumps: no jumps exist");
 		return;
 	}
-
-	return teleport(atoi(cmdv[1]), atoi(cmdv[2]));
+	for (int i = 0; jumps[i].name; i++)
+		chat("//jumps: %s (%d,%d)", jumps[i].name, jumps[i].x, jumps[i].z);
 }
 
 void teleport(int x, int z)
