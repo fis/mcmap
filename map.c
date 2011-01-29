@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "common.h"
+#include "config.h"
 #include "map.h"
 #include "world.h"
 
@@ -221,6 +222,7 @@ void map_update(int x1, int x2, int z1, int z2)
 						else
 							*p++ = (255 << rshift) | ((255-4*(v-64)) << gshift);
 					}
+#ifdef FEAT_FULLCHUNK
 					else if (map_flags & MAP_FLAG_LIGHTS)
 					{
 						int ly = (map_mode == MAP_MODE_CROSS ? map_y+1 : c->height[bx][bz]+1);
@@ -234,6 +236,7 @@ void map_update(int x1, int x2, int z1, int z2)
 						r = (lv+6)*r / 20; g = (lv+6)*g / 20; b = (lv+6)*b / 20;
 						*p++ = (r << rshift) | (g << gshift) | (b << bshift);
 					}
+#endif /* FEAT_FULLCHUNK */
 					else
 						*p++ = block_colors[*b];
 					b += blocks_xpitch;

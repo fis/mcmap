@@ -7,6 +7,7 @@
 #include <SDL.h>
 
 #include "cmd.h"
+#include "config.h"
 #include "common.h"
 #include "console.h"
 #include "map.h"
@@ -428,10 +429,12 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 		*repaint = 1;
 		break;
 
+#ifdef FEAT_FULLCHUNK
 	case SDLK_n:
 		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
 		*repaint = 1;
 		break;
+#endif
 
 	case SDLK_UP:
 		map_update_alt(+1, 1);
