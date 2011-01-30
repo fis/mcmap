@@ -202,28 +202,37 @@ int mcmap_main(int argc, char **argv)
 		}
 	}
 
+	jumps = g_hash_table_new(g_str_hash, g_str_equal);
+
 	if (opt.jumpfile)
 	{
-		gchar *jumpfile;
-		gsize length;
+		gchar *jump_file;
 		GError *error;
-		struct Jump *ptr = jumps;
-		gchar *fileptr;
-		if (!g_file_get_contents(opt.jumpfile, &jumpfile, &length, &error))
+		struct Jump *jump;
+		gchar *file_ptr;
+		if (!g_file_get_contents(opt.jumpfile, &jump_file, NULL, &error))
 			dief("Opening %s: %s", opt.jumpfile, error->message);
-		fileptr = jumpfile;
-		#define NEXT while (isspace(*fileptr)) fileptr++; start = fileptr; while (!isspace(*fileptr)) fileptr++; *fileptr++ = 0
-		while (fileptr+1 < jumpfile+length)
+		#define FIELD(assigner) \
+			field = file_ptr; \
+			while (!isspace(*file_ptr) && file_ptr[1] != 0) \
+				file_ptr++; \
+			*file_ptr++ = 0; \
+			assigner; \
+			while (isspace(*file_ptr)) \
+				file_ptr++
+		file_ptr = jump_file;
+		while (*file_ptr != 0)
 		{
-			gchar *start;
-			NEXT; ptr->name = start;
-			NEXT; ptr->x = atoi(start);
-			NEXT; ptr->z = atoi(start);
-			ptr++;
-			if (ptr == jumps+256)
-				die("THAT'S TOO MANY JUMPS FOR ONE EVENING.");
+			gchar *field;
+			gchar *name;
+			jump = g_malloc(sizeof(struct Jump));
+			FIELD(name = strdup(field));
+			FIELD(jump->x = atoi(field));
+			FIELD(jump->z = atoi(field));
+			g_hash_table_insert(jumps, name, jump);
 		}
-		ptr->name = NULL;
+		#undef FIELD
+		g_free(jump_file);
 	}
 
 	/* initialization stuff */

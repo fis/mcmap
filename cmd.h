@@ -6,10 +6,11 @@
 void cmd_parse(unsigned char *cmd, int cmdlen);
 
 struct Jump {
-	char *name;
 	int x;
 	int z;
-} jumps[256];
+};
+
+GHashTable *jumps;
 
 void teleport(int x, int z);
 

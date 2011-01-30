@@ -22,8 +22,6 @@ static struct { char *name; void (*run)(int, gchar **); } commands[] = {
 #undef command
 };
 
-struct Jump jumps[256] = {{NULL, 0, 0}};
-
 void cmd_parse(unsigned char *cmd, int cmdlen)
 {
 	gchar *cmdstr = g_strndup((gchar *)cmd, cmdlen);
@@ -34,7 +32,7 @@ void cmd_parse(unsigned char *cmd, int cmdlen)
 	while (cmdv[cmdc])
 		cmdc++;
 
-	for (int i = 0; i < sizeof(commands)/sizeof(commands[0]); i++) 
+	for (int i = 0; i < NELEMS(commands); i++) 
 	{
 		if (strcmp(cmdv[0], commands[i].name) == 0)
 		{
@@ -67,13 +65,11 @@ void cmd_goto(int cmdc, gchar **cmdv)
 {
 	if (cmdc == 2)
 	{
-		for (int i = 0; jumps[i].name; i++)
-			if (strcmp(jumps[i].name, cmdv[1]) == 0)
-			{
-				teleport(jumps[i].x, jumps[i].z);
-				return;
-			}
-		chat("//goto: no such jump (try //jumps)");
+		struct Jump *jump = g_hash_table_lookup(jumps, cmdv[1]);
+		if (jump == NULL)
+			chat("//goto: no such jump (try //jumps)");
+		else
+			teleport(jump->x, jump->z);
 	}
 	else if (cmdc == 3)
 	{
@@ -87,13 +83,20 @@ void cmd_goto(int cmdc, gchar **cmdv)
 
 void cmd_jumps(int cmdc, gchar **argv)
 {
-	if (!jumps[0].name)
+	if (g_hash_table_size(jumps) == 0)
 	{
 		chat("//jumps: no jumps exist");
 		return;
 	}
-	for (int i = 0; jumps[i].name; i++)
-		chat("//jumps: %s (%d,%d)", jumps[i].name, jumps[i].x, jumps[i].z);
+
+	GHashTableIter iter;
+	gchar *name;
+	struct Jump *jump;
+
+	g_hash_table_iter_init(&iter, jumps);
+
+	while (g_hash_table_iter_next(&iter, (gpointer *) &name, (gpointer *) &jump))
+		chat("//jumps: %s (%d,%d)", name, jump->x, jump->z);
 }
 
 void teleport(int x, int z)

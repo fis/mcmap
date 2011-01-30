@@ -6,6 +6,8 @@
 
 #include <glib.h>
 
+#define NELEMS(array) (sizeof(array) / sizeof((array)[0]))
+
 /* 2d points for hash table keys */
 
 struct coord
