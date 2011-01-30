@@ -224,9 +224,22 @@ void map_update(int x1, int x2, int z1, int z2)
 							*p++ = ((4*v) << rshift) | ((4*v) << gshift) | ((255-4*v) << bshift);
 						else
 							*p++ = (255 << rshift) | ((255-4*(v-64)) << gshift);
+						b += blocks_xpitch;
+						continue;
 					}
+
+					#define TRANSFORM_RGB(expr) \
+						do { \
+							Uint32 x; \
+	                                                Uint32 r = (rgb >> rshift) & 0xff, g = (rgb >> gshift) & 0xff, b = (rgb >> bshift) & 0xff; \
+							x = r; r = expr; x = g; g = expr; x = b; b = expr; \
+							rgb = (r << rshift) | (g << gshift) | (b << bshift); \
+						} while (0)
+
+					Uint32 rgb = block_colors[*b];
+
 #ifdef FEAT_FULLCHUNK
-					else if (map_flags & MAP_FLAG_LIGHTS)
+					if (map_flags & MAP_FLAG_LIGHTS)
 					{
 						int ly = (map_mode == MAP_MODE_CROSS ? map_y+1 : c->height[bx][bz]+1);
 						if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
@@ -234,15 +247,26 @@ void map_update(int x1, int x2, int z1, int z2)
 						if (ly & 1) lv >>= 4; else lv &= 0xf;
 						if (lv > 14) lv = 14;
 
-						Uint32 rgb = block_colors[*b];
-						Uint32 r = (rgb >> rshift) & 0xff, g = (rgb >> gshift) & 0xff, b = (rgb >> bshift) & 0xff;
-						r = (lv+6)*r / 20; g = (lv+6)*g / 20; b = (lv+6)*b / 20;
-						*p++ = (r << rshift) | (g << gshift) | (b << bshift);
+						TRANSFORM_RGB((lv+6)*x / 20);
 					}
 #endif /* FEAT_FULLCHUNK */
-					else
-						*p++ = block_colors[*b];
+
+					#define water(block) ((block) == 0x08 || (block) == 0x09)
+					if (water(*b))
+					{
+						int h = (map_mode == MAP_MODE_CROSS ? map_y : c->height[bx][bz]);
+						while (--h)
+							if (water(c->blocks[bx][bz][h]))
+								TRANSFORM_RGB(x*7/8);
+							else
+								break;
+					}
+					#undef water
+
+					*p++ = rgb;
 					b += blocks_xpitch;
+
+					#undef TRANSFORM_RGB
 				}
 
 				pixels += pitch;
