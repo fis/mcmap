@@ -2,7 +2,6 @@
 #define MCMAP_WORLD_H 1
 
 #include "config.h"
-#include "common.h"
 
 #define CHUNK_XBITS 4
 #define CHUNK_ZBITS 4

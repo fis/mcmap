@@ -10,10 +10,12 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
+#include <SDL.h>
+
 #include "cmd.h"
+#include "protocol.h"
 #include "common.h"
 #include "map.h"
-#include "protocol.h"
 #include "world.h"
 
 static struct { char *name; void (*run)(int, gchar **); } commands[] = {

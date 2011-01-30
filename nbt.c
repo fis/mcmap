@@ -3,6 +3,7 @@
 #include <glib.h>
 #include <zlib.h>
 
+#include "protocol.h"
 #include "common.h"
 #include "nbt.h"
 
