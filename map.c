@@ -257,7 +257,8 @@ void map_update(int x1, int x2, int z1, int z2)
 
 					if (IS_WATER(c->blocks[bx][bz][y]))
 					{
-						rgb = block_colors[0x08];
+						if (map_mode == MAP_MODE_TOPO)
+							rgb = block_colors[0x08];
 
 						int h = y;
 						while (--h)
