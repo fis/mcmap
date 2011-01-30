@@ -179,21 +179,26 @@ static gpointer teleport_fall(gpointer data)
 
 	int h = 127, desth = 64;
 	int delay = 50*1000; /* 50 ms delay for normal safe fall */
+	int seen_ground = 0;
 
 	while (h > desth)
 	{
 		/* check for loaded chunks for insta-drop knowledge */
 
-		unsigned char *s = world_stack(x, z, 0);
-		if (s)
+		if (!seen_ground)
 		{
-			for (desth = 127; desth >= 0; desth--)
-				if (s[desth])
-					break;
-			desth += 3;
-			if (h < desth)
-				h = desth;
-			delay = 0;
+			unsigned char *s = world_stack(x, z, 0);
+			if (s)
+			{
+				for (desth = 127; desth >= 0; desth--)
+					if (s[desth])
+						break;
+				desth += 3;
+				if (h < desth)
+					h = desth;
+				delay = 0;
+			}
+			seen_ground = 1;
 		}
 
 		/* fall slowly down */
