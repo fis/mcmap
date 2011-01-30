@@ -96,6 +96,55 @@ void cmd_jumps(int cmdc, gchar **argv)
 		chat("//jumps: %s (%d,%d)", jumps[i].name, jumps[i].x, jumps[i].z);
 }
 
+struct teleport_fall_data
+{
+	int x;
+	int z;
+};
+
+gpointer teleport_fall(gpointer data)
+{
+	struct teleport_fall_data *tfd = data;
+	int x = tfd->x, z = tfd->z;
+
+	int h = 127, desth = 64;
+	int delay = 50*1000; /* 50 ms delay for normal safe fall */
+
+	while (h > desth)
+	{
+		/* check for loaded chunks for insta-drop knowledge */
+
+		unsigned char *s = world_stack(x, z, 0);
+		if (s)
+		{
+			for (desth = 127; desth >= 0; desth--)
+				if (s[desth])
+					break;
+			desth += 3;
+			if (h < desth)
+				h = desth;
+			delay = 0;
+		}
+
+		/* fall slowly down */
+
+		packet_t *pfall1 = packet_new(PACKET_TO_ANY, PACKET_PLAYER_MOVE,
+		                              (double)x, (double)h, h+1.62, (double)z, 0);
+		packet_t *pfall2 = packet_dup(pfall1);
+
+		inject_to_server(pfall1);
+		inject_to_client(pfall2);
+
+		if (delay)
+			usleep(delay);
+
+		h--;
+	}
+
+	g_free(tfd);
+	return 0;
+}
+
 void teleport(int x, int z)
 {
 	if (!opt.nomap)
@@ -164,6 +213,13 @@ void teleport(int x, int z)
 	inject_to_client(pmove2);
 
 	chat("//goto: jumping to (%d,%d)", x, z);
+
+	/* fake safe landing */
+
+	struct teleport_fall_data *tfd = g_malloc(sizeof *tfd);
+	tfd->x = x;
+	tfd->z = z;
+	g_thread_create(teleport_fall, tfd, FALSE, NULL);
 }
 
 #ifdef FEAT_FULLCHUNK

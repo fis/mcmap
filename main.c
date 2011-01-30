@@ -73,18 +73,17 @@ gpointer proxy_thread(gpointer data)
 		}
 
 #if DEBUG_PROTOCOL >= 2 /* use for packet dumping for protocol analysis */
-		log_print("%s packet 0x%02x size %u", desc, p->id, p->size);
+		if (p->id != PACKET_CHUNK)
 		{
-			unsigned left = p->size;
-			unsigned char *pb = p->bytes;
-			while (left > 0)
+			int i, nf = packet_nfields(p);
+
+			fprintf(stderr, "packet: %u [%s]\n", p->id, desc);
+			for (i = 0; i < nf; i++)
 			{
-				char buf[128] = {0};
-				for (int i = 0; i < 16 && left > 0; i++, left--)
-				{
-					sprintf(buf+strlen(buf), "%02x ", *pb++);
-				}
-				log_print("DATA %s", buf);
+				fprintf(stderr, "  field %d:", i);
+				for (unsigned u = p->field_offset[i]; u < p->field_offset[i+1]; u++)
+					fprintf(stderr, " %02x", p->bytes[u]);
+				fprintf(stderr, "\n");
 			}
 		}
 #endif

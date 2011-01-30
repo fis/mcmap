@@ -184,6 +184,8 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 		}
 	}
 
+	state->p.field_offset[fmt->nfields] = buf_pos - buf_start;
+
 	state->p.size = buf_pos - buf_start;
 	state->p.bytes = &buf[buf_start];
 
@@ -352,6 +354,11 @@ void packet_free(gpointer packet)
 	g_free(p->bytes);
 	g_free(p->field_offset);
 	g_free(p);
+}
+
+int packet_nfields(packet_t *packet)
+{
+	return packet_format[packet->id].nfields;
 }
 
 int packet_int(packet_t *packet, unsigned field)
