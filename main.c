@@ -22,7 +22,7 @@ struct options opt = {
 	.nomap = FALSE,
 	.scale = 1,
 	.wndsize = 0,
-	.jumpfile = NULL,
+	.jumpfile = 0,
 };
 
 /* miscellaneous helper routines */
@@ -207,11 +207,11 @@ int mcmap_main(int argc, char **argv)
 	if (opt.jumpfile)
 	{
 		gchar *jump_file;
-		GError *error;
+		GError *error = 0;
 		struct Jump *jump;
 		gchar *file_ptr;
 		if (!g_file_get_contents(opt.jumpfile, &jump_file, NULL, &error))
-			dief("Opening %s: %s", opt.jumpfile, error->message);
+			die(error->message);
 		#define FIELD(assigner) \
 			field = file_ptr; \
 			while (!isspace(*file_ptr) && file_ptr[1] != 0) \
