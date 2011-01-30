@@ -2,9 +2,6 @@
 #define MCMAP_COMMON_H
 
 #include "platform.h"
-#include "protocol.h"
-
-#include <glib.h>
 
 #define NELEMS(array) (sizeof(array) / sizeof((array)[0]))
 

@@ -3,8 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "common.h"
+#include <glib.h>
+
 #include "protocol.h"
+#include "common.h"
 
 /*
  * reference:

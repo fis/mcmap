@@ -10,10 +10,10 @@
 #include <zlib.h>
 
 #include "cmd.h"
+#include "protocol.h"
 #include "common.h"
 #include "map.h"
 #include "nbt.h"
-#include "protocol.h"
 #include "world.h"
 
 static GHashTable *chunk_table = 0;

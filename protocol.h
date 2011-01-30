@@ -1,8 +1,7 @@
 #ifndef MCMAP_PROTOCOL_H
 #define MCMAP_PROTOCOL_H 1
 
-#include <glib.h>
-
+#include "platform.h"
 #include "protocol-data.h"
 
 enum packet_dir

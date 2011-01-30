@@ -8,10 +8,10 @@
 
 #include "cmd.h"
 #include "config.h"
+#include "protocol.h"
 #include "common.h"
 #include "console.h"
 #include "map.h"
-#include "protocol.h"
 #include "world.h"
 
 /* default command-line options */

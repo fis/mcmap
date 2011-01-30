@@ -1,8 +1,6 @@
 #ifndef MCMAP_MAP_H
 #define MCMAP_MAP_H 1
 
-#include <SDL.h>
-
 #define MCMAP_EVENT_REPAINT SDL_USEREVENT
 
 enum map_mode

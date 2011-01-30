@@ -1,6 +1,10 @@
 #include <math.h>
 #include <stdlib.h>
+#include <SDL.h>
 
+#include <glib.h>
+
+#include "protocol.h"
 #include "common.h"
 #include "config.h"
 #include "map.h"

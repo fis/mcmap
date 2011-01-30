@@ -6,8 +6,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-#include "common.h"
 #include "protocol.h"
+#include "common.h"
 #include "console.h"
 
 static int console_readline = 0;

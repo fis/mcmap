@@ -1,6 +1,10 @@
 #include <unistd.h>
 #include <math.h>
+#include <SDL.h>
 
+#include <glib.h>
+
+#include "protocol.h"
 #include "common.h"
 #include "map.h"
 #include "world.h"
