@@ -127,6 +127,7 @@ gpointer proxy_thread(gpointer data)
 		case PACKET_ENTITY_REL_MOVE_LOOK:
 		case PACKET_ENTITY_MOVE:
 		case PACKET_ENTITY_ATTACH:
+		case PACKET_TIME:
 			g_async_queue_push(cfg->q, packet_dup(p));
 			break;
 
@@ -441,6 +442,12 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 	case SDLK_n:
 		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
 		*repaint = 1;
+		break;
+	case SDLK_a:
+		map_update_time(6000);
+		break;
+	case SDLK_s:
+		map_update_time(18000);
 		break;
 #endif
 

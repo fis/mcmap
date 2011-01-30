@@ -98,6 +98,7 @@ static SDL_Surface *map = 0;
 static int map_min_x = 0, map_min_z = 0;
 static int map_max_x = 0, map_max_z = 0;
 static int map_y = 0;
+static int map_darken = 0;
 
 static int map_scale = 1;
 static int map_scale_indicator = 3;
@@ -243,15 +244,29 @@ void map_update(int x1, int x2, int z1, int z2)
 #define IS_WATER(block) ((block) == 0x08 || (block) == 0x09)
 
 #ifdef FEAT_FULLCHUNK
+#define LIGHT_EXPONENT(x) (x*13/14)
+#define EXTRA_LIGHT 5
+
 					if (map_flags & MAP_FLAG_LIGHTS)
 					{
 						int ly = y+1;
 						if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
-						int lv = c->light_blocks[bx*CHUNK_ZSIZE*CHUNK_YSIZE/2 + bz*CHUNK_YSIZE/2 + ly/2];
-						if (ly & 1) lv >>= 4; else lv &= 0xf;
-						if (lv > 14) lv = 14;
 
-						TRANSFORM_RGB((lv+6)*x / 20);
+						int lv = c->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2],
+							lv_day = c->light_sky[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2];
+
+						if (ly & 1)
+							lv >>= 4, lv_day >>= 4;
+						else
+							lv &= 0xf, lv_day &= 0xf;
+
+						lv_day -= map_darken;
+						if (lv_day < 0) lv_day = 0;
+
+						lv = lv_day + lv*((15+EXTRA_LIGHT)-lv_day)/15;
+
+						for (int i = lv; i < 15+EXTRA_LIGHT; i++)
+							TRANSFORM_RGB(LIGHT_EXPONENT(x));
 					}
 #endif /* FEAT_FULLCHUNK */
 
@@ -345,6 +360,34 @@ void map_update_alt(int y, int relative)
 	{
 		map_update(map_min_x, map_max_x, map_min_z, map_max_z);
 		map_repaint();
+	}
+}
+
+void map_update_time(int daytime)
+{
+	/* daytime: 0 at sunrise, 12000 at sunset, 24000 on next sunrise.
+	 * 12000 .. 13800 is dusk, 22200 .. 24000 is dawn */
+
+	int darken = 0;
+
+	if (daytime > 12000)
+	{
+		if (daytime < 13800)
+			darken = (daytime-12000)/180;
+		else if (daytime > 22200)
+			darken = (24000-daytime)/180;
+		else
+			darken = 10;
+	}
+
+	if (map_darken != darken)
+	{
+		map_darken = darken;
+		if (map_flags & MAP_FLAG_LIGHTS)
+		{
+			map_update(map_min_x, map_max_x, map_min_z, map_max_z);
+			map_repaint();
+		}
 	}
 }
 
