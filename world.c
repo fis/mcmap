@@ -382,6 +382,7 @@ gpointer world_thread(gpointer data)
 
 		unsigned char *p;
 		int t;
+		long long ll;
 
 		switch (packet->id)
 		{
@@ -490,6 +491,12 @@ gpointer world_thread(gpointer data)
 					log_print("[INFO] Mounted vehicle %d", new_vehicle);
 				entity_vehicle = packet_int(packet, 1);
 			}
+			break;
+
+		case PACKET_TIME:
+			ll = packet_long(packet, 0);
+			ll %= 24000;
+			map_update_time(ll);
 			break;
 
 		case PACKET_CHAT:
