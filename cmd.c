@@ -251,7 +251,7 @@ void teleport(int x, int z)
 		{
 			if (!stacks[i])
 			{
-				chat("//goto: impossible: jump from unloaded block");
+				chat("//goto: impossible: jump from unloaded chunk");
 				return;
 			}
 		}
@@ -262,7 +262,7 @@ void teleport(int x, int z)
 				continue;
 			for (unsigned i = 0; i < nstacks; i++)
 			{
-				if (stacks[i][h])
+				if (!(stacks[i][h] == 0x00 || stacks[i][h] == 0x08 || stacks[i][h] == 0x09))
 				{
 					chat("//goto: blocked: the skies are not clear");
 					return;
