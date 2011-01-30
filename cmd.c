@@ -22,8 +22,6 @@ static struct { char *name; void (*run)(int, gchar **); } commands[] = {
 #undef command
 };
 
-struct Jump jumps[256] = {{NULL, 0, 0}};
-
 void cmd_parse(unsigned char *cmd, int cmdlen)
 {
 	gchar *cmdstr = g_strndup((gchar *)cmd, cmdlen);
@@ -34,7 +32,7 @@ void cmd_parse(unsigned char *cmd, int cmdlen)
 	while (cmdv[cmdc])
 		cmdc++;
 
-	for (int i = 0; i < sizeof(commands)/sizeof(commands[0]); i++) 
+	for (int i = 0; i < NELEMS(commands); i++) 
 	{
 		if (strcmp(cmdv[0], commands[i].name) == 0)
 		{
@@ -67,13 +65,11 @@ void cmd_goto(int cmdc, gchar **cmdv)
 {
 	if (cmdc == 2)
 	{
-		for (int i = 0; jumps[i].name; i++)
-			if (strcmp(jumps[i].name, cmdv[1]) == 0)
-			{
-				teleport(jumps[i].x, jumps[i].z);
-				return;
-			}
-		chat("//goto: no such jump (try //jumps)");
+		struct Jump *jump = g_hash_table_lookup(jumps, cmdv[1]);
+		if (jump == NULL)
+			chat("//goto: no such jump (try //jumps list)");
+		else
+			teleport(jump->x, jump->z);
 	}
 	else if (cmdc == 3)
 	{
@@ -81,20 +77,94 @@ void cmd_goto(int cmdc, gchar **cmdv)
 	}
 	else
 	{
-		chat("usage: //goto x z or //goto name (try //jumps)");
+		chat("usage: //goto x z or //goto name (try //jumps list)");
 	}
 }
 
-void cmd_jumps(int cmdc, gchar **argv)
+void cmd_jumps(int cmdc, gchar **cmdv)
 {
-	if (!jumps[0].name)
+	if (cmdc < 2)
+	{
+usage:
+		chat("usage: //jumps (list | save [filename] | add name x z | rm name)");
+		return;
+	}
+
+	if (strcmp(cmdv[1], "list") == 0)
+		jumps_list();
+	else if (strcmp(cmdv[1], "save") == 0 && (cmdc == 2 || cmdc == 3))
+		jumps_save(cmdc == 3 ? cmdv[2] : opt.jumpfile);
+	else if (strcmp(cmdv[1], "add") == 0 && cmdc == 5)
+		jumps_add(cmdv[2], atoi(cmdv[3]), atoi(cmdv[4]), TRUE);
+	else if (strcmp(cmdv[1], "rm") == 0 && cmdc == 3)
+		jumps_rm(cmdv[2]);
+	else
+		goto usage;
+}
+
+#define FOREACH_JUMP(name, jump) \
+	GHashTableIter jump_iter; \
+	gchar *name; \
+	struct Jump *jump; \
+	g_hash_table_iter_init(&jump_iter, jumps); \
+	while (g_hash_table_iter_next(&jump_iter, (gpointer *) &name, (gpointer *) &jump))
+
+void jumps_list()
+{
+	if (g_hash_table_size(jumps) == 0)
 	{
 		chat("//jumps: no jumps exist");
 		return;
 	}
-	for (int i = 0; jumps[i].name; i++)
-		chat("//jumps: %s (%d,%d)", jumps[i].name, jumps[i].x, jumps[i].z);
+
+	FOREACH_JUMP (name, jump)
+		chat("//jumps: %s (%d,%d)", name, jump->x, jump->z);
 }
+
+void jumps_save(gchar *filename)
+{
+	if (filename == NULL)
+	{
+		chat("//jumps: no jump file; please use //jumps save filename");
+		return;
+	}
+
+	FILE *jump_file = fopen(filename, "w");
+
+	if (jump_file == NULL)
+	{
+		chat("//jumps: opening %s: %s", filename, strerror(errno));
+		return;
+	}
+
+	FOREACH_JUMP (name, jump)
+		fprintf(jump_file, "%s\t\t%d %d\n", name, jump->x, jump->z);
+
+	fclose(jump_file);
+	chat("//jumps: saved to %s", filename);
+
+	opt.jumpfile = (char *) jump_file; /* FIXME: do we want this? */
+}
+
+void jumps_add(gchar *name, int x, int z, gboolean is_command)
+{
+	struct Jump *jump = g_malloc(sizeof(struct Jump));
+	jump->x = x;
+	jump->z = z;
+	g_hash_table_insert(jumps, strdup(name), jump);
+	if (is_command)
+		chat("//jumps: added %s (%d,%d)", name, x, z);
+}
+
+void jumps_rm(gchar *name)
+{
+	if (g_hash_table_remove(jumps, name))
+		chat("//jumps: removed %s", name);
+	else
+		chat("//jumps: no such jump");
+}
+
+#undef FOREACH_JUMP
 
 struct teleport_fall_data
 {
@@ -102,7 +172,7 @@ struct teleport_fall_data
 	int z;
 };
 
-gpointer teleport_fall(gpointer data)
+static gpointer teleport_fall(gpointer data)
 {
 	struct teleport_fall_data *tfd = data;
 	int x = tfd->x, z = tfd->z;
