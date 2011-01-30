@@ -21,7 +21,7 @@ enum special_color_names
 
 #define RGB(r,g,b) (((r)<<16)|((g)<<8)|(b))
 
-#define AIR_COLOR RGB(180, 255, 255)
+#define AIR_COLOR RGB(12, 120, 192)
 static Uint32 block_colors[256] = {
 	[0x00] = AIR_COLOR,          /* air */
 	[0x01] = RGB(180, 180, 180), /* stone */
@@ -251,7 +251,6 @@ void map_update(int x1, int x2, int z1, int z2)
 					}
 #endif /* FEAT_FULLCHUNK */
 
-					#define water(block) ((block) == 0x08 || (block) == 0x09)
 					if (water(*b))
 					{
 						int h = (map_mode == MAP_MODE_CROSS ? map_y : c->height[bx][bz]);
@@ -261,7 +260,6 @@ void map_update(int x1, int x2, int z1, int z2)
 							else
 								break;
 					}
-					#undef water
 
 					*p++ = rgb;
 					b += blocks_xpitch;
