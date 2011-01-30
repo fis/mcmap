@@ -204,7 +204,7 @@ static gpointer teleport_fall(gpointer data)
 		/* fall slowly down */
 
 		packet_t *pfall1 = packet_new(PACKET_TO_ANY, PACKET_PLAYER_MOVE,
-		                              (double)x, (double)h, h+1.62, (double)z, 0);
+		                              x+0.5, (double)h, h+1.62, z+0.5, 0);
 		packet_t *pfall2 = packet_dup(pfall1);
 
 		inject_to_server(pfall1);
@@ -274,11 +274,11 @@ void teleport(int x, int z)
 	/* inject jumping packets */
 
 	packet_t *pjump1 = packet_new(PACKET_TO_ANY, PACKET_PLAYER_MOVE,
-	                              (double)player_x, 128.0, 129.62, (double)player_z, 0);
+	                              player_x+0.5, 128.0, 129.62, player_z+0.5, 0);
 	packet_t *pjump2 = packet_dup(pjump1);
 
 	packet_t *pmove1 = packet_new(PACKET_TO_ANY, PACKET_PLAYER_MOVE,
-	                              (double)x, 128.0, 129.62, (double)z, 0);
+	                              x+0.5, 128.0, 129.62, z+0.5, 0);
 	packet_t *pmove2 = packet_dup(pmove1);
 
 	inject_to_server(pjump1);
