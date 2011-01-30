@@ -139,6 +139,10 @@ void map_init(SDL_Surface *screen)
 		die("SDL map surface init");
 
 	map_mutex = g_mutex_new();
+
+#ifdef FEAT_FULLCHUNK
+	map_flags = MAP_FLAG_LIGHTS;
+#endif
 }
 
 inline void map_repaint(void)

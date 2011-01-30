@@ -443,12 +443,6 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
 		*repaint = 1;
 		break;
-	case SDLK_a:
-		map_update_time(6000);
-		break;
-	case SDLK_s:
-		map_update_time(18000);
-		break;
 #endif
 
 	case SDLK_UP:
