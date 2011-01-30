@@ -143,7 +143,7 @@ void jumps_save(gchar *filename)
 	fclose(jump_file);
 	chat("//jumps: saved to %s", filename);
 
-	opt.jumpfile = (char *) jump_file; /* FIXME: do we want this? */
+	opt.jumpfile = filename; /* FIXME: do we want this? */
 }
 
 void jumps_add(gchar *name, int x, int z, gboolean is_command)
