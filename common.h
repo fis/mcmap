@@ -52,4 +52,21 @@ struct options
 	gchar *jumpfile;
 } opt;
 
+/* utilities */
+
+#define hollow(x) ((x) == 0x00 || water(x) || lava(x))
+#define water(x) ((x) == 0x08 || (x) == 0x09)
+#define lava(x) ((x) == 0x0a || (x) == 0x0b)
+
+/* teleportation */
+
+struct Jump {
+        int x;
+        int z;
+};
+
+GHashTable *jumps;
+
+void teleport(int x, int z);
+
 #endif /* MCMAP_COMMON_H */

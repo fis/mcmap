@@ -1,6 +1,6 @@
 # mcmap/Makefile.common  -*- mode: makefile -*-
 
-sources += cmd.c console.c main.c map.c nbt.c protocol.c world.c
+sources += cmd.c common.c console.c main.c map.c nbt.c protocol.c world.c
 
 ifdef debug
 	CFLAGS ?= -g

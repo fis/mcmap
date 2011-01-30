@@ -166,6 +166,7 @@ void jumps_rm(gchar *name)
 
 #undef FOREACH_JUMP
 
+#if 0 /* to be removed in next commit */
 struct teleport_fall_data
 {
 	int x;
@@ -296,6 +297,7 @@ void teleport(int x, int z)
 	tfd->z = z;
 	g_thread_create(teleport_fall, tfd, FALSE, NULL);
 }
+#endif
 
 #ifdef FEAT_FULLCHUNK
 void cmd_save(int cmdc, gchar **cmdv)
