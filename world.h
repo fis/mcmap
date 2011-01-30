@@ -24,7 +24,6 @@ struct chunk
 	struct coord key;
 	unsigned char blocks[CHUNK_XSIZE][CHUNK_ZSIZE][CHUNK_YSIZE];
 	unsigned char height[CHUNK_XSIZE][CHUNK_ZSIZE];
-	unsigned char surface[CHUNK_XSIZE][CHUNK_ZSIZE];
 #ifdef FEAT_FULLCHUNK
 	unsigned char meta[CHUNK_NBLOCKS/2];
 	unsigned char light_blocks[CHUNK_NBLOCKS/2];

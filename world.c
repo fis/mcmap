@@ -136,6 +136,8 @@ static void handle_chunk(int x0, int y0, int z0,
 	unsigned char *zb_light_sky = zb_light_blocks + (xs*ys*zs+1)/2;
 #endif
 
+	int changed = 0;
+
 	for (int x = x0; x < x0+xs; x++)
 	{
 		for (int z = z0; z < z0+zs; z++)
@@ -147,6 +149,9 @@ static void handle_chunk(int x0, int y0, int z0,
 				c = world_chunk(&cc, 1);
 				current_chunk = cc;
 			}
+
+			if (!changed && memcmp(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, yupds) != 0)
+				changed = 1;
 
 			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, yupds);
 			zb += ys;
@@ -167,23 +172,17 @@ static void handle_chunk(int x0, int y0, int z0,
 
 			if (y0+yupds >= h)
 			{
-				unsigned char surfblock = 0x00; /* air */
-				int newh = h;
+				int newh = y0 + yupds;
+				if (newh >= CHUNK_YSIZE)
+					newh = CHUNK_YSIZE - 1;
 
 				unsigned char *stack = c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
-				for (h = 0; h < y0+yupds; h++)
-				{
-					if (!stack[h])
-						continue; /* air */
-					surfblock = stack[h];
-					newh = h;
-				}
 
-				if (surfblock)
-				{
-					c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)] = newh;
-					c->surface[CHUNK_XOFF(x)][CHUNK_ZOFF(z)] = surfblock;
-				}
+				while (!stack[newh] && newh > 0)
+					newh--;
+
+				c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)] = newh;
+				changed = 1;
 			}
 
 			if (cc.x < c_min_x) c_min_x = cc.x;
@@ -193,30 +192,32 @@ static void handle_chunk(int x0, int y0, int z0,
 		}
 	}
 
-	map_update(c_min_x, c_max_x, c_min_z, c_max_z);
+	if (changed)
+		map_update(c_min_x, c_max_x, c_min_z, c_max_z);
 }
 
-static inline void block_change(struct chunk *c, int x, int y, int z, unsigned char type)
+static inline int block_change(struct chunk *c, int x, int y, int z, unsigned char type)
 {
 	if (y < 0 || y >= CHUNK_YSIZE)
-		return; /* sometimes server sends Y=CHUNK_YSIZE block-to-air "updates" */
+		return 0; /* sometimes server sends Y=CHUNK_YSIZE block-to-air "updates" */
 
+	int changed = (c->blocks[x][z][y] == type);
 	c->blocks[x][z][y] = type;
+
 	if (y >= c->height[x][z])
 	{
-		c->surface[x][z] = type;
-		c->height[x][z] = y;
+		int newh = y;
 
 		if (!type)
-		{
-			int h;
-			for (h = y; h > 0; h--)
-				if (c->blocks[x][z][h])
-					break;
-			c->surface[x][z] = c->blocks[x][z][h];
-			c->height[x][z] = h;
-		}
+			while (!c->blocks[x][z][newh] && newh > 0)
+				newh--;
+
+		if (c->height[x][z] != newh)
+			changed = 1;
+		c->height[x][z] = newh;
 	}
+
+	return changed;
 }
 
 static void handle_multi_set_block(int cx, int cz, int size, unsigned char *coord, unsigned char *type)
@@ -226,14 +227,18 @@ static void handle_multi_set_block(int cx, int cz, int size, unsigned char *coor
 	if (!c)
 		return; /* edit in an unloaded chunk */
 
+	int changed = 0;
+
 	while (size--)
 	{
 		int x = coord[0] >> 4, y = coord[1], z = coord[0] & 0x0f;
 		coord += 2;
-		block_change(c, x, y, z, *type++);
+		if (block_change(c, x, y, z, *type++))
+			changed = 1;
 	}
 
-	map_update(cx, cx, cz, cz);
+	if (changed)
+		map_update(cx, cx, cz, cz);
 }
 
 static void handle_set_block(int x, int y, int z, int type)
@@ -243,8 +248,8 @@ static void handle_set_block(int x, int y, int z, int type)
 	if (!c)
 		return; /* edit in an unloaded chunk */
 
-	block_change(c, CHUNK_XOFF(x), y, CHUNK_ZOFF(z), type);
-	map_update(cc.x, cc.x, cc.z, cc.z);
+	if (block_change(c, CHUNK_XOFF(x), y, CHUNK_ZOFF(z), type))
+		map_update(cc.x, cc.x, cc.z, cc.z);
 }
 
 static void entity_add(int id, unsigned char *name, int x, int y, int z)

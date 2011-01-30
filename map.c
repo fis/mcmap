@@ -189,24 +189,15 @@ void map_update(int x1, int x2, int z1, int z2)
 			}
 
 			unsigned char *pixels = (unsigned char *)map->pixels + czo*CHUNK_ZSIZE*pitch + cxo*CHUNK_XSIZE*4;
-			unsigned char *blocks;
-			unsigned blocks_pitch;
 
-			if (map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_TOPO)
+			unsigned char *blocks = &c->blocks[0][0][0];
+			unsigned blocks_pitch = CHUNK_YSIZE;
+
+			if (map_mode == MAP_MODE_TOPO)
 			{
-				blocks = map_mode == MAP_MODE_SURFACE ? &c->surface[0][0] : &c->height[0][0];
+				blocks = &c->height[0][0];
 				blocks_pitch = 1;
 			}
-			else if (map_mode == MAP_MODE_CROSS)
-			{
-				int y0 = map_y;
-				if (y0 < 0) y0 = 0;
-				else if (y0 >= CHUNK_YSIZE) y0 = CHUNK_YSIZE - 1;
-				blocks = &c->blocks[0][0][y0];
-				blocks_pitch = CHUNK_YSIZE;
-			}
-			else
-				dief("unrecognized map mode: %d", map_mode);
 
 			unsigned blocks_xpitch = CHUNK_ZSIZE*blocks_pitch;
 
@@ -217,31 +208,44 @@ void map_update(int x1, int x2, int z1, int z2)
 
 				for (int bx = 0; bx < CHUNK_XSIZE; bx++)
 				{
+					Uint32 y = c->height[bx][bz];
+
+					/* select basic color */
+
+					Uint32 rgb;
+
 					if (map_mode == MAP_MODE_TOPO)
 					{
 						Uint32 v = *b;
 						if (v < 64)
-							*p++ = ((4*v) << rshift) | ((4*v) << gshift) | ((255-4*v) << bshift);
+							rgb = ((4*v) << rshift) | ((4*v) << gshift);
 						else
-							*p++ = (255 << rshift) | ((255-4*(v-64)) << gshift);
-						b += blocks_xpitch;
-						continue;
+							rgb = (255 << rshift) | ((255-4*(v-64)) << gshift);
+					}
+					else
+					{
+						if (map_mode == MAP_MODE_CROSS)
+							y = map_y;
+
+						rgb = block_colors[b[y]];
 					}
 
-					#define TRANSFORM_RGB(expr) \
-						do { \
-							Uint32 x; \
-	                                                Uint32 r = (rgb >> rshift) & 0xff, g = (rgb >> gshift) & 0xff, b = (rgb >> bshift) & 0xff; \
-							x = r; r = expr; x = g; g = expr; x = b; b = expr; \
-							rgb = (r << rshift) | (g << gshift) | (b << bshift); \
-						} while (0)
+					/* apply shadings and such */
 
-					Uint32 rgb = block_colors[*b];
+#define TRANSFORM_RGB(expr)	  \
+					do { \
+						Uint32 x; \
+						Uint32 r = (rgb >> rshift) & 0xff, g = (rgb >> gshift) & 0xff, b = (rgb >> bshift) & 0xff; \
+						x = r; r = expr; x = g; g = expr; x = b; b = expr; \
+						rgb = (r << rshift) | (g << gshift) | (b << bshift); \
+					} while (0)
+
+#define IS_WATER(block) ((block) == 0x08 || (block) == 0x09)
 
 #ifdef FEAT_FULLCHUNK
 					if (map_flags & MAP_FLAG_LIGHTS)
 					{
-						int ly = (map_mode == MAP_MODE_CROSS ? map_y+1 : c->height[bx][bz]+1);
+						int ly = y+1;
 						if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
 						int lv = c->light_blocks[bx*CHUNK_ZSIZE*CHUNK_YSIZE/2 + bz*CHUNK_YSIZE/2 + ly/2];
 						if (ly & 1) lv >>= 4; else lv &= 0xf;
@@ -251,22 +255,25 @@ void map_update(int x1, int x2, int z1, int z2)
 					}
 #endif /* FEAT_FULLCHUNK */
 
-					#define water(block) ((block) == 0x08 || (block) == 0x09)
-					if (water(*b))
+					if (IS_WATER(c->blocks[bx][bz][y]))
 					{
-						int h = (map_mode == MAP_MODE_CROSS ? map_y : c->height[bx][bz]);
+						rgb = block_colors[0x08];
+
+						int h = y;
 						while (--h)
-							if (water(c->blocks[bx][bz][h]))
+							if (IS_WATER(c->blocks[bx][bz][h]))
 								TRANSFORM_RGB(x*7/8);
 							else
 								break;
 					}
-					#undef water
+
+#undef IS_WATER
+#undef TRANSFORM_RGB
+
+					/* update bitmap */
 
 					*p++ = rgb;
 					b += blocks_xpitch;
-
-					#undef TRANSFORM_RGB
 				}
 
 				pixels += pitch;
