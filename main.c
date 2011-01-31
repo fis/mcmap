@@ -3,14 +3,15 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <gio/gio.h>
+#include <glib.h>
 #include <SDL.h>
 
 #include "cmd.h"
+#include "config.h"
+#include "protocol.h"
 #include "common.h"
 #include "console.h"
 #include "map.h"
-#include "protocol.h"
 #include "world.h"
 
 /* default command-line options */
@@ -21,6 +22,7 @@ struct options opt = {
 	.nomap = FALSE,
 	.scale = 1,
 	.wndsize = 0,
+	.jumpfile = 0,
 };
 
 /* miscellaneous helper routines */
@@ -33,7 +35,7 @@ static void handle_chat(unsigned char *msg, int msglen);
 
 struct proxy_config
 {
-	GSocket *sock_from, *sock_to;
+	socket_t sock_from, sock_to;
 	int client_to_server;
 	GAsyncQueue *q;
 	GAsyncQueue *iq;
@@ -45,7 +47,7 @@ static GAsyncQueue *iq_server = 0;
 gpointer proxy_thread(gpointer data)
 {
 	struct proxy_config *cfg = data;
-	GSocket *sfrom = cfg->sock_from, *sto = cfg->sock_to;
+	socket_t sfrom = cfg->sock_from, sto = cfg->sock_to;
 	char *desc = cfg->client_to_server ? "client -> server" : "server -> client";
 
 	packet_state_t state = PACKET_STATE_INIT(cfg->client_to_server ? PACKET_TO_SERVER : PACKET_TO_CLIENT);
@@ -70,19 +72,19 @@ gpointer proxy_thread(gpointer data)
 			return 0;
 		}
 
+#define DEBUG_PROTOCOL 2
 #if DEBUG_PROTOCOL >= 2 /* use for packet dumping for protocol analysis */
-		log_print("%s packet 0x%02x size %u", desc, p->id, p->size);
+		if (p->id == PACKET_UPDATE_HEALTH /*|| p->id == PACKET_PLAYER_MOVE || p->id == PACKET_PLAYER_MOVE_ROTATE*/)
 		{
-			unsigned left = p->size;
-			unsigned char *pb = p->bytes;
-			while (left > 0)
+			int i, nf = packet_nfields(p);
+
+			fprintf(stderr, "packet: %u [%s]\n", p->id, desc);
+			for (i = 0; i < nf; i++)
 			{
-				char buf[128] = {0};
-				for (int i = 0; i < 16 && left > 0; i++, left--)
-				{
-					sprintf(buf+strlen(buf), "%02x ", *pb++);
-				}
-				log_print("DATA %s", buf);
+				fprintf(stderr, "  field %d:", i);
+				for (unsigned u = p->field_offset[i]; u < p->field_offset[i+1]; u++)
+					fprintf(stderr, " %02x", p->bytes[u]);
+				fprintf(stderr, "\n");
 			}
 		}
 #endif
@@ -101,17 +103,21 @@ gpointer proxy_thread(gpointer data)
 				dief("proxy thread (%s) write failed", desc);
 		}
 
-		/* communicate interesting chunks back */
+		/* communicate interesting chunks to world thread */
 
-		if (!world_running)
+		if (!world_running || (p->flags & PACKET_FLAG_IGNORE))
 			continue;
 
 		switch (p->id)
 		{
-		case PACKET_LOGIN:
 		case PACKET_CHUNK:
 		case PACKET_MULTI_SET_BLOCK:
 		case PACKET_SET_BLOCK:
+			if (opt.nomap)
+				break;
+			/* fall-through to processing */
+
+		case PACKET_LOGIN:
 		case PACKET_PLAYER_MOVE:
 		case PACKET_PLAYER_ROTATE:
 		case PACKET_PLAYER_MOVE_ROTATE:
@@ -122,8 +128,8 @@ gpointer proxy_thread(gpointer data)
 		case PACKET_ENTITY_REL_MOVE_LOOK:
 		case PACKET_ENTITY_MOVE:
 		case PACKET_ENTITY_ATTACH:
-			if (!opt.nomap)
-				g_async_queue_push(cfg->q, packet_dup(p));
+		case PACKET_TIME:
+			g_async_queue_push(cfg->q, packet_dup(p));
 			break;
 
 		case PACKET_CHAT:
@@ -144,7 +150,7 @@ gpointer proxy_thread(gpointer data)
 
 /* main application */
 
-int main(int argc, char **argv)
+int mcmap_main(int argc, char **argv)
 {
 	setlocale(LC_ALL, "");
 
@@ -156,6 +162,7 @@ int main(int argc, char **argv)
 		{ "port", 'p', 0, G_OPTION_ARG_INT, &opt.localport, "Local port to listen at", "P" },
 		{ "size", 's', 0, G_OPTION_ARG_STRING, &opt.wndsize, "Fixed-size window size", "WxH" },
 		{ "scale", 'x', 0, G_OPTION_ARG_INT, &opt.scale, "Zoom factor", "N" },
+		{ "jumps", 'j', 0, G_OPTION_ARG_STRING, &opt.jumpfile, "File containing list of jumps", "FILENAME" },
 		{ NULL }
 	};
 
@@ -196,10 +203,42 @@ int main(int argc, char **argv)
 		}
 	}
 
+	jumps = g_hash_table_new(g_str_hash, g_str_equal);
+
+	if (opt.jumpfile)
+	{
+		gchar *jump_file;
+		GError *error = 0;
+		struct Jump *jump;
+		gchar *file_ptr;
+		if (!g_file_get_contents(opt.jumpfile, &jump_file, NULL, &error))
+			die(error->message);
+		#define FIELD(assigner) \
+			field = file_ptr; \
+			while (!isspace(*file_ptr) && file_ptr[1] != 0) \
+				file_ptr++; \
+			*file_ptr++ = 0; \
+			assigner; \
+			while (isspace(*file_ptr)) \
+				file_ptr++
+		file_ptr = jump_file;
+		while (*file_ptr != 0)
+		{
+			gchar *field;
+			gchar *name;
+			jump = g_malloc(sizeof(struct Jump));
+			FIELD(name = strdup(field));
+			FIELD(jump->x = atoi(field));
+			FIELD(jump->z = atoi(field));
+			g_hash_table_insert(jumps, name, jump);
+		}
+		#undef FIELD
+		g_free(jump_file);
+	}
+
 	/* initialization stuff */
 
 	g_thread_init(0);
-	g_type_init();
 
 	iq_client = g_async_queue_new_full(packet_free);
 	iq_server = g_async_queue_new_full(packet_free);
@@ -215,50 +254,78 @@ int main(int argc, char **argv)
 
 	log_print("[INFO] Waiting for connection...");
 
-	GSocketListener *listener = g_socket_listener_new();
+	socket_t listener = make_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	if (!g_socket_listener_add_inet_port(listener, opt.localport, 0, 0))
+	if (listener < 0)
+		die("network setup: socket() for listener");
+
 	{
-		die("Unable to set up sockets.");
-		return 1;
+		int b = 1;
+		setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&b, sizeof b);
 	}
 
-	GSocketConnection *conn_cli = g_socket_listener_accept(listener, 0, 0, 0);
+	struct sockaddr_in listener_in = { 0 };
+	listener_in.sin_family = AF_INET;
+	listener_in.sin_addr.s_addr = htonl(INADDR_ANY);
+	listener_in.sin_port = htons(opt.localport);
+	if (bind(listener, (struct sockaddr *)&listener_in, sizeof listener_in) != 0)
+		die("network setup: bind() for listener");
 
-	if (!conn_cli)
-	{
-		die("Client never connected.");
-		return 1;
-	}
+	if (listen(listener, SOMAXCONN) != 0)
+		die("network setup: listen() for listener");
+
+	socket_t sock_cli = accept(listener, 0, 0);
+	if (sock_cli < 0)
+		die("network setup: accept() for listener");
 
 	/* connect to the minecraft server side */
 
 	log_print("[INFO] Connecting to %s...", argv[1]);
 
-	GSocketClient *client = g_socket_client_new();
+	struct addrinfo hints = { 0 }, *serveraddr;
 
-	GSocketConnection *conn_srv = g_socket_client_connect_to_host(client, argv[1], 25565, 0, 0);
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
 
-	if (!conn_srv)
+	char *portsep = strrchr(argv[1], ':');
+
+	int aires;
+	if (portsep)
 	{
-		die("Unable to connect to server.");
-		return 1;
+		*portsep = 0;
+		aires = getaddrinfo(argv[1], portsep+1, &hints, &serveraddr);
 	}
+	else
+		aires = getaddrinfo(argv[1], "25565", &hints, &serveraddr);
+
+	if (aires != 0)
+		die("network setup: getaddrinfo() for server");
+
+	socket_t sock_srv = make_socket(serveraddr->ai_family, serveraddr->ai_socktype, serveraddr->ai_protocol);
+
+	if (sock_srv < 0)
+		die("network setup: socket() for server");
+
+	if (connect(sock_srv, serveraddr->ai_addr, serveraddr->ai_addrlen) != 0)
+		die("network setup: connect() for server");
+
+	freeaddrinfo(serveraddr);
 
 	/* start the user interface side */
 
 	console_init();
 
+	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
+	{
+		die("Failed to initialize SDL.");
+		return 1;
+	}
+
 	SDL_Surface *screen = NULL;
 
 	if (!opt.nomap)
 	{
-		if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
-		{
-			die("Failed to initialize SDL.");
-			return 1;
-		}
-
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
 		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
 		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
@@ -284,9 +351,6 @@ int main(int argc, char **argv)
 
 	log_print("[INFO] Starting up...");
 
-	GSocket *sock_cli = g_socket_connection_get_socket(conn_cli);
-	GSocket *sock_srv = g_socket_connection_get_socket(conn_srv);
-
 	struct proxy_config proxy_client_server = {
 		.sock_from = sock_cli,
 		.sock_to = sock_srv,
@@ -304,10 +368,7 @@ int main(int argc, char **argv)
 	};
 
 	g_thread_create(proxy_thread, &proxy_client_server, FALSE, 0);
-	if (!opt.nomap)
-		g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
-	else
-		proxy_thread(&proxy_server_client);
+	g_thread_create(proxy_thread, &proxy_server_client, FALSE, 0);
 	
 	/* enter SDL main loop */
 
@@ -335,6 +396,12 @@ int main(int argc, char **argv)
 				handle_mouse(&e.button);
 				break;
 
+			case SDL_VIDEORESIZE:
+				screen = SDL_SetVideoMode(e.resize.w, e.resize.h, 32, SDL_SWSURFACE|SDL_RESIZABLE);
+				repaint = 1;
+				break;
+
+			case SDL_VIDEOEXPOSE:
 			case MCMAP_EVENT_REPAINT:
 				repaint = 1;
 				break;
@@ -343,7 +410,7 @@ int main(int argc, char **argv)
 
 		/* repaint dirty bits if necessary */
 
-		if (repaint)
+		if (repaint && !opt.nomap)
 			map_draw(screen);
 
 		/* wait for something interesting to happen */
@@ -359,24 +426,31 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 	switch (e->keysym.sym)
 	{
 	case SDLK_1:
-		map_setmode(MAP_MODE_SURFACE, 0);
+		map_setmode(MAP_MODE_SURFACE, 0, 0, 0);
 		*repaint = 1;
 		break;
 
 	case SDLK_2:
-		map_setmode(MAP_MODE_CROSS, MAP_FLAG_FOLLOW_Y);
+		map_setmode(MAP_MODE_CROSS, MAP_FLAG_FOLLOW_Y, 0, 0);
 		*repaint = 1;
 		break;
 
 	case SDLK_3:
-		map_setmode(MAP_MODE_CROSS, 0);
+		map_setmode(MAP_MODE_CROSS, 0, MAP_FLAG_FOLLOW_Y, 0);
 		*repaint = 1;
 		break;
 
 	case SDLK_4:
-		map_setmode(MAP_MODE_TOPO, 0);
+		map_setmode(MAP_MODE_TOPO, 0, 0, 0);
 		*repaint = 1;
 		break;
+
+#ifdef FEAT_FULLCHUNK
+	case SDLK_n:
+		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
+		*repaint = 1;
+		break;
+#endif
 
 	case SDLK_UP:
 		map_update_alt(+1, 1);
@@ -406,7 +480,7 @@ static void handle_mouse(SDL_MouseButtonEvent *e)
 		/* teleport */
 		int x, z;
 		map_s2w(e->x, e->y, &x, &z);
-		cmd_goto(x, z);
+		teleport(x, z);
 	}
 }
 
@@ -486,7 +560,7 @@ void chat(char *fmt, ...)
 	static const char prefix[4] = { 0xc2, 0xa7, 'b', 0 };
 	char *cmsg = g_strjoin("", prefix, msg, NULL);
 
-	inject_to_client(packet_new(PACKET_TO_ANY, PACKET_CHAT, cmsg));
+	inject_to_client(packet_new(0, PACKET_CHAT, cmsg));
 
 	g_free(cmsg);
 	g_free(msg);

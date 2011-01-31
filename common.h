@@ -1,9 +1,9 @@
 #ifndef MCMAP_COMMON_H
 #define MCMAP_COMMON_H
 
-#include "protocol.h"
+#include "platform.h"
 
-#include <glib.h>
+#define NELEMS(array) (sizeof(array) / sizeof((array)[0]))
 
 /* 2d points for hash table keys */
 
@@ -46,6 +46,24 @@ struct options
 	gboolean nomap;
 	gint scale;
 	gchar *wndsize;
+	gchar *jumpfile;
 } opt;
+
+/* utilities */
+
+#define hollow(x) ((x) == 0x00 || water(x) || lava(x))
+#define water(x) ((x) == 0x08 || (x) == 0x09)
+#define lava(x) ((x) == 0x0a || (x) == 0x0b)
+
+/* teleportation */
+
+struct Jump {
+        int x;
+        int z;
+};
+
+GHashTable *jumps;
+
+void teleport(int x, int z);
 
 #endif /* MCMAP_COMMON_H */

@@ -75,6 +75,9 @@ page-up makes blocks one pixel larger.
 Right-clicking a point on the map basically executes a //goto x z on
 the clicked coordinates (or nearby).
 
+Finally, the `n` key toggles "night mode" on: in this mode, blocks are
+shaded based on how well lit (excluding sunlight) they are.
+
 Chatting
 --------
 
@@ -94,8 +97,12 @@ Commands are prefixed with // -- chat packets starting with that
 prefix will be removed from the stream and considered by mcmap.
 
 * `//goto x z`: teleport into coordinates (x, z).
+* `//jump ...`: control the jump list (run without arguments for more
+  information).
 * `//coords`: print your current coordinates.
 * `//slap name`: transport you to a magical world of faeries and unicorns.
+* `//save [directory]`: save the seen chunks to disk in the Minecraft
+  world format.
 
 The teleporting works by first moving the player directly up to height
 y=128, then moving to (x, 128, z).  Passing through solid blocks is
@@ -107,3 +114,35 @@ on.
 (Also, don't teleport into some ridiculously far-away coordinates.
 The server seems to generate all the terrain on your flight-path, and
 will probably crash.)
+
+Building the Win32 port
+=======================
+
+Explode the following files into `win/glib/` under the source root:
+
+* http://ftp.gnome.org/pub/gnome/binaries/win32/glib/2.26/glib-dev_2.26.1-1_win32.zip
+* http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/zlib-dev_1.2.5-2_win32.zip
+* http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/gettext-runtime-dev_0.18.1.1-2_win32.zip
+
+Also explode this into `win/SDL-1.2.14/` (the `SDL-1.2.14` part is
+already in the tarball):
+
+* http://www.libsdl.org/release/SDL-devel-1.2.14-mingw32.tar.gz
+
+You also need the mingw stuff: on Ubuntu 10.10, the packages
+`gcc-mingw32` and `mingw32-runtime`.
+
+Then with some luck `make -f Makefile.win` will build a `mcmap.exe`.
+
+To actually run it, you need the SDL/glib/zlib DLL files.  Start with:
+
+* http://ftp.gnome.org/pub/gnome/binaries/win32/glib/2.26/glib_2.26.1-1_win32.zip
+* http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/gettext-runtime_0.18.1.1-2_win32.zip
+* http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/zlib_1.2.5-2_win32.zip
+
+Explode those somewhere and collect all .dll files from the `bin/`
+subdirectory.  Also take the `SDL.dll` from:
+
+*  http://www.libsdl.org/release/SDL-1.2.14-win32.zip
+
+These, placed in the same directory as `mcmap.exe`, should be enough.

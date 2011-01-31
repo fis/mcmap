@@ -1,0 +1,22 @@
+# mcmap/Makefile.win32  -*- mode: makefile -*-
+
+sources = win32.c
+objs = win32-res.o
+
+include Makefile.common
+
+CC := i586-mingw32msvc-gcc
+WINDRES ?= i586-mingw32msvc-windres
+
+CFLAGS += -DWINVER=0x0501 -DPLATFORM_WIN32
+CFLAGS += -Iwin/glib/include -Iwin/glib/include/glib-2.0 -Iwin/glib/lib/glib-2.0/include
+CFLAGS += -Iwin/SDL-1.2.14/include/SDL
+
+LDFLAGS += -lws2_32 -Wl,--subsystem,console
+LDFLAGS += -Lwin/glib/lib -lglib-2.0 -lgobject-2.0 -lgthread-2.0 -lz
+LDFLAGS += -Lwin/SDL-1.2.14/lib -lSDL
+
+EXE := .exe
+
+win32-res.o: win32.rc win32-res.h
+	$(WINDRES) -O coff $< $@

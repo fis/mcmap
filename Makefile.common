@@ -1,0 +1,43 @@
+# mcmap/Makefile.common  -*- mode: makefile -*-
+
+sources += cmd.c common.c console.c main.c map.c nbt.c protocol.c world.c
+
+ifdef debug
+	CFLAGS ?= -g
+	OBJDIR ?= build-debug
+else
+	CFLAGS ?= -O3
+	OBJDIR ?= build
+endif
+
+objs += $(sources:%.c=$(OBJDIR)/%.o)
+deps += $(sources:%.c=$(OBJDIR)/%.d)
+
+CFLAGS += -Wall -Werror -std=gnu99
+
+.PHONY: all clean
+
+all: $(OBJDIR)/mcmap$(EXE)
+
+$(OBJDIR)/mcmap$(EXE): $(objs)
+	$(CC) -o $@ $(objs) $(LDFLAGS)
+
+$(OBJDIR):
+	mkdir $@
+
+$(OBJDIR)/%.o: %.c | $(OBJDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+protocol-data.c: protocol.txt | protocol.pl
+	perl protocol.pl
+
+protocol-data.h: protocol-data.c
+
+-include $(deps)
+
+clean:
+	rm -f $(OBJDIR)/mcmap$(EXE) $(objs) $(deps)
+	-rmdir $(OBJDIR)
+
+$(OBJDIR)/%.d: %.c $(OBJDIR)
+	@$(CC) -MM -MG -MF $@ -MT $(@:.d=.o) -MT $@ $(CFLAGS) $<

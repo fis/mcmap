@@ -1,9 +1,12 @@
 #include <math.h>
 #include <stdlib.h>
+#include <SDL.h>
 
 #include <GL/gl.h>
 
+#include "protocol.h"
 #include "common.h"
+#include "config.h"
 #include "map.h"
 #include "world.h"
 
@@ -12,12 +15,17 @@
 enum special_color_names
 {
 	COLOR_PLAYER,
+	COLOR_UNLOADED,
 	COLOR_MAX_SPECIAL
 };
 
+#ifdef RGB
+#undef RGB
+#endif
+
 #define RGB(r,g,b) (((r)<<24)|((g)<<16)|(b)<<8)
 
-#define AIR_COLOR RGB(180, 255, 255)
+#define AIR_COLOR RGB(135, 206, 235)
 static GLuint block_colors[256] = {
 	[0x00] = AIR_COLOR,          /* air */
 	[0x01] = RGB(180, 180, 180), /* stone */
@@ -39,6 +47,9 @@ static GLuint block_colors[256] = {
 	[0x11] = RGB(95,  55,  0),   /* log */
 	[0x12] = RGB(0,   132, 0),   /* leaves */
 	[0x14] = RGB(185, 234, 231), /* glass */
+	[0x15] = RGB(65,  102, 245), /* lapis lazuli ore */
+	[0x16] = RGB(65,  102, 245), /* lapis lazuli block */
+	[0x18] = RGB(245, 245, 69),  /* sandstone */
 	[0x23] = RGB(240, 240, 240), /* cloth */
 	[0x25] = RGB(137, 180, 0),   /* yellow flower */
 	[0x26] = RGB(122, 130, 0),   /* red flower */
@@ -48,7 +59,7 @@ static GLuint block_colors[256] = {
 	[0x2c] = RGB(180, 180, 180), /* step */
 	[0x2d] = RGB(160, 0,   0),   /* brick */
 	[0x30] = RGB(0,   255, 0),   /* mossy cobble */
-	[0x31] = RGB(91,  0,   104), /* obsidian */
+	[0x31] = RGB(61,  0,   61),  /* obsidian */
 	[0x32] = RGB(255, 255, 0),   /* torch */
 	[0x33] = RGB(255, 108, 0),   /* fire */
 	[0x35] = RGB(133, 78,  0),   /* wooden stairs */
@@ -67,7 +78,7 @@ static GLuint block_colors[256] = {
 	[0x4e] = AIR_COLOR,          /* snow layer */
 	[0x4f] = RGB(211, 255, 255), /* ice */
 	[0x50] = RGB(238, 255, 255), /* snow */
-	[0x52] = RGB(225, 225, 178), /* clay */
+	[0x52] = RGB(165, 42,  42),  /* clay */
 	[0x56] = RGB(246, 156, 0),   /* pumpkin */
 	[0x57] = RGB(121, 17,  0),   /* netherstone */
 	[0x58] = RGB(107, 43,  15),  /* slow sand */
@@ -79,6 +90,7 @@ static GLuint block_colors[256] = {
 
 static GLdouble special_colors[COLOR_MAX_SPECIAL][3] = {
 	[COLOR_PLAYER] = { 1.0, 0.0, 1.0 },
+	[COLOR_UNLOADED] = { 0.0625, 0.0625, 0.0625 },
 };
 
 /* map graphics code */
@@ -111,6 +123,7 @@ struct region
 double player_dx = 0.0, player_dy = 0.0, player_dz = 0.0;
 int player_x = 0, player_y = 0, player_z = 0;
 static int map_y = 0;
+static int map_darken = 0;
 
 static GArray * volatile reg = 0;
 static int volatile reg_z0 = 0;
@@ -138,6 +151,10 @@ void map_init(SDL_Surface *screen)
 	map_h = map_ph;
 
 	reg_mutex = g_mutex_new();
+
+#ifdef FEAT_FULLCHUNK
+	map_flags = MAP_FLAG_LIGHTS;
+#endif
 }
 
 static struct region *reg_get(int cx, int cz)
@@ -206,6 +223,7 @@ inline void map_repaint(void)
 
 void map_change(int x, int z)
 {
+	log_print("map_change(%d,%d)", x, z);
 	g_mutex_lock(reg_mutex);
 	reg_get(x, z)->flags |= REG_REDRAW_BITMAP;
 	g_mutex_unlock(reg_mutex);
@@ -233,24 +251,14 @@ void map_update(int forced)
 					continue;
 				}
 
-				unsigned char *blocks;
-				unsigned blocks_pitch;
+				unsigned char *blocks = &c->blocks[0][0][0];
+				unsigned blocks_pitch = CHUNK_YSIZE;
 
-				if (map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_TOPO)
+				if (map_mode == MAP_MODE_TOPO)
 				{
-					blocks = map_mode == MAP_MODE_SURFACE ? &c->surface[0][0] : &c->height[0][0];
+					blocks = &c->height[0][0];
 					blocks_pitch = 1;
 				}
-				else if (map_mode == MAP_MODE_CROSS)
-				{
-					int y0 = map_y;
-					if (y0 < 0) y0 = 0;
-					else if (y0 >= CHUNK_YSIZE) y0 = CHUNK_YSIZE - 1;
-					blocks = &c->blocks[0][0][y0];
-					blocks_pitch = CHUNK_YSIZE;
-				}
-				else
-					dief("unrecognized map mode: %d", map_mode);
 
 				unsigned blocks_xpitch = CHUNK_ZSIZE*blocks_pitch;
 
@@ -261,16 +269,89 @@ void map_update(int forced)
 
 					for (int bx = 0; bx < CHUNK_XSIZE; bx++)
 					{
+						Uint32 y = c->height[bx][bz];
+
+						/* select basic color */
+
+						Uint32 rgb;
+
 						if (map_mode == MAP_MODE_TOPO)
 						{
-							GLuint v = *b;
+							Uint32 v = *b;
 							if (v < 64)
-								*p++ = ((4*v) << 24) | ((4*v) << 16) | ((255-4*v) << 8);
+								rgb = ((4*v) << 24) | ((4*v) << 16);
 							else
-								*p++ = (255 << 24) | ((255-4*(v-64)) << 16);
+								rgb = (255 << 24) | ((255-4*(v-64)) << 16);
 						}
 						else
-							*p++ = block_colors[*b];
+						{
+							if (map_mode == MAP_MODE_CROSS)
+								y = map_y;
+
+							rgb = block_colors[b[y]];
+						}
+
+						/* apply shadings and such */
+
+#define TRANSFORM_RGB(expr)	  \
+						do { \
+							Uint32 x; \
+							Uint32 r = (rgb >> 24) & 0xff, g = (rgb >> 16) & 0xff, b = (rgb >> 8) & 0xff; \
+							x = r; r = expr; x = g; g = expr; x = b; b = expr; \
+							rgb = (r << 24) | (g << 16) | (b << 8); \
+						} while (0)
+
+#ifdef FEAT_FULLCHUNK
+
+#define LIGHT_EXP1 60800
+#define LIGHT_EXP2 64000
+
+						if (map_flags & MAP_FLAG_LIGHTS)
+						{
+							int ly = y+1;
+							if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
+
+							int lv_block = c->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2],
+								lv_day = c->light_sky[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2];
+
+							if (ly & 1)
+								lv_block >>= 4, lv_day >>= 4;
+							else
+								lv_block &= 0xf, lv_day &= 0xf;
+
+							lv_day -= map_darken;
+							if (lv_day < 0) lv_day = 0;
+							Uint32 block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
+
+							Uint32 lf = 0x10000;
+
+							for (int i = lv_block; i < 15; i++)
+								lf = (lf*block_exp) >> 16;
+							for (int i = lv_day; i < 15; i++)
+								lf = (lf*LIGHT_EXP1) >> 16;
+
+							TRANSFORM_RGB((x*lf) >> 16);
+						}
+#endif /* FEAT_FULLCHUNK */
+
+						if (water(c->blocks[bx][bz][y]))
+						{
+							if (map_mode == MAP_MODE_TOPO)
+								rgb = block_colors[0x08];
+
+							int h = y;
+							while (--h)
+								if (water(c->blocks[bx][bz][h]))
+									TRANSFORM_RGB(x*7/8);
+								else
+									break;
+						}
+
+#undef TRANSFORM_RGB
+
+						/* update bitmap */
+
+						*p++ = rgb;
 						b += blocks_xpitch;
 					}
 
@@ -363,7 +444,35 @@ void map_update_alt(int y, int relative)
 		map_update(1);
 }
 
-void map_setmode(enum map_mode mode, unsigned flags)
+void map_update_time(int daytime)
+{
+	/* daytime: 0 at sunrise, 12000 at sunset, 24000 on next sunrise.
+	 * 12000 .. 13800 is dusk, 22200 .. 24000 is dawn */
+
+	int darken = 0;
+
+	if (daytime > 12000)
+	{
+		if (daytime < 13800)
+			darken = (daytime-12000)/180;
+		else if (daytime > 22200)
+			darken = (24000-daytime)/180;
+		else
+			darken = 10;
+	}
+
+	if (map_darken != darken)
+	{
+		map_darken = darken;
+		if (map_flags & MAP_FLAG_LIGHTS)
+		{
+			map_update(1);
+			map_repaint();
+		}
+	}
+}
+
+void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsigned flags_toggle)
 {
 	static char *modenames[] = {
 		[MAP_MODE_SURFACE] = "surface",
@@ -371,15 +480,24 @@ void map_setmode(enum map_mode mode, unsigned flags)
 		[MAP_MODE_TOPO] = "topographic",
 	};
 
-	map_mode = mode;
-	map_flags = flags;
+	enum map_mode old_mode = map_mode;
+	unsigned old_flags = map_flags;
 
-	if (mode == MAP_MODE_CROSS)
+	if (mode != MAP_MODE_NOCHANGE)
+		map_mode = mode;
+
+	map_flags |= flags_on;
+	map_flags &= ~flags_off;
+	map_flags ^= flags_toggle;
+
+	if (mode == MAP_MODE_CROSS && (old_mode != MAP_MODE_CROSS || (map_flags & MAP_FLAG_FOLLOW_Y)))
 		map_y = player_y;
 
-	chat("MODE: %s%s",
-	     modenames[mode],
-	     mode == MAP_MODE_CROSS && (flags & MAP_FLAG_FOLLOW_Y) ? " (follow player)" : "");
+	if (map_mode != old_mode || map_flags != old_flags)
+		chat("MODE: %s%s%s",
+		     modenames[map_mode],
+		     (mode == MAP_MODE_CROSS && map_flags & MAP_FLAG_FOLLOW_Y ? " (follow)" : ""),
+		     (map_flags & MAP_FLAG_LIGHTS ? " (lights)" : ""));
 
 #if 0
 	map_update(map_min_x, map_max_x, map_min_z, map_max_z);
