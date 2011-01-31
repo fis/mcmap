@@ -102,7 +102,7 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 			          buf[i+0],buf[i+1],buf[i+2],buf[i+3],buf[i+4],buf[i+5],buf[i+6],buf[i+7],
 			          buf[i+8],buf[i+9],buf[i+10],buf[i+11],buf[i+12],buf[i+13],buf[i+14],buf[i+15]);
 #endif
-		dief("Unknown packet id: 0x%02x (dir %d)", t, state->p.dir);
+		dief("Unknown packet id: 0x%02x (flags %02x)", t, state->p.flags);
 	}
 
 	state->p.field_offset = state->offset;
@@ -219,7 +219,7 @@ packet_t *packet_dup(packet_t *packet)
 {
 	packet_t *newp = g_malloc(sizeof *newp);
 
-	newp->dir = packet->dir;
+	newp->flags = packet->flags;
 	newp->id = packet->id;
 	newp->size = packet->size;
 	newp->bytes = g_memdup(packet->bytes, packet->size);
@@ -228,7 +228,7 @@ packet_t *packet_dup(packet_t *packet)
 	return newp;
 }
 
-packet_t *packet_new(enum packet_dir dir, enum packet_id type, ...)
+packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 {
 	GByteArray *data = g_byte_array_new();
 	GArray *offsets = g_array_new(FALSE, FALSE, sizeof(unsigned));
@@ -335,13 +335,15 @@ packet_t *packet_new(enum packet_dir dir, enum packet_id type, ...)
 		}
 	}
 
+	g_array_append_val(offsets, offset);
+
 	va_end(ap);
 
 	/* construct the actual packet */
 
 	packet_t *p = g_malloc(sizeof *p);
 
-	p->dir = dir;
+	p->flags = flags;
 	p->id = type;
 	p->size = offset;
 	p->bytes = g_byte_array_free(data, FALSE);

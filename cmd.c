@@ -54,7 +54,7 @@ void cmd_coords(int cmdc, gchar **cmdv)
 	if (cmdc == 2 && strcmp(cmdv[1], "-say") == 0)
 	{
 		char *msg = g_strdup_printf("/me is at (%d,%d) (y=%d)", player_x, player_z, player_y);
-		inject_to_server(packet_new(PACKET_TO_ANY, PACKET_CHAT, msg));
+		inject_to_server(packet_new(0, PACKET_CHAT, msg));
 		g_free(msg);
 	}
 	else if (cmdc == 1)
@@ -246,6 +246,6 @@ void cmd_slap(int cmdc, gchar **cmdv)
 	}
 
 	char *msg = g_strdup_printf("/me slaps %s around a bit with a large trout", cmdv[1]);
-	inject_to_server(packet_new(PACKET_TO_ANY, PACKET_CHAT, msg));
+	inject_to_server(packet_new(0, PACKET_CHAT, msg));
 	g_free(msg);
 }

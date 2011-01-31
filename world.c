@@ -408,7 +408,7 @@ gpointer world_thread(gpointer data)
 			break;
 
 		case PACKET_LOGIN:
-			if (packet->dir == PACKET_TO_CLIENT)
+			if (packet->flags & PACKET_TO_CLIENT)
 			{
 				entity_player = packet_int(packet, 0);
 				world_seed = packet_long(packet, 3);
@@ -432,7 +432,7 @@ gpointer world_thread(gpointer data)
 				                      packet_double(packet, 1),
 				                      packet_double(packet, 3));
 
-			if (packet->dir == PACKET_TO_CLIENT && !spawn_known)
+			if ((packet->flags & PACKET_TO_CLIENT) && !spawn_known)
 			{
 				spawn_known = 1;
 				spawn_x = packet_double(packet, 0);
