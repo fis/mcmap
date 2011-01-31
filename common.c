@@ -9,6 +9,7 @@
 #include "map.h"
 #include "world.h"
 
+#ifdef FEAT_SAFE_TELEPORT
 struct teleport_fall_data
 {
 	int x;
@@ -62,6 +63,7 @@ static gpointer teleport_fall(gpointer data)
 	g_free(tfd);
 	return 0;
 }
+#endif
 
 void teleport(int x, int z)
 {
@@ -137,8 +139,10 @@ void teleport(int x, int z)
 
 	/* fake safe landing */
 
+#ifdef FEAT_SAFE_TELEPORT
 	struct teleport_fall_data *tfd = g_malloc(sizeof *tfd);
 	tfd->x = x;
 	tfd->z = z;
 	g_thread_create(teleport_fall, tfd, FALSE, NULL);
+#endif
 }
