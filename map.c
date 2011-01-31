@@ -249,8 +249,6 @@ void map_update(int x1, int x2, int z1, int z2)
 						rgb = (r << rshift) | (g << gshift) | (b << bshift); \
 					} while (0)
 
-#define IS_WATER(block) ((block) == 0x08 || (block) == 0x09)
-
 #ifdef FEAT_FULLCHUNK
 
 #define LIGHT_EXP1 60800
@@ -284,20 +282,19 @@ void map_update(int x1, int x2, int z1, int z2)
 					}
 #endif /* FEAT_FULLCHUNK */
 
-					if (IS_WATER(c->blocks[bx][bz][y]))
+					if (water(c->blocks[bx][bz][y]))
 					{
 						if (map_mode == MAP_MODE_TOPO)
 							rgb = block_colors[0x08];
 
 						int h = y;
 						while (--h)
-							if (IS_WATER(c->blocks[bx][bz][h]))
+							if (water(c->blocks[bx][bz][h]))
 								TRANSFORM_RGB(x*7/8);
 							else
 								break;
 					}
 
-#undef IS_WATER
 #undef TRANSFORM_RGB
 
 					/* update bitmap */
