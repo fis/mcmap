@@ -25,7 +25,7 @@ enum special_color_names
 
 #define RGB(r,g,b) (((r)<<16)|((g)<<8)|(b))
 
-#define AIR_COLOR RGB(12, 120, 192)
+#define AIR_COLOR RGB(135, 206, 235)
 static Uint32 block_colors[256] = {
 	[0x00] = AIR_COLOR,          /* air */
 	[0x01] = RGB(180, 180, 180), /* stone */
