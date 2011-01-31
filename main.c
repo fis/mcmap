@@ -72,7 +72,6 @@ gpointer proxy_thread(gpointer data)
 			return 0;
 		}
 
-#define DEBUG_PROTOCOL 2
 #if DEBUG_PROTOCOL >= 2 /* use for packet dumping for protocol analysis */
 		if (p->id == PACKET_UPDATE_HEALTH /*|| p->id == PACKET_PLAYER_MOVE || p->id == PACKET_PLAYER_MOVE_ROTATE*/)
 		{
