@@ -252,29 +252,35 @@ void map_update(int x1, int x2, int z1, int z2)
 #define IS_WATER(block) ((block) == 0x08 || (block) == 0x09)
 
 #ifdef FEAT_FULLCHUNK
-#define LIGHT_EXPONENT(x) (x*13/14)
-#define EXTRA_LIGHT 5
+
+#define LIGHT_EXP1 60800
+#define LIGHT_EXP2 64000
 
 					if (map_flags & MAP_FLAG_LIGHTS)
 					{
 						int ly = y+1;
 						if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
 
-						int lv = c->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2],
+						int lv_block = c->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2],
 							lv_day = c->light_sky[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2];
 
 						if (ly & 1)
-							lv >>= 4, lv_day >>= 4;
+							lv_block >>= 4, lv_day >>= 4;
 						else
-							lv &= 0xf, lv_day &= 0xf;
+							lv_block &= 0xf, lv_day &= 0xf;
 
 						lv_day -= map_darken;
 						if (lv_day < 0) lv_day = 0;
+						Uint32 block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
 
-						lv = lv_day + lv*((15+EXTRA_LIGHT)-lv_day)/15;
+						Uint32 lf = 0x10000;
 
-						for (int i = lv; i < 15+EXTRA_LIGHT; i++)
-							TRANSFORM_RGB(LIGHT_EXPONENT(x));
+						for (int i = lv_block; i < 15; i++)
+							lf = (lf*block_exp) >> 16;
+						for (int i = lv_day; i < 15; i++)
+							lf = (lf*LIGHT_EXP1) >> 16;
+
+						TRANSFORM_RGB((x*lf) >> 16);
 					}
 #endif /* FEAT_FULLCHUNK */
 
