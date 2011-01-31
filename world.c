@@ -201,7 +201,7 @@ static inline int block_change(struct chunk *c, int x, int y, int z, unsigned ch
 	if (y < 0 || y >= CHUNK_YSIZE)
 		return 0; /* sometimes server sends Y=CHUNK_YSIZE block-to-air "updates" */
 
-	int changed = (c->blocks[x][z][y] == type);
+	int changed = (c->blocks[x][z][y] != type);
 	c->blocks[x][z][y] = type;
 
 	if (y >= c->height[x][z])
