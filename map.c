@@ -223,7 +223,6 @@ inline void map_repaint(void)
 
 void map_change(int x, int z)
 {
-	log_print("map_change(%d,%d)", x, z);
 	g_mutex_lock(reg_mutex);
 	reg_get(x, z)->flags |= REG_REDRAW_BITMAP;
 	g_mutex_unlock(reg_mutex);

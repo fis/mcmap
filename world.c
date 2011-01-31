@@ -133,6 +133,8 @@ static void handle_chunk(int x0, int y0, int z0,
 	unsigned char *zb_light_sky = zb_light_blocks + (xs*ys*zs+1)/2;
 #endif
 
+	int changed = 0;
+
 	for (int x = x0; x < x0+xs; x++)
 	{
 		for (int z = z0; z < z0+zs; z++)
@@ -141,13 +143,17 @@ static void handle_chunk(int x0, int y0, int z0,
 
 			if (!COORD_EQUAL(cc, current_chunk))
 			{
+				if (changed)
+					map_change(current_chunk.x, current_chunk.z);
+				changed = 0;
+
 				c = world_chunk(&cc, 1);
 				current_chunk = cc;
 				map_change(cc.x, cc.z);
 			}
 
-			if (memcmp(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, yupds) != 0)
-				map_change(cc.x, cc.z);
+			if (!changed && memcmp(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, yupds) != 0)
+				changed = 1;
 
 			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, yupds);
 			zb += ys;
@@ -181,6 +187,9 @@ static void handle_chunk(int x0, int y0, int z0,
 			}
 		}
 	}
+
+	if (changed)
+		map_change(current_chunk.x, current_chunk.z);
 }
 
 static inline int block_change(struct chunk *c, int x, int y, int z, unsigned char type)
@@ -188,10 +197,7 @@ static inline int block_change(struct chunk *c, int x, int y, int z, unsigned ch
 	if (y < 0 || y >= CHUNK_YSIZE)
 		return 0; /* sometimes server sends Y=CHUNK_YSIZE block-to-air "updates" */
 
-	int changed = (c->blocks[x][z][y] == type);
-	if (changed)
-		log_print("block_change: (%d,%d,%d) %d -> %d", x, y, z, c->blocks[x][z][y], type);
-
+	int changed = (c->blocks[x][z][y] != type);
 	c->blocks[x][z][y] = type;
 
 	if (y >= c->height[x][z])
