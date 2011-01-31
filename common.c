@@ -9,6 +9,7 @@
 #include "map.h"
 #include "world.h"
 
+#ifdef FEAT_SAFE_TELEPORT
 struct teleport_fall_data
 {
 	int x;
@@ -20,48 +21,83 @@ static gpointer teleport_fall(gpointer data)
 	struct teleport_fall_data *tfd = data;
 	int x = tfd->x, z = tfd->z;
 
-	int h = 127, desth = 64;
-	int delay = 50*1000; /* 50 ms delay for normal safe fall */
-	int seen_ground = 0;
-
-	while (h > desth)
-	{
-		/* check for loaded chunks for insta-drop knowledge */
-
-		if (!seen_ground)
-		{
-			unsigned char *s = world_stack(x, z, 0);
-			if (s)
-			{
-				for (desth = 127; desth >= 0; desth--)
-					if (s[desth])
-						break;
-				desth += 3;
-				if (h < desth)
-					h = desth;
-				delay = 0;
-			}
-			seen_ground = 1;
-		}
-
-		/* fall slowly down */
-
-		packet_t *pfall1 = packet_new(PACKET_TO_ANY, PACKET_PLAYER_MOVE,
-		                              x+0.5, (double)h, h+1.62, z+0.5, 0);
-		packet_t *pfall2 = packet_dup(pfall1);
-
-		inject_to_server(pfall1);
-		inject_to_client(pfall2);
-
-		if (delay)
-			usleep(delay);
-
-		h--;
-	}
+	packet_t *p;
+	unsigned char *stack;
 
 	g_free(tfd);
+	tfd = 0;
+
+	stack = world_stack(x, z, 0);
+
+	if (!stack)
+	{
+		/* put in the stepping stone */
+
+		p = packet_new(PACKET_TO_ANY, PACKET_SET_BLOCK,
+		               x, 127, z, 3, 0);
+		inject_to_client(p);
+
+		/* wait for the world to materalize, if necessary */
+
+		while (!stack)
+		{
+			usleep(100*1000);
+			stack = world_stack(x, z, 0);
+		}
+
+		/* remove the stepping stone */
+
+		p = packet_new(PACKET_TO_ANY, PACKET_SET_BLOCK,
+		               x, 127, z, stack[127], 0); /* TODO: fix metadata */
+		inject_to_client(p);
+	}
+
+	/* all done if fall is short enough, or on top of water */
+
+	int surfh = 127;
+	while (!stack[surfh] && surfh > 0)
+		surfh--;
+
+	if (surfh >= 125 ||
+	    (surfh >= 2 &&
+	     water(stack[surfh]) && water(stack[surfh-1]) && water(stack[surfh-2])))
+		return 0;
+
+	/* otherwise, put in some water to stop the fall */
+
+	for (int y = surfh+1; y <= surfh+3; y++)
+	{
+		p = packet_new(PACKET_TO_ANY, PACKET_SET_BLOCK,
+		               x, y, z, 9, 8);
+		inject_to_client(p);
+	}
+
+	/* wait for up to 30.0 seconds for the player to reach it */
+
+	volatile int *py = &player_y; /* TODO: fix thread-safety, maybe do with events */
+
+	for (int i = 0; i < 300; i++)
+	{
+		if (*py <= surfh+1)
+			break;
+		usleep(100*1000);
+	}
+
+	/* remove the water */
+	/* actually this won't work as the water also ends up in stack[]
+	   due to inject_to_client() being handled as a server-sent packet;
+	   TODO: fix the injection mechanism, make that specifiable */
+
+	for (int y = surfh+1; y <= surfh+3; y++)
+	{
+		p = packet_new(PACKET_TO_ANY, PACKET_SET_BLOCK,
+		               x, y, z, stack[y], 0); /* TODO: fix metadata */
+		inject_to_client(p);
+	}
+
 	return 0;
 }
+#endif
 
 void teleport(int x, int z)
 {
@@ -120,11 +156,11 @@ void teleport(int x, int z)
 	/* inject jumping packets */
 
 	packet_t *pjump1 = packet_new(PACKET_TO_ANY, PACKET_PLAYER_MOVE,
-	                              player_x+0.5, 128.0, 129.62, player_z+0.5, 0);
+	                              player_x+0.5, 130.0, 131.62, player_z+0.5, 0);
 	packet_t *pjump2 = packet_dup(pjump1);
 
 	packet_t *pmove1 = packet_new(PACKET_TO_ANY, PACKET_PLAYER_MOVE,
-	                              x+0.5, 128.0, 129.62, z+0.5, 0);
+	                              x+0.5, 130.0, 131.62, z+0.5, 0);
 	packet_t *pmove2 = packet_dup(pmove1);
 
 	inject_to_server(pjump1);
@@ -137,8 +173,10 @@ void teleport(int x, int z)
 
 	/* fake safe landing */
 
+#ifdef FEAT_SAFE_TELEPORT
 	struct teleport_fall_data *tfd = g_malloc(sizeof *tfd);
 	tfd->x = x;
 	tfd->z = z;
 	g_thread_create(teleport_fall, tfd, FALSE, NULL);
+#endif
 }
