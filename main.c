@@ -72,8 +72,9 @@ gpointer proxy_thread(gpointer data)
 			return 0;
 		}
 
+#define DEBUG_PROTOCOL 2
 #if DEBUG_PROTOCOL >= 2 /* use for packet dumping for protocol analysis */
-		if (p->id != PACKET_CHUNK)
+		if (p->id == PACKET_UPDATE_HEALTH /*|| p->id == PACKET_PLAYER_MOVE || p->id == PACKET_PLAYER_MOVE_ROTATE*/)
 		{
 			int i, nf = packet_nfields(p);
 
@@ -102,9 +103,9 @@ gpointer proxy_thread(gpointer data)
 				dief("proxy thread (%s) write failed", desc);
 		}
 
-		/* communicate interesting chunks back */
+		/* communicate interesting chunks to world thread */
 
-		if (!world_running)
+		if (!world_running || (p->flags & PACKET_FLAG_IGNORE))
 			continue;
 
 		switch (p->id)
@@ -553,7 +554,7 @@ void chat(char *fmt, ...)
 	static const char prefix[4] = { 0xc2, 0xa7, 'b', 0 };
 	char *cmsg = g_strjoin("", prefix, msg, NULL);
 
-	inject_to_client(packet_new(PACKET_TO_ANY, PACKET_CHAT, cmsg));
+	inject_to_client(packet_new(0, PACKET_CHAT, cmsg));
 
 	g_free(cmsg);
 	g_free(msg);

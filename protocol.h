@@ -4,12 +4,10 @@
 #include "platform.h"
 #include "protocol-data.h"
 
-enum packet_dir
-{
-	PACKET_TO_ANY,
-	PACKET_TO_CLIENT,
-	PACKET_TO_SERVER
-};
+#define PACKET_TO_CLIENT 0x01
+#define PACKET_TO_SERVER 0x02
+
+#define PACKET_FLAG_IGNORE 0x04
 
 enum field_type
 {
@@ -30,7 +28,7 @@ enum field_type
 
 struct packet
 {
-	enum packet_dir dir;
+	unsigned flags;
 	unsigned id;
 	unsigned size;
 	unsigned char *bytes;
@@ -52,7 +50,7 @@ struct packet_state
 
 typedef struct packet_state packet_state_t;
 
-#define PACKET_STATE_INIT(d) { .buf_start = 0, .buf_pos = 0, .buf_end = 0, .p = { .dir = d } }
+#define PACKET_STATE_INIT(f) { .buf_start = 0, .buf_pos = 0, .buf_end = 0, .p = { .flags = f } }
 
 packet_t *packet_read(socket_t sock, packet_state_t *state);
 
@@ -60,7 +58,7 @@ int packet_write(socket_t sock, packet_t *packet);
 
 packet_t *packet_dup(packet_t *packet);
 
-packet_t *packet_new(enum packet_dir dir, enum packet_id type, ...);
+packet_t *packet_new(unsigned flags, enum packet_id type, ...);
 
 void packet_free(gpointer packet);
 
