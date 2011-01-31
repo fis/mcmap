@@ -97,8 +97,12 @@ Commands are prefixed with // -- chat packets starting with that
 prefix will be removed from the stream and considered by mcmap.
 
 * `//goto x z`: teleport into coordinates (x, z).
+* `//jump ...`: control the jump list (run without arguments for more
+  information).
 * `//coords`: print your current coordinates.
 * `//slap name`: transport you to a magical world of faeries and unicorns.
+* `//save [directory]`: save the seen chunks to disk in the Minecraft
+  world format.
 
 The teleporting works by first moving the player directly up to height
 y=128, then moving to (x, 128, z).  Passing through solid blocks is
