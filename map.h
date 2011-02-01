@@ -3,6 +3,14 @@
 
 #define MCMAP_EVENT_REPAINT SDL_USEREVENT
 
+typedef struct {
+	Uint8 r;
+	Uint8 g;
+	Uint8 b;
+} RGB;
+
+#define RGB(rv, gv, bv) ((RGB){ .r = (rv), .g = (gv), .b = (bv) })
+
 enum map_mode
 {
 	MAP_MODE_NOCHANGE,

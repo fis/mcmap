@@ -19,80 +19,72 @@ enum special_color_names
 	COLOR_MAX_SPECIAL
 };
 
-#ifdef RGB
-#undef RGB
-#endif
-
-#define RGB(r,g,b) (((r)<<16)|((g)<<8)|(b))
-
-#define AIR_COLOR RGB(135, 206, 235)
-static Uint32 block_colors[256] = {
-	[0x00] = AIR_COLOR,          /* air */
-	[0x01] = RGB(180, 180, 180), /* stone */
-	[0x02] = RGB(34,  180, 0),   /* grass */
-	[0x03] = RGB(158, 123, 18),  /* dirt */
-	[0x04] = RGB(128, 128, 128), /* cobblestone */
-	[0x05] = RGB(133, 78,  0),   /* wood */
-	[0x06] = RGB(0,   132, 0),   /* sapling */
-	[0x07] = RGB(0,   0,   0),   /* bedrock */
-	[0x08] = RGB(39,  161, 225), /* water */
-	[0x09] = RGB(39,  161, 225), /* stationary water */
-	[0x0a] = RGB(255, 81,  0),   /* lava */
-	[0x0b] = RGB(255, 81,  0),   /* stationary lava */
-	[0x0c] = RGB(245, 245, 69),  /* sand */
-	[0x0d] = RGB(222, 190, 160), /* gravel */
-	[0x0e] = RGB(255, 180, 0),   /* gold ore */
-	[0x0f] = RGB(92,  92,  92),  /* iron ore */
-	[0x10] = RGB(51,  51,  51),  /* coal ore */
-	[0x11] = RGB(95,  55,  0),   /* log */
-	[0x12] = RGB(0,   132, 0),   /* leaves */
-	[0x14] = RGB(185, 234, 231), /* glass */
-	[0x15] = RGB(65,  102, 245), /* lapis lazuli ore */
-	[0x16] = RGB(65,  102, 245), /* lapis lazuli block */
-	[0x18] = RGB(245, 245, 69),  /* sandstone */
-	[0x23] = RGB(240, 240, 240), /* cloth */
-	[0x25] = RGB(137, 180, 0),   /* yellow flower */
-	[0x26] = RGB(122, 130, 0),   /* red flower */
-	[0x29] = RGB(255, 180, 0),   /* gold block */
-	[0x2a] = RGB(92,  92,  92),  /* iron block */
-	[0x2b] = RGB(180, 180, 180), /* double step */
-	[0x2c] = RGB(180, 180, 180), /* step */
-	[0x2d] = RGB(160, 0,   0),   /* brick */
-	[0x30] = RGB(0,   255, 0),   /* mossy cobble */
-	[0x31] = RGB(61,  0,   61),  /* obsidian */
-	[0x32] = RGB(255, 255, 0),   /* torch */
-	[0x33] = RGB(255, 108, 0),   /* fire */
-	[0x35] = RGB(133, 78,  0),   /* wooden stairs */
-	[0x37] = RGB(160, 0,   0),   /* redstone wire */
-	[0x38] = RGB(0,   255, 255), /* diamond ore */
-	[0x39] = RGB(0,   255, 255), /* diamond block */
-	[0x3c] = RGB(114, 76,  9),   /* soil */
-	[0x41] = AIR_COLOR,          /* ladder */
-	[0x43] = RGB(128, 128, 128), /* cobblestone stairs */
-	[0x45] = AIR_COLOR,          /* lever */
-	[0x49] = RGB(160, 0,   0),   /* redstone ore */
-	[0x4a] = RGB(160, 0,   0),   /* redstone ore (lit) */
-	[0x4b] = RGB(160, 0,   0),   /* redstone torch (off) */
-	[0x4c] = RGB(160, 0,   0),   /* redstone torch (on) */
-	[0x4d] = AIR_COLOR,          /* stone button */
-	[0x4e] = AIR_COLOR,          /* snow layer */
-	[0x4f] = RGB(211, 255, 255), /* ice */
-	[0x50] = RGB(238, 255, 255), /* snow */
-	[0x52] = RGB(165, 42,  42),  /* clay */
-	[0x53] = RGB(0,   255, 0),   /* reed^H^H^H^Hsugar cane */
-	[0x56] = RGB(246, 156, 0),   /* pumpkin */
-	[0x57] = RGB(121, 17,  0),   /* netherstone */
-	[0x58] = RGB(107, 43,  15),  /* slow sand */
-	[0x59] = RGB(186, 157, 0),   /* lightstone */
-	[0x5b] = RGB(246, 156, 0),   /* pumpkin (lit) */
+#define AIR_COLOR {135, 206, 235}
+static RGB block_colors[256] = {
+	[0x00] = AIR_COLOR,       /* air */
+	[0x01] = {180, 180, 180}, /* stone */
+	[0x02] = {34,  180, 0},   /* grass */
+	[0x03] = {158, 123, 18},  /* dirt */
+	[0x04] = {128, 128, 128}, /* cobblestone */
+	[0x05] = {133, 78,  0},   /* wood */
+	[0x06] = {0,   132, 0},   /* sapling */
+	[0x07] = {0,   0,   0},   /* bedrock */
+	[0x08] = {39,  161, 225}, /* water */
+	[0x09] = {39,  161, 225}, /* stationary water */
+	[0x0a] = {255, 81,  0},   /* lava */
+	[0x0b] = {255, 81,  0},   /* stationary lava */
+	[0x0c] = {245, 245, 69},  /* sand */
+	[0x0d] = {222, 190, 160}, /* gravel */
+	[0x0e] = {255, 180, 0},   /* gold ore */
+	[0x0f] = {92,  92,  92},  /* iron ore */
+	[0x10] = {51,  51,  51},  /* coal ore */
+	[0x11] = {95,  55,  0},   /* log */
+	[0x12] = {0,   132, 0},   /* leaves */
+	[0x14] = {185, 234, 231}, /* glass */
+	[0x15] = {65,  102, 245}, /* lapis lazuli ore */
+	[0x16] = {65,  102, 245}, /* lapis lazuli block */
+	[0x18] = {245, 245, 69},  /* sandstone */
+	[0x23] = {240, 240, 240}, /* cloth */
+	[0x25] = {137, 180, 0},   /* yellow flower */
+	[0x26] = {122, 130, 0},   /* red flower */
+	[0x29] = {255, 180, 0},   /* gold block */
+	[0x2a] = {92,  92,  92},  /* iron block */
+	[0x2b] = {180, 180, 180}, /* double step */
+	[0x2c] = {180, 180, 180}, /* step */
+	[0x2d] = {160, 0,   0},   /* brick */
+	[0x30] = {0,   255, 0},   /* mossy cobble */
+	[0x31] = {61,  0,   61},  /* obsidian */
+	[0x32] = {255, 255, 0},   /* torch */
+	[0x33] = {255, 108, 0},   /* fire */
+	[0x35] = {133, 78,  0},   /* wooden stairs */
+	[0x37] = {160, 0,   0},   /* redstone wire */
+	[0x38] = {0,   255, 255}, /* diamond ore */
+	[0x39] = {0,   255, 255}, /* diamond block */
+	[0x3c] = {114, 76,  9},   /* soil */
+	[0x41] = AIR_COLOR,       /* ladder */
+	[0x43] = {128, 128, 128}, /* cobblestone stairs */
+	[0x45] = AIR_COLOR,       /* lever */
+	[0x49] = {160, 0,   0},   /* redstone ore */
+	[0x4a] = {160, 0,   0},   /* redstone ore (lit) */
+	[0x4b] = {160, 0,   0},   /* redstone torch (off) */
+	[0x4c] = {160, 0,   0},   /* redstone torch (on) */
+	[0x4d] = AIR_COLOR,       /* stone button */
+	[0x4e] = AIR_COLOR,       /* snow layer */
+	[0x4f] = {211, 255, 255}, /* ice */
+	[0x50] = {238, 255, 255}, /* snow */
+	[0x52] = {165, 42,  42},  /* clay */
+	[0x53] = {0,   255, 0},   /* reed^H^H^H^Hsugar cane */
+	[0x56] = {246, 156, 0},   /* pumpkin */
+	[0x57] = {121, 17,  0},   /* netherstone */
+	[0x58] = {107, 43,  15},  /* slow sand */
+	[0x59] = {186, 157, 0},   /* lightstone */
+	[0x5b] = {246, 156, 0},   /* pumpkin (lit) */
 };
 
-static Uint32 special_colors[COLOR_MAX_SPECIAL] = {
-	[COLOR_PLAYER] = RGB(255, 0, 255),
-	[COLOR_UNLOADED] = RGB(16, 16, 16),
+static RGB special_colors[COLOR_MAX_SPECIAL] = {
+	[COLOR_PLAYER] = {255, 0, 255},
+	[COLOR_UNLOADED] = {16, 16, 16},
 };
-
-#undef RGB
 
 /* map graphics code */
 
@@ -115,24 +107,16 @@ static GMutex * volatile map_mutex = 0;
 
 static int player_yaw = 0;
 
+static inline Uint32 pack_rgb(RGB rgb)
+{
+	return (rgb.r << map->format->Rshift) +
+	       (rgb.g << map->format->Gshift) +
+	       (rgb.b << map->format->Bshift);
+}
+
 void map_init(SDL_Surface *screen)
 {
 	SDL_PixelFormat *fmt = screen->format;
-
-	Uint32 get_color(Uint32 c)
-	{
-		Uint32 r = c >> 16, g = (c >> 8) & 0xff, b = c & 0xff;
-		return (r << fmt->Rshift) | (g << fmt->Gshift) | (b << fmt->Bshift);
-	}
-
-	if (fmt->Rshift != 16 || fmt->Gshift != 8 || fmt->Bshift != 0)
-	{
-		for (int i = 0; i < 256; i++)
-			block_colors[i] = get_color(block_colors[i]);
-
-		for (int i = 0; i < COLOR_MAX_SPECIAL; i++)
-			special_colors[i] = get_color(special_colors[i]);
-	}
 
 	map = SDL_CreateRGBSurface(SDL_SWSURFACE, CHUNK_XSIZE, CHUNK_ZSIZE, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
 
@@ -178,8 +162,6 @@ void map_update(int x1, int x2, int z1, int z2)
 	SDL_LockSurface(map);
 	Uint32 pitch = map->pitch;
 
-	Uint32 rshift = map->format->Rshift, gshift = map->format->Gshift, bshift = map->format->Bshift;
-
 	for (int cz = z1; cz <= z2; cz++)
 	{
 		int czo = cz - map_min_z;
@@ -194,7 +176,7 @@ void map_update(int x1, int x2, int z1, int z2)
 			if (!c)
 			{
 				SDL_Rect r = { .x = cxo*CHUNK_XSIZE, .y = czo*CHUNK_ZSIZE, .w = CHUNK_XSIZE, .h = CHUNK_ZSIZE };
-				SDL_FillRect(map, &r, special_colors[COLOR_UNLOADED]);
+				SDL_FillRect(map, &r, pack_rgb(special_colors[COLOR_UNLOADED]));
 				continue;
 			}
 
@@ -222,15 +204,15 @@ void map_update(int x1, int x2, int z1, int z2)
 
 					/* select basic color */
 
-					Uint32 rgb;
+					RGB rgb;
 
 					if (map_mode == MAP_MODE_TOPO)
 					{
 						Uint32 v = *b;
 						if (v < 64)
-							rgb = ((4*v) << rshift) | ((4*v) << gshift);
+							rgb = RGB(4*v, 4*v, 0);
 						else
-							rgb = (255 << rshift) | ((255-4*(v-64)) << gshift);
+							rgb = RGB(255, 255-4*(v-64), 0);
 					}
 					else
 					{
@@ -242,13 +224,13 @@ void map_update(int x1, int x2, int z1, int z2)
 
 					/* apply shadings and such */
 
-#define TRANSFORM_RGB(expr)	  \
-					do { \
-						Uint32 x; \
-						Uint32 r = (rgb >> rshift) & 0xff, g = (rgb >> gshift) & 0xff, b = (rgb >> bshift) & 0xff; \
-						x = r; r = expr; x = g; g = expr; x = b; b = expr; \
-						rgb = (r << rshift) | (g << gshift) | (b << bshift); \
-					} while (0)
+					#define TRANSFORM_RGB(expr) \
+						do { \
+							Uint8 x; \
+							x = rgb.r; rgb.r = (expr); \
+							x = rgb.g; rgb.g = (expr); \
+							x = rgb.b; rgb.b = (expr); \
+						} while (0)
 
 #ifdef FEAT_FULLCHUNK
 
@@ -300,7 +282,7 @@ void map_update(int x1, int x2, int z1, int z2)
 
 					/* update bitmap */
 
-					*p++ = rgb;
+					*p++ = pack_rgb(rgb);
 					b += blocks_xpitch;
 				}
 
@@ -521,7 +503,7 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 		int sx = x0 + txx*ix + txy*iy;
 		int sy = y0 + tyx*ix + tyy*iy;
 		Uint32 *p = (Uint32 *)&pixels[sy*pitch + sx*4];
-		*p = special_colors[COLOR_PLAYER];
+		*p = pack_rgb(special_colors[COLOR_PLAYER]);
 	}
 
 	/* draw the triangle shape */
@@ -561,7 +543,7 @@ static void map_draw_entity_marker(struct entity *e, void *userdata)
 		return;
 
 	SDL_Rect r = { .x = ex, .y = ey, .w = map_scale_indicator, .h = map_scale_indicator };
-	SDL_FillRect(screen, &r, special_colors[COLOR_PLAYER]);
+	SDL_FillRect(screen, &r, pack_rgb(special_colors[COLOR_PLAYER]));
 }
 
 void map_draw(SDL_Surface *screen)
