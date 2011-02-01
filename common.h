@@ -57,7 +57,8 @@ struct options
 
 /* teleportation */
 
-struct Jump {
+struct Jump
+{
         int x;
         int z;
 };

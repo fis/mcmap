@@ -3,7 +3,8 @@
 
 #define MCMAP_EVENT_REPAINT SDL_USEREVENT
 
-typedef struct {
+typedef struct
+{
 	Uint8 r;
 	Uint8 g;
 	Uint8 b;
