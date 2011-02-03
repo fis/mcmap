@@ -51,7 +51,8 @@ struct options
 
 /* utilities */
 
-#define hollow(x) ((x) == 0x00 || water(x) || lava(x))
+#define hollow(x) (air(x) || water(x) || lava(x))
+#define air(x) ((x) == 0x00)
 #define water(x) ((x) == 0x08 || (x) == 0x09)
 #define lava(x) ((x) == 0x0a || (x) == 0x0b)
 

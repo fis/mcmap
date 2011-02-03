@@ -91,6 +91,8 @@ static RGB special_colors[COLOR_MAX_SPECIAL] = {
 double player_dx = 0.0, player_dy = 0.0, player_dz = 0.0;
 int player_x = 0, player_y = 0, player_z = 0;
 
+int ceiling_y = CHUNK_YSIZE;
+
 static SDL_Surface *map = 0;
 static int map_min_x = 0, map_min_z = 0;
 static int map_max_x = 0, map_max_z = 0;
@@ -125,8 +127,10 @@ void map_init(SDL_Surface *screen)
 
 	map_mutex = g_mutex_new();
 
+	map_flags |= MAP_FLAG_CHOP;
+
 #ifdef FEAT_FULLCHUNK
-	map_flags = MAP_FLAG_LIGHTS;
+	map_flags |= MAP_FLAG_LIGHTS;
 #endif
 }
 
@@ -218,6 +222,12 @@ void map_update(int x1, int x2, int z1, int z2)
 					{
 						if (map_mode == MAP_MODE_CROSS)
 							y = map_y;
+						else if (map_flags & MAP_FLAG_CHOP && y >= ceiling_y)
+						{
+							y = ceiling_y - 1;
+							while (air(b[y]) && y > 1)
+								y--;
+						}
 
 						rgb = block_colors[b[y]];
 					}
@@ -316,8 +326,24 @@ void map_update_player_pos(double x, double y, double z)
 
 	if (map_mode == MAP_MODE_CROSS && (map_flags & MAP_FLAG_FOLLOW_Y))
 		map_update_alt(new_y, 0);
+	else if (map_mode == MAP_MODE_SURFACE && (map_flags & MAP_FLAG_CHOP))
+		map_update_ceiling();
 
 	map_repaint();
+}
+
+void map_update_ceiling()
+{	
+	unsigned char *stack = world_stack(player_x, player_z, 0);
+	int old_ceiling_y = ceiling_y;
+	if (stack && player_y >= 0 && player_y < CHUNK_YSIZE)
+	{
+		for (ceiling_y = player_y + 2; ceiling_y < CHUNK_YSIZE; ceiling_y++)
+		if (!hollow(stack[ceiling_y]))
+			break;
+		if (ceiling_y != old_ceiling_y)
+			map_update(map_min_x, map_max_x, map_min_z, map_max_z);
+	}
 }
 
 void map_update_player_dir(double yaw, double pitch)
@@ -407,9 +433,10 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 		map_y = player_y;
 
 	if (map_mode != old_mode || map_flags != old_flags)
-		chat("MODE: %s%s%s",
+		chat("MODE: %s%s%s%s",
 		     modenames[map_mode],
 		     (mode == MAP_MODE_CROSS && map_flags & MAP_FLAG_FOLLOW_Y ? " (follow)" : ""),
+		     (map_flags & MAP_FLAG_CHOP ? " (chop)" : ""),
 		     (map_flags & MAP_FLAG_LIGHTS ? " (lights)" : ""));
 
 	map_update(map_min_x, map_max_x, map_min_z, map_max_z);

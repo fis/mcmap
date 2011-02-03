@@ -438,6 +438,12 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 		*repaint = 1;
 		break;
 
+	case SDLK_c:
+		map_setmode(MAP_MODE_SURFACE, 0, 0, MAP_FLAG_CHOP);
+		map_update_ceiling();
+		*repaint = 1;
+		break;
+
 #ifdef FEAT_FULLCHUNK
 	case SDLK_n:
 		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
