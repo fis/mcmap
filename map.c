@@ -339,8 +339,8 @@ void map_update_ceiling()
 	if (stack && player_y >= 0 && player_y < CHUNK_YSIZE)
 	{
 		for (ceiling_y = player_y + 2; ceiling_y < CHUNK_YSIZE; ceiling_y++)
-		if (!hollow(stack[ceiling_y]))
-			break;
+			if (!hollow(stack[ceiling_y]))
+				break;
 		if (ceiling_y != old_ceiling_y)
 			map_update(map_min_x, map_max_x, map_min_z, map_max_z);
 	}
