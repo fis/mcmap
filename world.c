@@ -18,19 +18,19 @@
 
 static GHashTable *chunk_table = 0;
 
-int chunk_min_x = 0, chunk_min_z = 0;
-int chunk_max_x = 0, chunk_max_z = 0;
+jint chunk_min_x = 0, chunk_min_z = 0;
+jint chunk_max_x = 0, chunk_max_z = 0;
 
 static GHashTable *entity_table = 0;
 static GHashTable *anentity_table = 0;
 static GMutex *entity_mutex = 0;
 
-static int entity_player = -1;
-static int entity_vehicle = -1;
+static jint entity_player = -1;
+static jint entity_vehicle = -1;
 
-static long long world_seed = 0;
+static jlong world_seed = 0;
 static int spawn_known = 0;
-static int spawn_x = 0, spawn_y = 0, spawn_z = 0;
+static jint spawn_x = 0, spawn_y = 0, spawn_z = 0;
 
 volatile int world_running = 1;
 
@@ -46,7 +46,7 @@ struct chunk *world_chunk(struct coord *coord, int gen)
 	c->key = *coord;
 	g_hash_table_insert(chunk_table, &c->key, c);
 
-	int x = coord->x, z = coord->z;
+	jint x = coord->x, z = coord->z;
 
 	if (x < chunk_min_x)
 		chunk_min_x = x;
@@ -61,7 +61,7 @@ struct chunk *world_chunk(struct coord *coord, int gen)
 	return c;
 }
 
-unsigned char *world_stack(int x, int z, int gen)
+unsigned char *world_stack(jint x, jint z, int gen)
 {
 	struct coord cc = { .x = CHUNK_XIDX(x), .z = CHUNK_ZIDX(z) };
 
@@ -72,7 +72,7 @@ unsigned char *world_stack(int x, int z, int gen)
 	return c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
 }
 
-int world_getheight(int x, int z)
+jint world_getheight(jint x, jint z)
 {
 	struct coord cc = { .x = CHUNK_XIDX(x), .z = CHUNK_ZIDX(z) };
 
@@ -83,8 +83,8 @@ int world_getheight(int x, int z)
 	return c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
 }
 
-static void handle_chunk(int x0, int y0, int z0,
-                         int xs, int ys, int zs,
+static void handle_chunk(jint x0, jint y0, jint z0,
+                         jint xs, jint ys, jint zs,
                          unsigned zlen, unsigned char *zdata)
 {
 	static unsigned char zbuf[256*1024];
@@ -119,15 +119,15 @@ static void handle_chunk(int x0, int y0, int z0,
 	struct coord current_chunk = { .x = -0x80000000, .z = -0x80000000 };
 	struct chunk *c = 0;
 
-	int yupds = ys;
+	jint yupds = ys;
 
 	if (y0 > CHUNK_YSIZE)
 		stopf("too high chunk update: %d..%d", y0, y0+ys-1);
 	else if (y0 + ys > CHUNK_YSIZE)
 		yupds = CHUNK_YSIZE - y0;
 
-	int c_min_x = INT_MAX, c_min_z = INT_MAX;
-	int c_max_x = INT_MIN, c_max_z = INT_MIN;
+	jint c_min_x = INT_MAX, c_min_z = INT_MAX;
+	jint c_max_x = INT_MIN, c_max_z = INT_MIN;
 
 	unsigned char *zb = zbuf;
 #ifdef FEAT_FULLCHUNK
@@ -138,9 +138,9 @@ static void handle_chunk(int x0, int y0, int z0,
 
 	int changed = 0;
 
-	for (int x = x0; x < x0+xs; x++)
+	for (jint x = x0; x < x0+xs; x++)
 	{
-		for (int z = z0; z < z0+zs; z++)
+		for (jint z = z0; z < z0+zs; z++)
 		{
 			struct coord cc = { .x = CHUNK_XIDX(x), .z = CHUNK_ZIDX(z) };
 
@@ -168,11 +168,11 @@ static void handle_chunk(int x0, int y0, int z0,
 			zb_light_sky += (ys+1)/2;
 #endif
 
-			int h = c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
+			jint h = c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
 
 			if (y0+yupds >= h)
 			{
-				int newh = y0 + yupds;
+				jint newh = y0 + yupds;
 				if (newh >= CHUNK_YSIZE)
 					newh = CHUNK_YSIZE - 1;
 
@@ -196,7 +196,7 @@ static void handle_chunk(int x0, int y0, int z0,
 		map_update(c_min_x, c_max_x, c_min_z, c_max_z);
 }
 
-static inline int block_change(struct chunk *c, int x, int y, int z, unsigned char type)
+static inline int block_change(struct chunk *c, jint x, jint y, jint z, unsigned char type)
 {
 	if (y < 0 || y >= CHUNK_YSIZE)
 		return 0; /* sometimes server sends Y=CHUNK_YSIZE block-to-air "updates" */
@@ -206,7 +206,7 @@ static inline int block_change(struct chunk *c, int x, int y, int z, unsigned ch
 
 	if (y >= c->height[x][z])
 	{
-		int newh = y;
+		jint newh = y;
 
 		if (!type)
 			while (!c->blocks[x][z][newh] && newh > 0)
@@ -220,7 +220,7 @@ static inline int block_change(struct chunk *c, int x, int y, int z, unsigned ch
 	return changed;
 }
 
-static void handle_multi_set_block(int cx, int cz, int size, unsigned char *coord, unsigned char *type)
+static void handle_multi_set_block(jint cx, jint cz, jint size, unsigned char *coord, unsigned char *type)
 {
 	struct coord cc = { .x = cx, .z = cz };
 	struct chunk *c = world_chunk(&cc, 0);
@@ -241,7 +241,7 @@ static void handle_multi_set_block(int cx, int cz, int size, unsigned char *coor
 		map_update(cx, cx, cz, cz);
 }
 
-static void handle_set_block(int x, int y, int z, int type)
+static void handle_set_block(jint x, jint y, jint z, jint type)
 {	
 	struct coord cc = { .x = CHUNK_XIDX(x), .z = CHUNK_ZIDX(z) };
 	struct chunk *c = world_chunk(&cc, 0);
@@ -252,7 +252,7 @@ static void handle_set_block(int x, int y, int z, int type)
 		map_update(cc.x, cc.x, cc.z, cc.z);
 }
 
-static void entity_add(int id, unsigned char *name, int x, int y, int z)
+static void entity_add(jint id, unsigned char *name, jint x, jint y, jint z)
 {
 	struct entity *e = g_malloc(sizeof *e);
 
@@ -277,7 +277,7 @@ static void entity_add(int id, unsigned char *name, int x, int y, int z)
 		g_hash_table_replace(anentity_table, &e->id, e);
 }
 
-static void entity_del(int id)
+static void entity_del(jint id)
 {
 	if (id == entity_vehicle)
 	{
@@ -299,7 +299,7 @@ static void entity_del(int id)
 	g_hash_table_remove(anentity_table, &id);
 }
 
-static void entity_move(int id, int x, int y, int z, int relative)
+static void entity_move(jint id, jint x, jint y, jint z, int relative)
 {
 	struct entity *e;
 
@@ -323,7 +323,7 @@ static void entity_move(int id, int x, int y, int z, int relative)
 		e->az = z;
 	}
 
-	int ex = e->ax/32, ez = e->az/32;
+	jint ex = e->ax/32, ez = e->az/32;
 	if (e->x == ex && e->z == ez)
 		return;
 
@@ -381,8 +381,8 @@ gpointer world_thread(gpointer data)
 		packet_t *packet = g_async_queue_pop(q);
 
 		unsigned char *p;
-		int t;
-		long long ll;
+		jint t;
+		jlong tl;
 
 		switch (packet->id)
 		{
@@ -484,7 +484,7 @@ gpointer world_thread(gpointer data)
 		case PACKET_ENTITY_ATTACH:
 			if (packet_int(packet, 0) == entity_player)
 			{
-				int new_vehicle = packet_int(packet, 1);
+				jint new_vehicle = packet_int(packet, 1);
 				if (new_vehicle < 0)
 					log_print("[INFO] Unmounted vehicle %d normally", entity_vehicle);
 				else
@@ -494,9 +494,9 @@ gpointer world_thread(gpointer data)
 			break;
 
 		case PACKET_TIME:
-			ll = packet_long(packet, 0);
-			ll %= 24000;
-			map_update_time(ll);
+			tl = packet_long(packet, 0);
+			tl %= 24000;
+			map_update_time(tl);
 			break;
 
 		case PACKET_CHAT:
@@ -518,7 +518,7 @@ gpointer world_thread(gpointer data)
 
 static const char base36_chars[36] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
-static char *base36_encode(int value, char *buf, int bufsize)
+static char *base36_encode(jint value, char *buf, int bufsize)
 {
 	buf[bufsize-1] = 0;
 	bufsize -= 2;
