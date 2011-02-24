@@ -72,6 +72,13 @@ place: 0x0f
 entity_holding: 0x10
 - short: selected slot index (0..8)
 
+unknown_0x11: 0x11
+- int: who knows
+- byte: who knows
+- int: who knows
+- byte: who knows
+- int: who knows
+
 entity_animate: 0x12
 - int: player ID
 - byte: animation ID
@@ -114,6 +121,14 @@ entity_spawn_painting: 0x19
 - string:        painting name, eg. "Creepers"
 - int, int, int: X, Y, Z
 - int:           ???
+
+unknown_0x1b: 0x1b
+- float: who knows
+- float: who knows
+- float: who knows
+- float: who knows
+- bool: who knows
+- bool: who knows
 
 entity_velocity: 0x1c
 - int:                 entity ID
