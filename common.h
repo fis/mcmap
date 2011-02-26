@@ -2,17 +2,9 @@
 #define MCMAP_COMMON_H
 
 #include "platform.h"
+#include "types.h"
 
 #define NELEMS(array) (sizeof(array) / sizeof((array)[0]))
-
-/* 2d points for hash table keys */
-
-struct coord
-{
-	int x, z;
-};
-
-#define COORD_EQUAL(a,b) ((a).x == (b).x && (a).z == (b).z)
 
 guint coord_hash(gconstpointer key);
 gboolean coord_equal(gconstpointer a, gconstpointer b);

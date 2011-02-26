@@ -20,7 +20,7 @@ enum special_color_names
 };
 
 #define AIR_COLOR {135, 206, 235}
-static RGB block_colors[256] = {
+static struct rgb block_colors[256] = {
 	[0x00] = AIR_COLOR,       /* air */
 	[0x01] = {180, 180, 180}, /* stone */
 	[0x02] = {34,  180, 0},   /* grass */
@@ -81,7 +81,7 @@ static RGB block_colors[256] = {
 	[0x5b] = {246, 156, 0},   /* pumpkin (lit) */
 };
 
-static RGB special_colors[COLOR_MAX_SPECIAL] = {
+static struct rgb special_colors[COLOR_MAX_SPECIAL] = {
 	[COLOR_PLAYER] = {255, 0, 255},
 	[COLOR_UNLOADED] = {16, 16, 16},
 };
@@ -89,15 +89,16 @@ static RGB special_colors[COLOR_MAX_SPECIAL] = {
 /* map graphics code */
 
 double player_dx = 0.0, player_dy = 0.0, player_dz = 0.0;
-int player_x = 0, player_y = 0, player_z = 0;
+jint player_x = 0, player_y = 0, player_z = 0;
 
-int ceiling_y = CHUNK_YSIZE;
+jint ceiling_y = CHUNK_YSIZE;
 
 static SDL_Surface *map = 0;
-static int map_min_x = 0, map_min_z = 0;
-static int map_max_x = 0, map_max_z = 0;
-static int map_y = 0;
+static jint map_min_x = 0, map_min_z = 0;
+static jint map_max_x = 0, map_max_z = 0;
+static jint map_y = 0;
 static int map_darken = 0;
+static unsigned map_rshift, map_gshift, map_bshift;
 
 static int map_scale = 1;
 static int map_scale_indicator = 3;
@@ -109,11 +110,11 @@ static GMutex * volatile map_mutex = 0;
 
 static int player_yaw = 0;
 
-static inline Uint32 pack_rgb(RGB rgb)
+static inline Uint32 pack_rgb(struct rgb rgb)
 {
-	return (rgb.r << map->format->Rshift) +
-	       (rgb.g << map->format->Gshift) +
-	       (rgb.b << map->format->Bshift);
+	return (rgb.r << map_rshift) |
+	       (rgb.g << map_gshift) |
+	       (rgb.b << map_bshift);
 }
 
 void map_init(SDL_Surface *screen)
@@ -121,6 +122,9 @@ void map_init(SDL_Surface *screen)
 	SDL_PixelFormat *fmt = screen->format;
 
 	map = SDL_CreateRGBSurface(SDL_SWSURFACE, CHUNK_XSIZE, CHUNK_ZSIZE, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
+	map_rshift = fmt->Rshift;
+	map_gshift = fmt->Gshift;
+	map_bshift = fmt->Bshift;
 
 	if (!map)
 		die("SDL map surface init");
@@ -140,7 +144,7 @@ inline void map_repaint(void)
 	SDL_PushEvent(&e);
 }
 
-void map_update(int x1, int x2, int z1, int z2)
+void map_update(jint x1, jint x2, jint z1, jint z2)
 {
 	g_mutex_lock(map_mutex);
 
@@ -153,7 +157,7 @@ void map_update(int x1, int x2, int z1, int z2)
 		map_min_x = x1; map_max_x = x2;
 		map_min_z = z1; map_max_z = z2;
 
-		int xs = x2 - x1 + 1, zs = z2 - z1 + 1;
+		jint xs = x2 - x1 + 1, zs = z2 - z1 + 1;
 
 		Uint32 rmask = map->format->Rmask, gmask = map->format->Gmask, bmask = map->format->Bmask;
 
@@ -166,13 +170,13 @@ void map_update(int x1, int x2, int z1, int z2)
 	SDL_LockSurface(map);
 	Uint32 pitch = map->pitch;
 
-	for (int cz = z1; cz <= z2; cz++)
+	for (jint cz = z1; cz <= z2; cz++)
 	{
-		int czo = cz - map_min_z;
+		jint czo = cz - map_min_z;
 
-		for (int cx = x1; cx <= x2; cx++)
+		for (jint cx = x1; cx <= x2; cx++)
 		{
-			int cxo = cx - map_min_x;
+			jint cxo = cx - map_min_x;
 
 			struct coord cc = { .x = cx, .z = cz };
 			struct chunk *c = world_chunk(&cc, 0);
@@ -197,18 +201,18 @@ void map_update(int x1, int x2, int z1, int z2)
 
 			unsigned blocks_xpitch = CHUNK_ZSIZE*blocks_pitch;
 
-			for (int bz = 0; bz < CHUNK_ZSIZE; bz++)
+			for (jint bz = 0; bz < CHUNK_ZSIZE; bz++)
 			{
 				Uint32 *p = (Uint32*)pixels;
 				unsigned char *b = blocks;
 
-				for (int bx = 0; bx < CHUNK_XSIZE; bx++)
+				for (jint bx = 0; bx < CHUNK_XSIZE; bx++)
 				{
 					Uint32 y = c->height[bx][bz];
 
 					/* select basic color */
 
-					RGB rgb;
+					struct rgb rgb;
 
 					if (map_mode == MAP_MODE_TOPO)
 					{
@@ -280,7 +284,7 @@ void map_update(int x1, int x2, int z1, int z2)
 						if (map_mode == MAP_MODE_TOPO)
 							rgb = block_colors[0x08];
 
-						int h = y;
+						jint h = y;
 						while (--h)
 							if (water(c->blocks[bx][bz][h]))
 								TRANSFORM_RGB(x*7/8);
@@ -311,7 +315,7 @@ void map_update(int x1, int x2, int z1, int z2)
 
 void map_update_player_pos(double x, double y, double z)
 {
-	int new_x = floor(x), new_y = floor(y), new_z = floor(z);
+	jint new_x = floor(x), new_y = floor(y), new_z = floor(z);
 
 	if (new_x == player_x && new_y == player_y && new_z == player_z)
 		return;
@@ -335,7 +339,7 @@ void map_update_player_pos(double x, double y, double z)
 void map_update_ceiling()
 {	
 	unsigned char *stack = world_stack(player_x, player_z, 0);
-	int old_ceiling_y = ceiling_y;
+	jint old_ceiling_y = ceiling_y;
 	if (stack && player_y >= 0 && player_y < CHUNK_YSIZE)
 	{
 		for (ceiling_y = player_y + 2; ceiling_y < CHUNK_YSIZE; ceiling_y++)
@@ -366,9 +370,9 @@ void map_update_player_dir(double yaw, double pitch)
 	map_repaint();
 }
 
-void map_update_alt(int y, int relative)
+void map_update_alt(jint y, int relative)
 {
-	int new_y = relative ? map_y + y : y;
+	jint new_y = relative ? map_y + y : y;
 	if (new_y < 0) new_y = 0;
 	else if (new_y >= CHUNK_YSIZE) new_y = CHUNK_YSIZE-1;
 
@@ -462,7 +466,7 @@ void map_setscale(int scale, int relative)
 
 /* screen-drawing related code */
 
-void map_s2w(SDL_Surface *screen, int sx, int sy, int *x, int *z, int *xo, int *zo)
+void map_s2w(SDL_Surface *screen, int sx, int sy, jint *x, jint *z, jint *xo, jint *zo)
 {
 	/* Pixel screen->w/2 equals middle (rounded down) of block player_x.
 	 * Pixel screen->w/2 - (map_scale-1)/2 equals left edge of block player_x.
@@ -483,7 +487,7 @@ void map_s2w(SDL_Surface *screen, int sx, int sy, int *x, int *z, int *xo, int *
 	if (zo) *zo = sy - (py + dy*map_scale);
 }
 
-void map_w2s(SDL_Surface *screen, int x, int z, int *sx, int *sy)
+void map_w2s(SDL_Surface *screen, jint x, jint z, int *sx, int *sy)
 {
 	int px = screen->w/2 - (map_scale-1)/2;
 	int py = screen->h/2 - (map_scale-1)/2;
@@ -582,8 +586,8 @@ void map_draw(SDL_Surface *screen)
 
 	g_mutex_lock(map_mutex);
 
-	int scr_x0, scr_z0;
-	int scr_xo, scr_zo;
+	jint scr_x0, scr_z0;
+	jint scr_xo, scr_zo;
 	map_s2w(screen, 0, 0, &scr_x0, &scr_z0, &scr_xo, &scr_zo);
 
 	if (map_scale == 1)
@@ -636,16 +640,16 @@ void map_draw(SDL_Surface *screen)
 		SDL_LockSurface(screen);
 		SDL_LockSurface(map);
 
-		int m_x0 = scr_x0 - map_min_x*CHUNK_XSIZE;
-		int m_z = scr_z0 - map_min_z*CHUNK_ZSIZE;
+		jint m_x0 = scr_x0 - map_min_x*CHUNK_XSIZE;
+		jint m_z = scr_z0 - map_min_z*CHUNK_ZSIZE;
 
-		int m_xo0 = scr_xo, m_zo = scr_zo;
+		jint m_xo0 = scr_xo, m_zo = scr_zo;
 
 		for (int s_y = 0; s_y < screen->h && m_z < map->h; s_y++)
 		{
 			if (m_z >= 0)
 			{
-				int m_x = m_x0, m_xo = m_xo0;
+				jint m_x = m_x0, m_xo = m_xo0;
 				for (int s_x = 0; s_x < screen->w && m_x < map->w; s_x++)
 				{
 					if (m_x >= 0)

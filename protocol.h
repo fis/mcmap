@@ -1,7 +1,11 @@
 #ifndef MCMAP_PROTOCOL_H
 #define MCMAP_PROTOCOL_H 1
 
+#include "types.h"
 #include "platform.h"
+
+/* protocol mess */
+
 #include "protocol-data.h"
 
 #define PACKET_TO_CLIENT 0x01
@@ -64,8 +68,8 @@ void packet_free(gpointer packet);
 
 int packet_nfields(packet_t *packet);
 
-int packet_int(packet_t *packet, unsigned field);
-long long packet_long(packet_t *packet, unsigned field);
+jint packet_int(packet_t *packet, unsigned field);
+jlong packet_long(packet_t *packet, unsigned field);
 double packet_double(packet_t *packet, unsigned field);
 unsigned char *packet_string(packet_t *packet, unsigned field, int *len);
 

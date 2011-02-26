@@ -365,7 +365,7 @@ int packet_nfields(packet_t *packet)
 	return packet_format[packet->id].nfields;
 }
 
-int packet_int(packet_t *packet, unsigned field)
+jint packet_int(packet_t *packet, unsigned field)
 {
 	unsigned char *p = &packet->bytes[packet->field_offset[field]];
 	int t = 0;
@@ -388,7 +388,7 @@ int packet_int(packet_t *packet, unsigned field)
 	}
 }
 
-long long packet_long(packet_t *packet, unsigned field)
+jlong packet_long(packet_t *packet, unsigned field)
 {
 	if (packet_format[packet->id].ftype[field] == FIELD_LONG)
 	{

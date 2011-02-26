@@ -2,6 +2,7 @@
 #define MCMAP_WORLD_H 1
 
 #include "config.h"
+#include "types.h"
 
 #define CHUNK_XBITS 4
 #define CHUNK_ZBITS 4
@@ -32,14 +33,14 @@ struct chunk
 
 struct entity
 {
-	int id;
+	jint id;
 	unsigned char *name;
-	int x, z;       /* in blocks */
-	int ax, ay, az; /* in absolute-int format */
+	jint x, z;       /* in blocks */
+	jint ax, ay, az; /* in absolute-int format */
 };
 
-extern int chunk_min_x, chunk_min_z;
-extern int chunk_max_x, chunk_max_z;
+extern jint chunk_min_x, chunk_min_z;
+extern jint chunk_max_x, chunk_max_z;
 
 extern volatile int world_running;
 
@@ -48,9 +49,9 @@ void world_init(void);
 gpointer world_thread(gpointer data);
 
 struct chunk *world_chunk(struct coord *coord, int gen);
-unsigned char *world_stack(int x, int z, int gen);
+unsigned char *world_stack(jint x, jint z, int gen);
 
-int world_getheight(int x, int z);
+jint world_getheight(jint x, jint z);
 
 void world_entities(void (*callback)(struct entity *e, void *userdata), void *userdata);
 
