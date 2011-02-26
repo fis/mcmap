@@ -400,14 +400,11 @@ void map_update_time(int daytime)
 			darken = 10;
 	}
 
-	if (map_darken != darken)
+	if (map_darken != darken && (map_flags & MAP_FLAG_LIGHTS) && (map_flags & MAP_FLAG_NIGHT))
 	{
 		map_darken = darken;
-		if (map_flags & MAP_FLAG_LIGHTS)
-		{
-			map_update(map_min_x, map_max_x, map_min_z, map_max_z);
-			map_repaint();
-		}
+		map_update(map_min_x, map_max_x, map_min_z, map_max_z);
+		map_repaint();
 	}
 }
 
@@ -433,11 +430,12 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 		map_y = player_y;
 
 	if (map_mode != old_mode || map_flags != old_flags)
-		chat("MODE: %s%s%s%s",
+		chat("MODE: %s%s%s%s%s",
 		     modenames[map_mode],
 		     (mode == MAP_MODE_CROSS && map_flags & MAP_FLAG_FOLLOW_Y ? " (follow)" : ""),
 		     (mode == MAP_MODE_SURFACE && map_flags & MAP_FLAG_CHOP ? " (chop)" : ""),
-		     (map_flags & MAP_FLAG_LIGHTS ? " (lights)" : ""));
+		     (map_flags & MAP_FLAG_LIGHTS ? " (lights)" : ""),
+		     ((map_flags & MAP_FLAG_LIGHTS) && (map_flags & MAP_FLAG_NIGHT) ? " (night)" : ""));
 
 	map_update(map_min_x, map_max_x, map_min_z, map_max_z);
 }

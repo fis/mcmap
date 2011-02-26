@@ -446,6 +446,12 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 
 #ifdef FEAT_FULLCHUNK
 	case SDLK_n:
+		/* TODO: handle if map mode != lights */
+		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_NIGHT);
+		*repaint = 1;
+		break;
+
+	case SDLK_l:
 		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
 		*repaint = 1;
 		break;
