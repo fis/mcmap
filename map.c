@@ -98,6 +98,7 @@ static jint map_min_x = 0, map_min_z = 0;
 static jint map_max_x = 0, map_max_z = 0;
 static jint map_y = 0;
 static int map_darken = 0;
+static unsigned map_rshift, map_gshift, map_bshift;
 
 static int map_scale = 1;
 static int map_scale_indicator = 3;
@@ -111,9 +112,9 @@ static int player_yaw = 0;
 
 static inline Uint32 pack_rgb(struct rgb rgb)
 {
-	return (rgb.r << map->format->Rshift) +
-	       (rgb.g << map->format->Gshift) +
-	       (rgb.b << map->format->Bshift);
+	return (rgb.r << map_rshift) |
+	       (rgb.g << map_gshift) |
+	       (rgb.b << map_bshift);
 }
 
 void map_init(SDL_Surface *screen)
@@ -121,6 +122,9 @@ void map_init(SDL_Surface *screen)
 	SDL_PixelFormat *fmt = screen->format;
 
 	map = SDL_CreateRGBSurface(SDL_SWSURFACE, CHUNK_XSIZE, CHUNK_ZSIZE, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
+	map_rshift = fmt->Rshift;
+	map_gshift = fmt->Gshift;
+	map_bshift = fmt->Bshift;
 
 	if (!map)
 		die("SDL map surface init");

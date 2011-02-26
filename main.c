@@ -1,4 +1,5 @@
 #include <locale.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -153,6 +154,12 @@ int mcmap_main(int argc, char **argv)
 {
 	setlocale(LC_ALL, "");
 
+	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
+	{
+		die("Failed to initialize SDL.");
+		return 1;
+	}
+
 	/* command line option grokking */
 
 	static GOptionEntry gopt_entries[] = {
@@ -251,6 +258,8 @@ int mcmap_main(int argc, char **argv)
 
 	/* wait for a client to connect to us */
 
+	sighandler_t sdl_handler = signal(SIGINT, SIG_DFL); /* so you can ^C */
+
 	log_print("[INFO] Waiting for connection...");
 
 	socket_t listener = make_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -313,13 +322,9 @@ int mcmap_main(int argc, char **argv)
 
 	/* start the user interface side */
 
-	console_init();
+	signal(SIGINT, sdl_handler); /* for proper SDL cleanup */
 
-	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
-	{
-		die("Failed to initialize SDL.");
-		return 1;
-	}
+	console_init();
 
 	SDL_Surface *screen = NULL;
 
