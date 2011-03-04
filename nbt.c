@@ -45,7 +45,7 @@ static struct nbt_tag *nbt_new(char *name, enum nbt_tag_type type)
 	return tag;
 }
 
-struct nbt_tag *nbt_new_int(char *name, enum nbt_tag_type type, int intv)
+struct nbt_tag *nbt_new_int(char *name, enum nbt_tag_type type, jint intv)
 {
 	if (type != NBT_TAG_BYTE && type != NBT_TAG_SHORT && type != NBT_TAG_INT)
 		dief("nbt_new_int: bad type: %d", type);
@@ -55,7 +55,7 @@ struct nbt_tag *nbt_new_int(char *name, enum nbt_tag_type type, int intv)
 	return tag;
 }
 
-struct nbt_tag *nbt_new_long(char *name, long long longv)
+struct nbt_tag *nbt_new_long(char *name, jlong longv)
 {
 	struct nbt_tag *tag = nbt_new(name, NBT_TAG_LONG);
 	tag->data.longv = longv;
@@ -128,20 +128,22 @@ void nbt_struct_add(struct nbt_tag *s, struct nbt_tag *field)
 
 /* NBT file IO code */
 
-static int nbt_gzwrite(gzFile f, struct nbt_tag *tag, int only_payload)
+static void format_tag(GByteArray *arr, struct nbt_tag *tag, int only_payload)
 {
 	if (!only_payload)
 	{
-		if (gzputc(f, tag->type) < 0)
-			return 0;
+		guint at = arr->len;
+		size_t nlen = strlen(tag->name);
 
-		if (gzwrite(f, tag->namelen, 2) != 2)
-			return 0;
-		if (gzputs(f, tag->name) < 0)
-			return 0;
+		g_byte_array_set_size(arr, at + 3 + nlen);
+
+		arr->data[at] = tag->type;
+		arr->data[at+1] = tag->namelen[0];
+		arr->data[at+2] = tag->namelen[1];
+		memcpy(&arr->data[at+3], tag->name, nlen);
 	}
 
-	unsigned char buf[8];
+	guint at = arr->len;
 	unsigned char *p;
 
 	switch (tag->type)
@@ -151,103 +153,94 @@ static int nbt_gzwrite(gzFile f, struct nbt_tag *tag, int only_payload)
 		break;
 
 	case NBT_TAG_BYTE:
-		if (gzputc(f, tag->data.intv) < 0)
-			return 0;
+		g_byte_array_set_size(arr, at + 1);
+		arr->data[at] = tag->data.intv;
 		break;
 
 	case NBT_TAG_SHORT:
-		buf[0] = tag->data.intv >> 8;
-		buf[1] = tag->data.intv;
-		if (gzwrite(f, buf, 2) != 2)
-			return 0;
+		g_byte_array_set_size(arr, at + 2);
+		arr->data[at]   = tag->data.intv >> 8;
+		arr->data[at+1] = tag->data.intv;
 		break;
 
 	case NBT_TAG_INT:
-		buf[0] = tag->data.intv >> 24;
-		buf[1] = tag->data.intv >> 16;
-		buf[2] = tag->data.intv >> 8;
-		buf[3] = tag->data.intv;
-		if (gzwrite(f, buf, 4) != 4)
-			return 0;
+		g_byte_array_set_size(arr, at + 4);
+		arr->data[at]   = tag->data.intv >> 24;
+		arr->data[at+1] = tag->data.intv >> 16;
+		arr->data[at+2] = tag->data.intv >> 8;
+		arr->data[at+3] = tag->data.intv;
 		break;
 
 	case NBT_TAG_LONG:
-		buf[0] = tag->data.longv >> 56;
-		buf[1] = tag->data.longv >> 48;
-		buf[2] = tag->data.longv >> 40;
-		buf[3] = tag->data.longv >> 32;
-		buf[4] = tag->data.longv >> 24;
-		buf[5] = tag->data.longv >> 16;
-		buf[6] = tag->data.longv >> 8;
-		buf[7] = tag->data.longv;
-		if (gzwrite(f, buf, 8) != 8)
-			return 0;
+		g_byte_array_set_size(arr, at + 8);
+		arr->data[at]   = tag->data.longv >> 56;
+		arr->data[at+1] = tag->data.longv >> 48;
+		arr->data[at+2] = tag->data.longv >> 40;
+		arr->data[at+3] = tag->data.longv >> 32;
+		arr->data[at+4] = tag->data.longv >> 24;
+		arr->data[at+5] = tag->data.longv >> 16;
+		arr->data[at+6] = tag->data.longv >> 8;
+		arr->data[at+7] = tag->data.longv;
 		break;
 
 	case NBT_TAG_FLOAT:
-		die("nbt_gzwrite: NBT_TAG_FLOAT unimplemented");
+		die("nbt format_tag: NBT_TAG_FLOAT unimplemented");
 
 	case NBT_TAG_DOUBLE:
+		g_byte_array_set_size(arr, at + 8);
 		p = (unsigned char *)&tag->data.doublev;
-		buf[7] = p[0]; buf[6] = p[1]; buf[5] = p[2]; buf[4] = p[3];
-		buf[3] = p[4]; buf[2] = p[5]; buf[1] = p[6]; buf[0] = p[7];
-		if (gzwrite(f, buf, 8) != 8)
-			return 0;
+		arr->data[at+7] = p[0]; arr->data[at+6] = p[1]; arr->data[at+5] = p[2]; arr->data[at+4] = p[3];
+		arr->data[at+3] = p[4]; arr->data[at+2] = p[5]; arr->data[at+1] = p[6]; arr->data[at]   = p[7];
 		break;
 
 	case NBT_TAG_BLOB:
-		buf[0] = tag->data.blobv.len >> 24;
-		buf[1] = tag->data.blobv.len >> 16;
-		buf[2] = tag->data.blobv.len >> 8;
-		buf[3] = tag->data.blobv.len;
-		if (gzwrite(f, buf, 4) != 4)
-			return 0;
-		if (gzwrite(f, tag->data.blobv.data, tag->data.blobv.len) != tag->data.blobv.len)
-			return 0;
+		g_byte_array_set_size(arr, at + 4 + tag->data.blobv.len);
+		arr->data[at]   = tag->data.blobv.len >> 24;
+		arr->data[at+1] = tag->data.blobv.len >> 16;
+		arr->data[at+2] = tag->data.blobv.len >> 8;
+		arr->data[at+3] = tag->data.blobv.len;
+		memcpy(&arr->data[at+4], tag->data.blobv.data, tag->data.blobv.len);
 		break;
 
 	case NBT_TAG_STR:
-		buf[0] = tag->data.blobv.len >> 8;
-		buf[1] = tag->data.blobv.len;
-		if (gzwrite(f, buf, 2) != 2)
-			return 0;
-		if (gzwrite(f, tag->data.blobv.data, tag->data.blobv.len) != tag->data.blobv.len)
-			return 0;
+		g_byte_array_set_size(arr, at + 2 + tag->data.blobv.len);
+		arr->data[at]   = tag->data.blobv.len >> 8;
+		arr->data[at+1] = tag->data.blobv.len;
+		memcpy(&arr->data[at+2], tag->data.blobv.data, tag->data.blobv.len);
 		break;
 
 	case NBT_TAG_ARRAY:
-		die("nbt_gzwrite: NBT_TAG_ARRAY unimplemented");
+		die("nbt format_tag: NBT_TAG_ARRAY unimplemented");
 
 	case NBT_TAG_STRUCT:
 		for (guint i = 0; i < tag->data.structv->len; i++)
-			if (!nbt_gzwrite(f, g_ptr_array_index(tag->data.structv, i), 0))
-				return 0;
-		if (gzwrite(f, "\0", 2) != 2)
-			return 0;
+			format_tag(arr, g_ptr_array_index(tag->data.structv, i), 0);
+		g_byte_array_append(arr, (guint8*)"\0", 2);
 		break;
 	}
-
-	return 1;
 }
 
-int nbt_save(char *file, struct nbt_tag *tag)
+unsigned char *nbt_compress(struct nbt_tag *tag, int *len)
 {
-	gzFile f = gzopen(file, "wb9");
-	if (!f)
-		return 0;
+	GByteArray *arr = g_byte_array_new();
 
-	if (gzwrite(f, "\x0a\x00\x00", 3) != 3)
-	{
-		gzclose(f);
-		return 0;
-	}
+	g_byte_array_append(arr, (guint8*)"\x0a\x00", 3);
+	format_tag(arr, tag, 0);
 
-	int ret = nbt_gzwrite(f, tag, 0);
-	gzclose(f);
-	return ret;
+	uLongf clen = compressBound(arr->len);
+	Bytef *cbuf = g_malloc(clen);
+	int ret = compress(cbuf, &clen, arr->data, arr->len);
+
+	g_byte_array_unref(arr);
+
+	if (ret != Z_OK)
+		dief("zlib broke badly: %d", ret);
+
+	*len = clen;
+	return cbuf;
 }
 
-struct nbt_tag *nbt_load(char *file)
+struct nbt_tag *nbt_uncompress(unsigned char *data, int len)
 {
-	die("nbt_load: unimplemented");
+	die("nbt_uncompress: unimplemented");
 }

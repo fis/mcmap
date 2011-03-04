@@ -593,7 +593,8 @@ static void world_save_block(gpointer key, gpointer value, gpointer userdata)
 
 	nbt_struct_add(data, nbt_new_int("TerrainPopulated", NBT_TAG_BYTE, 1));
 
-	nbt_save(pathbuf, data);
+	/* nbt_save(pathbuf, data); */
+	die("temporarily out of order");
 	nbt_free(data);
 }
 
@@ -617,7 +618,8 @@ int world_save(char *dir)
 
 	nbt_struct_add(data, nbt_new_long("RandomSeed", world_seed));
 
-	int ret = nbt_save(pathbuf, data);
+	/* int ret = nbt_save(pathbuf, data); */
+	int ret = 1; die("temporarily out of order");
 	nbt_free(data);
 
 	if (!ret)

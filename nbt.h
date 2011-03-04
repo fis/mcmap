@@ -1,6 +1,8 @@
 #ifndef MCMAP_NBT_H
 #define MCMAP_NBT_H 1
 
+#include "types.h"
+
 enum nbt_tag_type
 {
 	NBT_TAG_END = 0,
@@ -18,8 +20,8 @@ enum nbt_tag_type
 
 struct nbt_tag;
 
-struct nbt_tag *nbt_new_int(char *name, enum nbt_tag_type type, int intv);
-struct nbt_tag *nbt_new_long(char *name, long long longv);
+struct nbt_tag *nbt_new_int(char *name, enum nbt_tag_type type, jint intv);
+struct nbt_tag *nbt_new_long(char *name, jlong longv);
 struct nbt_tag *nbt_new_double(char *name, enum nbt_tag_type type, double doublev);
 
 struct nbt_tag *nbt_new_blob(char *name, enum nbt_tag_type type, const void *data, int len);
@@ -31,7 +33,7 @@ void nbt_free(gpointer tag);
 
 void nbt_struct_add(struct nbt_tag *s, struct nbt_tag *field);
 
-int nbt_save(char *file, struct nbt_tag *tag);
-struct nbt_tag *nbt_load(char *file);
+unsigned char *nbt_compress(struct nbt_tag *tag, int *len);
+struct nbt_tag *nbt_uncompress(unsigned char *data, int len);
 
 #endif /* MCMAP_NBT_H */
