@@ -12,7 +12,7 @@ gboolean coord_equal(gconstpointer a, gconstpointer b);
 /* logging and information */
 
 void log_print(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
-void log_die(char *file, int line, int is_stop, char *fmt, ...) __attribute__ ((noreturn, format (printf, 4, 5)));
+void log_die(int is_stop, char *fmt, ...) __attribute__ ((noreturn, format (printf, 2, 3)));
 
 /* fatal error handling */
 
@@ -22,7 +22,7 @@ void log_die(char *file, int line, int is_stop, char *fmt, ...) __attribute__ ((
 #define stopf(fmt, ...) log_die(1, fmt, ## __VA_ARGS__)
 #define stop(msg) stopf("%s", msg)
 
-#define wtff(fmt, ...) dief("%s:%d: " fmt, ## __VA_ARGS__)
+#define wtff(fmt, ...) dief("%s:%d: " fmt, __FILE__, __LINE__, ## __VA_ARGS__)
 #define wtf(msg) wtff("%s", msg)
 
 /* options */

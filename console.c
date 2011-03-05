@@ -44,13 +44,13 @@ void log_print(char *fmt, ...)
 	va_end(ap);
 }
 
-void log_die(char *file, int line, int is_stop, char *fmt, ...)
+void log_die(int is_stop, char *fmt, ...)
 {
 	if (!is_stop)
 		console_cleanup();
 
 	GString *msg = tstamp();
-	g_string_append_printf(msg, "[DIED] %s: %d: ", file, line);
+	g_string_append_printf(msg, "[DIED] ");
 
 	va_list ap;
 	va_start(ap, fmt);
