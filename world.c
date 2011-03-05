@@ -574,7 +574,6 @@ static char *base36_encode(jint value, char *buf, int bufsize)
 
 static void world_append_chunk(struct region *reg, struct chunk *c)
 {
-	log_print("appending chunk (%d,%d) into region (%d,%d)", c->key.x, c->key.z, reg->key.x, reg->key.z);
 	/* dump the chunk data into compressed NBT */
 
 	struct nbt_tag *data = nbt_new_struct("Level");
@@ -609,7 +608,6 @@ static void world_append_chunk(struct region *reg, struct chunk *c)
 	reg->sects[zo][xo] = csect;
 	reg->tstamps[zo][xo] = 0; /* TODO: proper timestamps */
 	reg->nsect += csect;
-	log_print("region allocated chunks after: %d", reg->nsect);
 
 	unsigned char bhdr[5];
 	bhdr[0] = clen >> 24;
