@@ -220,7 +220,7 @@ static void format_tag(GByteArray *arr, struct nbt_tag *tag, int only_payload)
 	}
 }
 
-unsigned char *nbt_compress(struct nbt_tag *tag, int *len)
+unsigned char *nbt_compress(struct nbt_tag *tag, unsigned *len)
 {
 	GByteArray *arr = g_byte_array_new();
 
@@ -240,7 +240,7 @@ unsigned char *nbt_compress(struct nbt_tag *tag, int *len)
 	return cbuf;
 }
 
-struct nbt_tag *nbt_uncompress(unsigned char *data, int len)
+struct nbt_tag *nbt_uncompress(unsigned char *data, unsigned len)
 {
 	die("nbt_uncompress: unimplemented");
 }

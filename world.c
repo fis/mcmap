@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -516,6 +517,32 @@ gpointer world_thread(gpointer data)
 
 #ifdef FEAT_FULLCHUNK
 
+#define REG_XBITS 5
+#define REG_ZBITS 5
+
+#define REG_XSIZE (1 << REG_XBITS)
+#define REG_ZSIZE (1 << REG_ZBITS)
+
+#define REG_XZ (REG_XSIZE * REG_ZSIZE)
+
+#define REG_XCOORD(cx) ((cx) >> REG_XBITS)
+#define REG_ZCOORD(cz) ((cz) >> REG_ZBITS)
+
+#define REG_XOFF(cx) ((cx) & (REG_XSIZE - 1))
+#define REG_ZOFF(cz) ((cz) & (REG_ZSIZE - 1))
+
+#define SECT_SIZE 4096
+
+struct region
+{
+	struct coord key;
+	unsigned offsets[REG_ZSIZE][REG_XSIZE];
+	unsigned char sects[REG_ZSIZE][REG_XSIZE];
+	jint tstamps[REG_ZSIZE][REG_XSIZE];
+	unsigned nsect;
+	int fd;
+};
+
 static const char base36_chars[36] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 static char *base36_encode(jint value, char *buf, int bufsize)
@@ -545,36 +572,10 @@ static char *base36_encode(jint value, char *buf, int bufsize)
 	return buf + bufsize + 1;
 }
 
-static void world_save_block(gpointer key, gpointer value, gpointer userdata)
+static void world_append_chunk(struct region *reg, struct chunk *c)
 {
-	struct chunk *c = value;
-	char *dir = userdata;
-
-	int pathbufsize = strlen(dir) + 64;
-	char pathbuf[pathbufsize];
-
-	/* compute and create directory part of chunk path */
-
-	char dir_x_buf[3], dir_z_buf[3];
-
-	char *dir_x = base36_encode(c->key.x & 63, dir_x_buf, sizeof dir_x_buf);
-	char *dir_z = base36_encode(c->key.z & 63, dir_z_buf, sizeof dir_z_buf);
-
-	g_snprintf(pathbuf, pathbufsize, "%s/%s", dir, dir_x);
-	g_mkdir(pathbuf, 0777);
-	g_snprintf(pathbuf, pathbufsize, "%s/%s/%s", dir, dir_x, dir_z);
-	g_mkdir(pathbuf, 0777);
-
-	/* construct and open the chunk file */
-
-	char file_x_buf[16], file_z_buf[16];
-
-	char *file_x = base36_encode(c->key.x, file_x_buf, sizeof file_x_buf);
-	char *file_z = base36_encode(c->key.z, file_z_buf, sizeof file_z_buf);
-
-	g_snprintf(pathbuf, pathbufsize, "%s/%s/%s/c.%s.%s.dat", dir, dir_x, dir_z, file_x, file_z);
-
-	/* dump the chunk data */
+	log_print("appending chunk (%d,%d) into region (%d,%d)", c->key.x, c->key.z, reg->key.x, reg->key.z);
+	/* dump the chunk data into compressed NBT */
 
 	struct nbt_tag *data = nbt_new_struct("Level");
 
@@ -593,19 +594,51 @@ static void world_save_block(gpointer key, gpointer value, gpointer userdata)
 
 	nbt_struct_add(data, nbt_new_int("TerrainPopulated", NBT_TAG_BYTE, 1));
 
-	/* nbt_save(pathbuf, data); */
-	die("temporarily out of order");
+	unsigned clen;
+	unsigned char *cdata = nbt_compress(data, &clen);
+
 	nbt_free(data);
+
+	/* append it to our current region file */
+
+	unsigned csect = (5 + clen + SECT_SIZE - 1)/SECT_SIZE;
+
+	int zo = REG_ZOFF(c->key.z), xo = REG_XOFF(c->key.x);
+
+	reg->offsets[zo][xo] = 2 + reg->nsect;
+	reg->sects[zo][xo] = csect;
+	reg->tstamps[zo][xo] = 0; /* TODO: proper timestamps */
+	reg->nsect += csect;
+	log_print("region allocated chunks after: %d", reg->nsect);
+
+	unsigned char bhdr[5];
+	bhdr[0] = clen >> 24;
+	bhdr[1] = clen >> 16;
+	bhdr[2] = clen >> 8;
+	bhdr[3] = clen;
+	bhdr[4] = 2;
+
+	if (lseek(reg->fd, reg->offsets[zo][xo] * SECT_SIZE, SEEK_SET) == (off_t)-1)
+		die("lseek failed for region chunk");
+	if (write(reg->fd, bhdr, sizeof bhdr) != sizeof bhdr)
+		die("write failed for region chunk header");
+	if (write(reg->fd, cdata, clen) != clen)
+		die("write failed for region chunk data");
+
+	g_free(cdata);
 }
 
 int world_save(char *dir)
 {
 	/* write the top-level level.dat */
 
-	int pathbufsize = strlen(dir) + 16;
+	int pathbufsize = strlen(dir) + 64;
 	char pathbuf[pathbufsize];
 
 	g_snprintf(pathbuf, pathbufsize, "%s/level.dat", dir);
+	FILE *f = fopen(pathbuf, "wb");
+	if (!f)
+		return 0;
 
 	struct nbt_tag *data = nbt_new_struct("Data");
 
@@ -618,16 +651,94 @@ int world_save(char *dir)
 
 	nbt_struct_add(data, nbt_new_long("RandomSeed", world_seed));
 
-	/* int ret = nbt_save(pathbuf, data); */
-	int ret = 1; die("temporarily out of order");
+	nbt_struct_add(data, nbt_new_int("version", NBT_TAG_INT, 19132));
+	nbt_struct_add(data, nbt_new_str("LevelName", "mcmap dump"));
+
+	unsigned clen;
+	unsigned char *cdata = nbt_compress(data, &clen);
 	nbt_free(data);
+
+	int ret = (fwrite(cdata, 1, clen, f) == clen);
+	g_free(cdata);
 
 	if (!ret)
 		return 0;
 
-	/* write the chunk files */
+	/* write all the chunks into region files */
 
-	g_hash_table_foreach(chunk_table, world_save_block, dir);
+	GHashTable *region_table = g_hash_table_new_full(coord_hash, coord_equal, 0, g_free);
+
+	g_snprintf(pathbuf, pathbufsize, "%s/region", dir);
+	mkdir(pathbuf, 0777); /* ignore errors; might already exist */
+
+	GHashTableIter iter;
+	gpointer ckey, cvalue;
+
+	g_hash_table_iter_init(&iter, chunk_table);
+	while (g_hash_table_iter_next(&iter, &ckey, &cvalue))
+	{
+		struct chunk *c = cvalue;
+
+		/* find the corresponding region */
+
+		struct coord rc = { .x = REG_XCOORD(c->key.x), .z = REG_ZCOORD(c->key.z) };
+		struct region *reg = g_hash_table_lookup(region_table, &rc);
+
+		if (!reg)
+		{
+			char file_x_buf[16], file_z_buf[16];
+			char *file_x = base36_encode(rc.x, file_x_buf, sizeof file_x_buf);
+			char *file_z = base36_encode(rc.z, file_z_buf, sizeof file_z_buf);
+			g_snprintf(pathbuf, pathbufsize, "%s/region/r.%s.%s.mcr", dir, file_x, file_z);
+
+			reg = g_malloc0(sizeof *reg);
+			reg->key = rc;
+			reg->nsect = 0;
+			reg->fd = open(pathbuf, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+			if (reg->fd == -1)
+				dief("can't open region file: %s", pathbuf);
+
+			g_hash_table_insert(region_table, &reg->key, reg);
+		}
+
+		/* append a chunk into it */
+
+		world_append_chunk(reg, c);
+	}
+
+	/* finally update the region file headers and close them */
+
+	g_hash_table_iter_init(&iter, region_table);
+	while (g_hash_table_iter_next(&iter, &ckey, &cvalue))
+	{
+		struct region *reg = cvalue;
+		unsigned char reghdr[REG_XZ*8];
+
+		for (int z = 0; z < REG_ZSIZE; z++)
+		{
+			for (int x = 0; x < REG_XSIZE; x++)
+			{
+				int i = z*REG_XSIZE + x;
+				reghdr[4*i+0] = reg->offsets[z][x] >> 16;
+				reghdr[4*i+1] = reg->offsets[z][x] >> 8;
+				reghdr[4*i+2] = reg->offsets[z][x];
+				reghdr[4*i+3] = reg->sects[z][x];
+				reghdr[REG_XZ*4 + 4*i+0] = reg->tstamps[z][x] >> 24;
+				reghdr[REG_XZ*4 + 4*i+1] = reg->tstamps[z][x] >> 16;
+				reghdr[REG_XZ*4 + 4*i+2] = reg->tstamps[z][x] >> 8;
+				reghdr[REG_XZ*4 + 4*i+3] = reg->tstamps[z][x];
+			}
+		}
+
+		if (lseek(reg->fd, 0, SEEK_SET) == (off_t)-1)
+			die("lseek failed for region header update");
+		if (write(reg->fd, reghdr, sizeof reghdr) != sizeof reghdr)
+			die("write failed for region header update");
+
+		close(reg->fd);
+	}
+
+	g_hash_table_unref(region_table);
 
 	return 1;
 }
