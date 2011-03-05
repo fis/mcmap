@@ -435,7 +435,7 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 		map_y = player_y;
 
 	if (map_mode != old_mode || map_flags != old_flags)
-		chat("MODE: %s%s%s%s%s",
+		tell("MODE: %s%s%s%s%s",
 		     modenames[map_mode],
 		     (mode == MAP_MODE_CROSS && map_flags & MAP_FLAG_FOLLOW_Y ? " (follow)" : ""),
 		     (mode == MAP_MODE_SURFACE && map_flags & MAP_FLAG_CHOP ? " (chop)" : ""),

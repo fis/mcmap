@@ -175,7 +175,7 @@ void inject_to_server(packet_t *p)
 	g_async_queue_push(iq_server, p);
 }
 
-void chat(char *fmt, ...)
+void tell(char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
@@ -188,5 +188,16 @@ void chat(char *fmt, ...)
 	inject_to_client(packet_new(0, PACKET_CHAT, cmsg));
 
 	g_free(cmsg);
+	g_free(msg);
+}
+
+void say(char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	char *msg = g_strdup_vprintf(fmt, ap);
+	va_end(ap);
+
+	inject_to_server(packet_new(0, PACKET_CHAT, msg));
 	g_free(msg);
 }

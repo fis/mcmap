@@ -121,15 +121,15 @@ void teleport(int x, int z)
 		{
 			if (!stacks[i])
 			{
-				chat("//goto: impossible: jump from unloaded chunk");
+				tell("//goto: impossible: jump from unloaded chunk");
 				return;
 			}
 		}
 
 		if (player_y == -999)
-			chat("//goto: jumping from a minecart, who knows if this will work");
+			tell("//goto: jumping from a minecart, who knows if this will work");
 		else if (player_y < 0)
-			chat("//goto: you're below level 0! this should never happen (y=%d)", player_y);
+			tell("//goto: you're below level 0! this should never happen (y=%d)", player_y);
 
 		for (int h = (player_y == -999 ? 0 : player_y + 1); h < CHUNK_YSIZE; h++)
 		{
@@ -137,7 +137,7 @@ void teleport(int x, int z)
 			{
 				if (!hollow(stacks[i][h]))
 				{
-					chat("//goto: blocked: the skies are not clear");
+					tell("//goto: blocked: the skies are not clear");
 					return;
 				}
 			}
@@ -160,7 +160,7 @@ void teleport(int x, int z)
 	inject_to_server(pmove1);
 	inject_to_client(pmove2);
 
-	chat("//goto: jumping to (%d,%d)", x, z);
+	tell("//goto: jumping to (%d,%d)", x, z);
 
 	/* fake safe landing */
 

@@ -31,7 +31,7 @@ void start_ui(gboolean map, gint scale, gboolean resizable, int wnd_w, int wnd_h
 
 	if (map)
 	{
-		screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|(resizable ? SDL_RESIZABLE : 0));
+		screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|SDL_RESIZABLE);//(resizable ? SDL_RESIZABLE : 0));
 
 		if (!screen)
 		{
@@ -209,8 +209,8 @@ void handle_chat(unsigned char *msg, int msglen)
 
 	gchar *str = g_string_free(s, FALSE);
 	if (opt.noansi)
-		log_print("[CHAT] %s", str);
+		log_print("%s", str);
 	else
-		log_print("[CHAT] %s\x1b[0m", str);
+		log_print("%s\x1b[0m", str);
 	g_free(str);
 }

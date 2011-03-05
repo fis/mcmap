@@ -7,6 +7,7 @@ void start_proxy(socket_t sock_cli, socket_t sock_srv);
 void inject_to_client(packet_t *p);
 void inject_to_server(packet_t *p);
 
-void chat(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+void tell(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+void say(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 
 #endif /* MCMAP_PROXY_H */

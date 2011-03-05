@@ -44,7 +44,7 @@ void cmd_parse(unsigned char *cmd, int cmdlen)
 		}
 	}
 
-	chat("unknown command: //%s", cmdv[0]);
+	tell("unknown command: //%s", cmdv[0]);
 
 done:
 	g_strfreev(cmdv);
@@ -53,15 +53,11 @@ done:
 void cmd_coords(int cmdc, gchar **cmdv)
 {
 	if (cmdc == 2 && strcmp(cmdv[1], "-say") == 0)
-	{
-		char *msg = g_strdup_printf("/me is at (%d,%d) (y=%d)", player_x, player_z, player_y);
-		inject_to_server(packet_new(0, PACKET_CHAT, msg));
-		g_free(msg);
-	}
+		say("/me is at (%d,%d) (y=%d)", player_x, player_z, player_y);
 	else if (cmdc == 1)
-		chat("//coords: (%d,%d) (y=%d)", player_x, player_z, player_y);
+		tell("//coords: (%d,%d) (y=%d)", player_x, player_z, player_y);
 	else
-		chat("usage: //coords [-say]");
+		tell("usage: //coords [-say]");
 }
 
 void cmd_goto(int cmdc, gchar **cmdv)
@@ -70,7 +66,7 @@ void cmd_goto(int cmdc, gchar **cmdv)
 	{
 		struct Jump *jump = g_hash_table_lookup(jumps, cmdv[1]);
 		if (jump == NULL)
-			chat("//goto: no such jump (try //jumps list)");
+			tell("//goto: no such jump (try //jumps list)");
 		else
 			teleport(jump->x, jump->z);
 	}
@@ -80,7 +76,7 @@ void cmd_goto(int cmdc, gchar **cmdv)
 	}
 	else
 	{
-		chat("usage: //goto x z or //goto name (try //jumps list)");
+		tell("usage: //goto x z or //goto name (try //jumps list)");
 	}
 }
 
@@ -89,7 +85,7 @@ void cmd_jumps(int cmdc, gchar **cmdv)
 	if (cmdc < 2)
 	{
 usage:
-		chat("usage: //jumps (list | save [filename] | add name x z | rm name)");
+		tell("usage: //jumps (list | save [filename] | add name x z | rm name)");
 		return;
 	}
 
@@ -116,19 +112,19 @@ void jumps_list()
 {
 	if (g_hash_table_size(jumps) == 0)
 	{
-		chat("//jumps: no jumps exist");
+		tell("//jumps: no jumps exist");
 		return;
 	}
 
 	FOREACH_JUMP (name, jump)
-		chat("//jumps: %s (%d,%d)", name, jump->x, jump->z);
+		tell("//jumps: %s (%d,%d)", name, jump->x, jump->z);
 }
 
 void jumps_save(gchar *filename)
 {
 	if (filename == NULL)
 	{
-		chat("//jumps: no jump file; please use //jumps save filename");
+		tell("//jumps: no jump file; please use //jumps save filename");
 		return;
 	}
 
@@ -136,7 +132,7 @@ void jumps_save(gchar *filename)
 
 	if (jump_file == NULL)
 	{
-		chat("//jumps: opening %s: %s", filename, strerror(errno));
+		tell("//jumps: opening %s: %s", filename, strerror(errno));
 		return;
 	}
 
@@ -144,7 +140,7 @@ void jumps_save(gchar *filename)
 		fprintf(jump_file, "%s\t\t%d %d\n", name, jump->x, jump->z);
 
 	fclose(jump_file);
-	chat("//jumps: saved to %s", filename);
+	tell("//jumps: saved to %s", filename);
 
 	opt.jumpfile = filename; /* FIXME: do we want this? */
 }
@@ -156,15 +152,15 @@ void jumps_add(gchar *name, int x, int z, gboolean is_command)
 	jump->z = z;
 	g_hash_table_insert(jumps, strdup(name), jump);
 	if (is_command)
-		chat("//jumps: added %s (%d,%d)", name, x, z);
+		tell("//jumps: added %s (%d,%d)", name, x, z);
 }
 
 void jumps_rm(gchar *name)
 {
 	if (g_hash_table_remove(jumps, name))
-		chat("//jumps: removed %s", name);
+		tell("//jumps: removed %s", name);
 	else
-		chat("//jumps: no such jump");
+		tell("//jumps: no such jump");
 }
 
 #undef FOREACH_JUMP
@@ -179,7 +175,7 @@ void cmd_save(int cmdc, gchar **cmdv)
 	else if (cmdc == 2)
 		dir = cmdv[1];
 	else {
-		chat("usage: //save [dir]");
+		tell("usage: //save [dir]");
 		return;
 	}
 
@@ -212,29 +208,29 @@ void cmd_save(int cmdc, gchar **cmdv)
 	{
 		if (g_mkdir(dir, 0777) != 0)
 		{
-			chat("//save: can't create dir: %s", dir);
+			tell("//save: can't create dir: %s", dir);
 			return;
 		}
 	}
 	else if (t != 0)
 	{
-		chat("//save: can't stat: %s", dir);
+		tell("//save: can't stat: %s", dir);
 		return;
 	}
 	else if (!S_ISDIR(sbuf.st_mode))
 	{
-		chat("//save: not a directory: %s", dir);
+		tell("//save: not a directory: %s", dir);
 		return;
 	}
 
 	/* dump the world */
 
-	chat("//save: dumping world to: %s", dir);
+	tell("//save: dumping world to: %s", dir);
 
 	if (!world_save(dir))
-		chat("//save: failed");
+		tell("//save: failed");
 	else
-		chat("//save: successful");
+		tell("//save: successful");
 }
 #endif /* FEAT_FULLCHUNK */
 
@@ -242,11 +238,9 @@ void cmd_slap(int cmdc, gchar **cmdv)
 {
 	if (cmdc != 2)
 	{
-		chat("usage: //slap name");
+		tell("usage: //slap name");
 		return;
 	}
 
-	char *msg = g_strdup_printf("/me slaps %s around a bit with a large trout", cmdv[1]);
-	inject_to_server(packet_new(0, PACKET_CHAT, msg));
-	g_free(msg);
+	say("/me slaps %s around a bit with a large trout", cmdv[1]);
 }
