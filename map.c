@@ -9,6 +9,7 @@
 #include "config.h"
 #include "map.h"
 #include "world.h"
+#include "proxy.h"
 
 /* color maps */
 

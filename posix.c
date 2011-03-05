@@ -9,6 +9,7 @@
 #include "protocol.h"
 #include "common.h"
 #include "console.h"
+#include "proxy.h"
 
 static int console_readline = 0;
 static int opipe_read, opipe_write;

@@ -8,6 +8,19 @@
 #include "common.h"
 #include "map.h"
 #include "world.h"
+#include "proxy.h"
+
+guint coord_hash(gconstpointer key)
+{
+	const struct coord *c = key;
+	return c->x ^ ((c->z << 16) | (c->z >> 16));
+}
+
+gboolean coord_equal(gconstpointer a, gconstpointer b)
+{
+	const struct coord *ca = a, *cb = b;
+	return COORD_EQUAL(*ca, *cb);
+}
 
 #ifdef FEAT_SAFE_TELEPORT
 struct teleport_fall_data

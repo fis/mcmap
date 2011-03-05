@@ -17,6 +17,7 @@
 #include "common.h"
 #include "map.h"
 #include "world.h"
+#include "proxy.h"
 
 static struct { char *name; void (*run)(int, gchar **); } commands[] = {
 #define command(name) { #name, cmd_##name },

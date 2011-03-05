@@ -48,7 +48,7 @@ static struct nbt_tag *nbt_new(char *name, enum nbt_tag_type type)
 struct nbt_tag *nbt_new_int(char *name, enum nbt_tag_type type, jint intv)
 {
 	if (type != NBT_TAG_BYTE && type != NBT_TAG_SHORT && type != NBT_TAG_INT)
-		dief("nbt_new_int: bad type: %d", type);
+		wtff("nbt_new_int: bad type: %d", type);
 
 	struct nbt_tag *tag = nbt_new(name, type);
 	tag->data.intv = intv;
@@ -65,7 +65,7 @@ struct nbt_tag *nbt_new_long(char *name, jlong longv)
 struct nbt_tag *nbt_new_double(char *name, enum nbt_tag_type type, double doublev)
 {
 	if (type != NBT_TAG_FLOAT && type != NBT_TAG_DOUBLE)
-		dief("nbt_new_double: bad type: %d", type);
+		wtff("nbt_new_double: bad type: %d", type);
 
 	struct nbt_tag *tag = nbt_new(name, type);
 	tag->data.doublev = doublev;
@@ -75,7 +75,7 @@ struct nbt_tag *nbt_new_double(char *name, enum nbt_tag_type type, double double
 struct nbt_tag *nbt_new_blob(char *name, enum nbt_tag_type type, const void *data, int len)
 {
 	if (type != NBT_TAG_BLOB && type != NBT_TAG_STR)
-		dief("nbt_new_blob: bad type: %d", type);
+		wtff("nbt_new_blob: bad type: %d", type);
 
 	struct nbt_tag *tag = nbt_new(name, type);
 	tag->data.blobv.len = len;
@@ -121,7 +121,7 @@ void nbt_free(gpointer tag)
 void nbt_struct_add(struct nbt_tag *s, struct nbt_tag *field)
 {
 	if (s->type != NBT_TAG_STRUCT)
-		dief("nbt_struct_add: not a structure: %d", s->type);
+		wtff("nbt_struct_add: not a structure: %d", s->type);
 
 	g_ptr_array_add(s->data.structv, field);
 }
@@ -234,7 +234,7 @@ unsigned char *nbt_compress(struct nbt_tag *tag, unsigned *len)
 	g_byte_array_unref(arr);
 
 	if (ret != Z_OK)
-		dief("zlib broke badly: %d", ret);
+		wtff("zlib broke badly: %d", ret);
 
 	*len = clen;
 	return cbuf;
@@ -242,5 +242,5 @@ unsigned char *nbt_compress(struct nbt_tag *tag, unsigned *len)
 
 struct nbt_tag *nbt_uncompress(unsigned char *data, unsigned len)
 {
-	die("nbt_uncompress: unimplemented");
+	wtff("nbt_uncompress: unimplemented");
 }
