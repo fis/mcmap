@@ -31,7 +31,10 @@ void start_ui(gboolean map, gint scale, gboolean resizable, int wnd_w, int wnd_h
 
 	if (map)
 	{
-		screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, SDL_SWSURFACE|SDL_RESIZABLE);//(resizable ? SDL_RESIZABLE : 0));
+		Uint32 videoflags = SDL_SWSURFACE;
+		if (resizable) videoflags |= SDL_RESIZABLE;
+
+		screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, videoflags);
 
 		if (!screen)
 		{
