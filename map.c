@@ -91,6 +91,7 @@ static struct rgb special_colors[COLOR_MAX_SPECIAL] = {
 
 double player_dx = 0.0, player_dy = 0.0, player_dz = 0.0;
 jint player_x = 0, player_y = 0, player_z = 0;
+jshort player_health = 0;
 
 jint ceiling_y = CHUNK_YSIZE;
 

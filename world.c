@@ -500,6 +500,10 @@ gpointer world_thread(gpointer data)
 			map_update_time(tl);
 			break;
 
+		case PACKET_UPDATE_HEALTH:
+			player_health = packet_int(packet, 0);
+			break;
+
 		case PACKET_CHAT:
 			p = packet_string(packet, 0, &t);
 			if (t >= 3 && p[0] == '/' && p[1] == '/')

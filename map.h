@@ -29,6 +29,7 @@ enum map_mode
 
 extern double player_dx, player_dy, player_dz;
 extern jint player_x, player_y, player_z;
+extern jshort player_health;
 
 void map_init(SDL_Surface *screen);
 

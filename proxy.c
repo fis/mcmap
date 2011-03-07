@@ -146,6 +146,7 @@ gpointer proxy_thread(gpointer data)
 		case PACKET_ENTITY_MOVE:
 		case PACKET_ENTITY_ATTACH:
 		case PACKET_TIME:
+		case PACKET_UPDATE_HEALTH:
 			g_async_queue_push(cfg->q, packet_dup(p));
 			break;
 
