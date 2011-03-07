@@ -36,7 +36,7 @@ static struct nbt_tag *nbt_new(char *name, enum nbt_tag_type type)
 	struct nbt_tag *tag = g_new(struct nbt_tag, 1);
 
 	tag->type = type;
-	tag->name = g_strdup(name);
+	tag->name = name;
 
 	int namelen = strlen(name);
 	tag->namelen[0] = namelen >> 8;
@@ -48,16 +48,16 @@ static struct nbt_tag *nbt_new(char *name, enum nbt_tag_type type)
 struct nbt_tag *nbt_new_int(char *name, enum nbt_tag_type type, jint intv)
 {
 	if (type != NBT_TAG_BYTE && type != NBT_TAG_SHORT && type != NBT_TAG_INT)
-		wtff("nbt_new_int: bad type: %d", type);
+		dief("nbt_new_int: bad type: %d", type);
 
-	struct nbt_tag *tag = nbt_new(name, type);
+	struct nbt_tag *tag = nbt_new(g_strdup(name), type);
 	tag->data.intv = intv;
 	return tag;
 }
 
 struct nbt_tag *nbt_new_long(char *name, jlong longv)
 {
-	struct nbt_tag *tag = nbt_new(name, NBT_TAG_LONG);
+	struct nbt_tag *tag = nbt_new(g_strdup(name), NBT_TAG_LONG);
 	tag->data.longv = longv;
 	return tag;
 }
@@ -65,9 +65,9 @@ struct nbt_tag *nbt_new_long(char *name, jlong longv)
 struct nbt_tag *nbt_new_double(char *name, enum nbt_tag_type type, double doublev)
 {
 	if (type != NBT_TAG_FLOAT && type != NBT_TAG_DOUBLE)
-		wtff("nbt_new_double: bad type: %d", type);
+		dief("nbt_new_double: bad type: %d", type);
 
-	struct nbt_tag *tag = nbt_new(name, type);
+	struct nbt_tag *tag = nbt_new(g_strdup(name), type);
 	tag->data.doublev = doublev;
 	return tag;
 }
@@ -75,9 +75,9 @@ struct nbt_tag *nbt_new_double(char *name, enum nbt_tag_type type, double double
 struct nbt_tag *nbt_new_blob(char *name, enum nbt_tag_type type, const void *data, int len)
 {
 	if (type != NBT_TAG_BLOB && type != NBT_TAG_STR)
-		wtff("nbt_new_blob: bad type: %d", type);
+		dief("nbt_new_blob: bad type: %d", type);
 
-	struct nbt_tag *tag = nbt_new(name, type);
+	struct nbt_tag *tag = nbt_new(g_strdup(name), type);
 	tag->data.blobv.len = len;
 	tag->data.blobv.data = g_memdup(data, len);
 	return tag;
@@ -90,7 +90,7 @@ struct nbt_tag *nbt_new_str(char *name, const char *str)
 
 struct nbt_tag *nbt_new_struct(char *name)
 {
-	struct nbt_tag *tag = nbt_new(name, NBT_TAG_STRUCT);
+	struct nbt_tag *tag = nbt_new(g_strdup(name), NBT_TAG_STRUCT);
 	tag->data.structv = g_ptr_array_new_with_free_func(nbt_free);
 	return tag;
 }
@@ -121,12 +121,12 @@ void nbt_free(gpointer tag)
 void nbt_struct_add(struct nbt_tag *s, struct nbt_tag *field)
 {
 	if (s->type != NBT_TAG_STRUCT)
-		wtff("nbt_struct_add: not a structure: %d", s->type);
+		dief("nbt_struct_add: not a structure: %d", s->type);
 
 	g_ptr_array_add(s->data.structv, field);
 }
 
-/* NBT file IO code */
+/* NBT serialization code */
 
 static void format_tag(GByteArray *arr, struct nbt_tag *tag, int only_payload)
 {
@@ -215,7 +215,7 @@ static void format_tag(GByteArray *arr, struct nbt_tag *tag, int only_payload)
 	case NBT_TAG_STRUCT:
 		for (guint i = 0; i < tag->data.structv->len; i++)
 			format_tag(arr, g_ptr_array_index(tag->data.structv, i), 0);
-		g_byte_array_append(arr, (guint8*)"\0", 2);
+		g_byte_array_append(arr, (guint8*)"", 1);
 		break;
 	}
 }
@@ -234,13 +234,171 @@ unsigned char *nbt_compress(struct nbt_tag *tag, unsigned *len)
 	g_byte_array_unref(arr);
 
 	if (ret != Z_OK)
-		wtff("zlib broke badly: %d", ret);
+		dief("zlib broke badly: %d", ret);
 
 	*len = clen;
 	return cbuf;
 }
 
+static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
+{
+	if (len < 1)
+		die("truncated NBT tag: short type");
+
+	guint8 type = data[0];
+
+	if (type == NBT_TAG_END)
+	{
+		*taglen = 1;
+		return 0;
+	}
+
+	if (len < 3)
+		die("truncated NBT tag: short namelen");
+
+	int namelen = (data[1] << 8) | data[2];
+
+	if (len < 3+namelen)
+		die("truncated NBT tag: short name");
+
+	struct nbt_tag *tag = nbt_new(g_strndup((gchar*)&data[3], namelen), type);
+
+	data += 3 + namelen;
+	len -= 3 + namelen;
+	*taglen = 3 + namelen;
+
+	jint t;
+	jlong tl;
+	unsigned char *p;
+
+	struct nbt_tag *sub;
+	unsigned sublen;
+
+	switch (tag->type)
+	{
+	case NBT_TAG_BYTE:
+		if (len < 1) die("truncated NBT tag: short byte");
+		tag->data.intv = (jbyte)*data;
+		*taglen += 1;
+		break;
+
+	case NBT_TAG_SHORT:
+		if (len < 2) die("truncated NBT tag: short short");
+		tag->data.intv = (jshort)((data[0] << 8) | data[1]);
+		*taglen += 2;
+		break;
+
+	case NBT_TAG_INT:
+		if (len < 4) die("truncated NBT tag: short int");
+		tag->data.intv = (jint)((data[0] << 24) |
+		                        (data[1] << 16) |
+		                        (data[2] << 8)  |
+		                         data[3]);
+		*taglen += 4;
+		break;
+
+	case NBT_TAG_LONG:
+		if (len < 8) die("truncated NBT tag: short long");
+		tl = 0;
+		for (int i = 0; i < 8; i++)
+			tl = (tl << 8) | data[i];
+		tag->data.longv = tl;
+		*taglen += 8;
+		break;
+
+	case NBT_TAG_FLOAT:
+		die("nbt parse_tag: NBT_TAG_FLOAT unimplemented");
+
+	case NBT_TAG_DOUBLE:
+		if (len < 8) die("truncated NBT tag: short double");
+		p = (unsigned char *)&tag->data.doublev;
+		p[0] = data[7]; p[1] = data[6]; p[2] = data[5]; p[3] = data[4];
+		p[4] = data[3]; p[5] = data[2]; p[6] = data[1]; p[7] = data[0];
+		*taglen += 8;
+		break;
+
+	case NBT_TAG_BLOB:
+		if (len < 4) die("truncated NBT tag: short blob len");
+		t = (jint)((data[0] << 24) |
+		           (data[1] << 16) |
+		           (data[2] << 8)  |
+		            data[3]);
+		if (len < 4+t) die("truncated NBT tag: short blob data");
+		tag->data.blobv.len = t;
+		tag->data.blobv.data = g_memdup(&data[4], t);
+		*taglen += 4 + t;
+		break;
+
+	case NBT_TAG_STR:
+		if (len < 2) die("truncated NBT tag: short str len");
+		t = (jshort)((data[0] << 8) | data[1]);
+		if (len < 2+t) die("truncated NBT tag: short str data");
+		tag->data.blobv.len = t;
+		tag->data.blobv.data = g_memdup(&data[2], t);
+		*taglen += 2 + t;
+		break;
+
+	case NBT_TAG_ARRAY:
+		die("nbt parse_tag: NBT_TAG_ARRAY unimplemented");
+
+	case NBT_TAG_STRUCT:
+		tag->data.structv = g_ptr_array_new_with_free_func(nbt_free);
+		while ((sub = parse_tag(data, len, &sublen)) != 0)
+		{
+			nbt_struct_add(tag, sub);
+			data += sublen;
+			len -= sublen;
+			*taglen += sublen;
+		}
+		*taglen += 1;
+		break;
+
+	default:
+		dief("nbt parse_tag: unknown tag type: %d", tag->type);
+	}
+
+	return tag;
+}
+
 struct nbt_tag *nbt_uncompress(unsigned char *data, unsigned len)
 {
-	wtff("nbt_uncompress: unimplemented");
+	GByteArray *arr = g_byte_array_new();
+
+	z_stream zs;
+	zs.next_in = data;
+	zs.avail_in = len;
+	zs.zalloc = Z_NULL;
+	zs.zfree = Z_NULL;
+	zs.opaque = Z_NULL;
+	if (inflateInit(&zs) != Z_OK)
+		die("zlib broke: inflateInit");
+
+	unsigned char zbuf[4096];
+
+	while (1)
+	{
+		zs.next_out = zbuf;
+		zs.avail_out = sizeof zbuf;
+		int ret = inflate(&zs, Z_NO_FLUSH);
+
+		if (ret == Z_STREAM_END)
+			break;
+		if (ret != Z_OK)
+			die("zlib broke: inflate");
+		if (zs.next_out == zbuf)
+			continue;
+
+		g_byte_array_append(arr, zbuf, zs.next_out - zbuf);
+	}
+
+	inflateEnd(&zs);
+
+	if (arr->len < 3 || memcmp(arr->data, "\xa0\x00", 3) != 0)
+		die("nbt_uncompress: invalid header in uncompressed NBT");
+
+	unsigned t;
+	struct nbt_tag *tag = parse_tag(arr->data + 3, arr->len - 3, &t);
+
+	g_byte_array_unref(arr);
+	return tag;
 }
