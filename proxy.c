@@ -153,9 +153,9 @@ gpointer proxy_thread(gpointer data)
 		case PACKET_CHAT:
 			if (!cfg->client_to_server)
 			{
-				int msglen;
-				unsigned char *msg = packet_string(p, 0, &msglen);
-				handle_chat(msg, msglen);
+				//int msglen;
+				//unsigned char *msg = packet_string(p, 0, &msglen);
+				//handle_chat(msg, msglen);
 			}
 			break;
 		}

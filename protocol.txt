@@ -6,8 +6,6 @@ login: 0x01
   server -> client: player entity ID
 - string
   client -> server: nickname
-- string
-  client -> server: password
 - long
   server -> client: map seed value
 - byte
@@ -196,11 +194,21 @@ explosion: 0x3c
 - float:                  maybe radius
 - explosion_array:        list of explosion records
 
+unknown_0x46: 0x46
+- byte:   Reason?
+
+weather: 0x47
+- int:    ID?
+- byte:   Raining?
+- int:    X?
+- int:    Y?
+- int:    Z?
+
 inventory_open: 0x64
-- byte:   window ID
-- byte:   inventory type (0 = basic, 1 = workbench, 2 = furnace)
-- string: inventory window title
-- byte:   number of additional slots
+- byte:        window ID
+- byte:        inventory type (0 = basic, 1 = workbench, 2 = furnace)
+- string_utf8: inventory window title
+- byte:        number of additional slots
 
 inventory_close: 0x65
 - byte: window ID
@@ -210,6 +218,7 @@ inventory_click: 0x66
 - short: clicked slot (or -999 if outside)
 - bool:  true when right-clicking
 - short: transaction ID
+- byte:  shift
 - item:  clicked item in the slot
 
 inventory_update: 0x67
@@ -234,6 +243,10 @@ inventory_ack: 0x6a
 sign_update: 0x82
 - int, short, int:                X, Y, Z
 - string, string, string, string: sign contents
+
+increment_statistic: 0xc8
+- int: Statistic ID
+- byte: Amount
 
 disconnect: 0xff
 - string: disconnection reason

@@ -133,6 +133,11 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 
 		case FIELD_STRING:
 			t = buf_get_i16();
+			if (!buf_skip(t*2)) return 0;
+			break;
+
+		case FIELD_STRING_UTF8:
+			t = buf_get_i16();
 			if (!buf_skip(t)) return 0;
 			break;
 
@@ -321,6 +326,27 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 		case FIELD_STRING:
 			tp = va_arg(ap, unsigned char *);
 			{
+				GError *error = NULL;
+				gsize conv_len;
+				gchar *conv = g_convert((gchar*)tp, -1, "UTF16BE", "UTF8", NULL, &conv_len, &error);
+				if (conv == NULL)
+				{
+					if (error != NULL)
+						dief("g_convert UTF8->UTF16BE failed. Error: %s. String: %s", error->message, (char*)tp);
+					else
+						dief("g_convert UTF8->UTF16BE failed");
+				}
+				unsigned char lenb[2] = { (conv_len/2) >> 8, (conv_len/2) };
+				g_byte_array_append(data, lenb, 2);
+				g_byte_array_append(data, (unsigned char*)conv, conv_len);
+				offset += 2 + conv_len;
+				g_free(conv);
+			}
+			break;
+
+		case FIELD_STRING_UTF8:
+			tp = va_arg(ap, unsigned char *);
+			{
 				int len = strlen((char *)tp);
 				unsigned char lenb[2] = { len >> 8, len };
 				g_byte_array_append(data, lenb, 2);
@@ -440,6 +466,11 @@ unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
 	switch (packet_format[packet->id].ftype[field])
 	{
 	case FIELD_STRING:
+		// FIXME: Not correct!
+		*len = (p[0] << 8) | p[1];
+		return &p[2];
+
+	case FIELD_STRING_UTF8:
 		*len = (p[0] << 8) | p[1];
 		return &p[2];
 

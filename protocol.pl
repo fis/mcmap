@@ -20,6 +20,7 @@ my %types = (
 	'short' => 'FIELD_SHORT', 'int' => 'FIELD_INT', 'long' => 'FIELD_LONG',
 	'float' => 'FIELD_FLOAT', 'double' => 'FIELD_DOUBLE',
 	'string' => 'FIELD_STRING',
+	'string_utf8' => 'FIELD_STRING_UTF8',
 	'item' => 'FIELD_ITEM',
 	'byte_array' => 'FIELD_BYTE_ARRAY',
 	'block_array' => 'FIELD_BLOCK_ARRAY',
