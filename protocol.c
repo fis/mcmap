@@ -329,13 +329,8 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 				GError *error = NULL;
 				gsize conv_len;
 				gchar *conv = g_convert((gchar*)tp, -1, "UTF16BE", "UTF8", NULL, &conv_len, &error);
-				if (conv == NULL)
-				{
-					if (error != NULL)
-						dief("g_convert UTF8->UTF16BE failed. Error: %s. String: %s", error->message, (char*)tp);
-					else
-						dief("g_convert UTF8->UTF16BE failed");
-				}
+				if (!conv)
+					dief("g_convert UTF8->UTF16BE failed (error: %s, string: '%s')", error->message, (char*)tp);
 				unsigned char lenb[2] = { (conv_len/2) >> 8, (conv_len/2) };
 				g_byte_array_append(data, lenb, 2);
 				g_byte_array_append(data, (unsigned char*)conv, conv_len);
@@ -463,19 +458,34 @@ unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
 {
 	unsigned char *p = &packet->bytes[packet->field_offset[field]];
 
+	unsigned char *str;
+	int l;
+
 	switch (packet_format[packet->id].ftype[field])
 	{
 	case FIELD_STRING:
-		// FIXME: Not correct!
-		*len = (p[0] << 8) | p[1];
-		return &p[2];
+		l = (p[0] << 8) | p[1];
+		{
+			GError *error = NULL;
+			gsize conv_len;
+			str = (unsigned char *)g_convert((gchar*)&p[2], l*2, "UTF8", "UTF16BE", NULL, &conv_len, &error);
+			if (!str)
+				dief("g_convert UTF16BE->UTF8 failed (error: %s)", error->message);
+			l = conv_len;
+		}
+		break;
 
 	case FIELD_STRING_UTF8:
-		*len = (p[0] << 8) | p[1];
-		return &p[2];
+		l = (p[0] << 8) | p[1];
+		str = (unsigned char *)g_strndup((gchar*)&p[2], l);
+		break;
 
 	default:
 		dief("can't interpret field type %d as string (packet 0x%02x, field %u)",
 		     packet_format[packet->id].ftype[field], packet->id, field);
 	}
+
+	if (len)
+		*len = l;
+	return str;
 }

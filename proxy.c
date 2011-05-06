@@ -110,7 +110,8 @@ gpointer proxy_thread(gpointer data)
 
 		if (cfg->client_to_server
 		    && p->id == PACKET_CHAT
-		    && p->bytes[3] == '/' && p->bytes[4] == '/')
+		    && (p->bytes[1] || p->bytes[2] > 2)
+		    && memcmp(&p->bytes[3], "\x00/\x00/", 4) == 0)
 		{
 			g_async_queue_push(cfg->q, packet_dup(p));
 		}
@@ -153,9 +154,10 @@ gpointer proxy_thread(gpointer data)
 		case PACKET_CHAT:
 			if (!cfg->client_to_server)
 			{
-				//int msglen;
-				//unsigned char *msg = packet_string(p, 0, &msglen);
-				//handle_chat(msg, msglen);
+				int msglen;
+				unsigned char *msg = packet_string(p, 0, &msglen);
+				handle_chat(msg, msglen);
+				g_free(msg);
 			}
 			break;
 		}

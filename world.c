@@ -445,9 +445,8 @@ gpointer world_thread(gpointer data)
 
 
 		case PACKET_ENTITY_SPAWN_NAMED:
-			p = packet_string(packet, 1, &t);
 			entity_add(packet_int(packet, 0),
-			           (unsigned char *)g_strndup((gchar *)p, t),
+			           packet_string(packet, 1, 0),
 			           packet_int(packet, 2),
 			           packet_int(packet, 3),
 			           packet_int(packet, 4));
@@ -508,6 +507,7 @@ gpointer world_thread(gpointer data)
 			p = packet_string(packet, 0, &t);
 			if (t >= 3 && p[0] == '/' && p[1] == '/')
 				cmd_parse(p+2, t-2);
+			g_free(p);
 			break;
 		}
 
