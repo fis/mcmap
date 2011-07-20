@@ -26,7 +26,9 @@ my %types = (
 	'block_array' => 'FIELD_BLOCK_ARRAY',
 	'item_array' => 'FIELD_ITEM_ARRAY',
 	'explosion_array' => 'FIELD_EXPLOSION_ARRAY',
-	'entity_data' => 'FIELD_ENTITY_DATA'
+	'map_array' => 'FIELD_MAP_ARRAY',
+	'entity_data' => 'FIELD_ENTITY_DATA',
+	'object_data' => 'FIELD_OBJECT_DATA'
 	);
 
 while (my $line = <SPEC>)

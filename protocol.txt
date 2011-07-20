@@ -38,6 +38,7 @@ update_health: 0x08
 - short: player health, 0 .. 20 (in 0.5 hearts)
 
 respawn: 0x09
+- byte: world
 
 player_ping: 0x0a
 - bool: true if on ground
@@ -70,12 +71,12 @@ place: 0x0f
 entity_holding: 0x10
 - short: selected slot index (0..8)
 
-unknown_0x11: 0x11
-- int: who knows
+use_bed: 0x11
+- int: Player ID
 - byte: who knows
-- int: who knows
-- byte: who knows
-- int: who knows
+- int: X?
+- byte: Y?
+- int: Z?
 
 entity_animate: 0x12
 - int: player ID
@@ -105,7 +106,8 @@ entity_collect: 0x16
 entity_spawn_object: 0x17
 - int:           entity ID
 - byte:          object type
-- int, int, int: X, Y, Z 
+- int, int, int: X, Y, Z
+- object_data:   Variable length object data field.
 
 entity_spawn_mob: 0x18
 - int:           entity ID
@@ -194,7 +196,14 @@ explosion: 0x3c
 - float:                  maybe radius
 - explosion_array:        list of explosion records
 
-unknown_0x46: 0x46
+sound_effect: 0x3d
+- int:    Effect ID
+- int:    X
+- byte:   Y
+- int:    Z
+- int:    Sound data
+
+new_or_invalid_state: 0x46
 - byte:   Reason?
 
 weather: 0x47
@@ -243,6 +252,11 @@ inventory_ack: 0x6a
 sign_update: 0x82
 - int, short, int:                X, Y, Z
 - string, string, string, string: sign contents
+
+map_data: 0x83
+- short: unknown
+- short: map ID?
+- map_array: Map data
 
 increment_statistic: 0xc8
 - int: Statistic ID

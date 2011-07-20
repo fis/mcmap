@@ -172,6 +172,11 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 			if (!buf_skip(3*t)) return 0;
 			break;
 
+		case FIELD_MAP_ARRAY:
+			t = buf_getc(); // Note: Unsigned
+			if (!buf_skip(t)) return 0;
+			break;
+
 		case FIELD_ENTITY_DATA:
 			while (1)
 			{
@@ -187,6 +192,12 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 				case 5: if (!buf_skip(5)) return 0; break;
 				}
 			}
+			break;
+
+		case FIELD_OBJECT_DATA:
+			t = buf_get_i32();
+			if (t > 0)
+				if (!buf_skip(6)) return 0; // Skip 3 short
 			break;
 		}
 	}
