@@ -5,14 +5,14 @@
 
 #define MCMAP_EVENT_REPAINT SDL_USEREVENT
 
-#define REGION_XSIZE (CHUNK_XSIZE*32)
-#define REGION_ZSIZE (CHUNK_ZSIZE*32)
-
 #define REGION_BITS 5
 #define REGION_SIZE (1 << REGION_BITS)
 /* relies on implementation-defined arithmetic shift behaviour */
 #define REGION_IDX(coord) ((coord) >> REGION_BITS)
 #define REGION_OFF(coord) ((coord) & (REGION_SIZE-1))
+
+#define REGION_XSIZE (CHUNK_XSIZE*REGION_SIZE)
+#define REGION_ZSIZE (CHUNK_ZSIZE*REGION_SIZE)
 
 struct rgb
 {

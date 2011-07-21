@@ -146,12 +146,12 @@ static SDL_Surface *map_create_region(struct coord cc)
 	return region;
 }
 
-static SDL_Surface *map_get_region(struct coord cc)
+static SDL_Surface *map_get_region(struct coord cc, unsigned create)
 {
 	cc.x = REGION_IDX(cc.x);
 	cc.z = REGION_IDX(cc.z);
 	SDL_Surface *region = g_hash_table_lookup(regions, &cc);
-	return region ? region : map_create_region(cc);
+	return region ? region : (create ? map_create_region(cc) : 0);
 }
 
 inline void map_repaint(void)
@@ -168,7 +168,7 @@ void map_update_chunk(jint cx, jint cz)
 	struct coord cc = { .x = cx, .z = cz };
 	struct chunk *c = world_chunk(&cc, 0);
 
-	SDL_Surface *region = map_get_region(cc);
+	SDL_Surface *region = map_get_region(cc, 1);
 	SDL_LockSurface(region);
 	Uint32 pitch = region->pitch;
 
@@ -599,61 +599,86 @@ void map_draw(SDL_Surface *screen)
 
 	g_mutex_lock(map_mutex);
 
-	jint scr_x0, scr_z0;
-	jint scr_xo, scr_zo;
-	map_s2w(screen, 0, 0, &scr_x0, &scr_z0, &scr_xo, &scr_zo);
+	/* find top-left and bottom-right corners of screen in (sub)chunk coords */
 
-	if (map_scale == 1)
+	jint scr_x1, scr_z1;
+	jint scr_x1o, scr_z1o;
+
+	map_s2w(screen, 0, 0, &scr_x1, &scr_z1, &scr_x1o, &scr_z1o);
+
+	jint scr_x2, scr_z2;
+	jint scr_x2o, scr_z2o;
+
+	scr_x2 = scr_x1;
+	scr_z2 = scr_z1;
+
+	scr_x2o = scr_x1o + screen->w;
+	scr_z2o = scr_z1o + screen->h;
+
+	scr_x2 += scr_x2o / map_scale;
+	scr_z2 += scr_z2o / map_scale;
+
+	scr_x2o = scr_x2 % map_scale;
+	scr_z2o = scr_z2 % map_scale;
+
+	/* find out which regions intersect with visible coords */
+
+	jint reg_x1, reg_x2, reg_z1, reg_z2;
+
+	reg_x1 = REGION_IDX(CHUNK_XIDX(scr_x1));
+	reg_z1 = REGION_IDX(CHUNK_ZIDX(scr_z1));
+
+	reg_x2 = REGION_IDX(CHUNK_XIDX(scr_x2 + CHUNK_XSIZE - 1) + REGION_SIZE);
+	reg_z2 = REGION_IDX(CHUNK_ZIDX(scr_z2 + CHUNK_ZSIZE - 1) + REGION_SIZE);
+
+	/* draw those regions */
+
+	SDL_LockSurface(screen);
+
+	for (jint reg_z = reg_z1; reg_z <= reg_z2; reg_z++)
 	{
-		SDL_Rect rect_dst = { .x = 0, .y = 0, .w = REGION_XSIZE, .h = REGION_ZSIZE };
-		SDL_Rect rect_src = {
-			.x = 0,
-			.y = 0,
-			.w = REGION_ZSIZE,
-			.h = REGION_XSIZE
-		};
-
-		struct coord cc = { .x = player_x/16, .z = player_z/16 };
-		SDL_BlitSurface(map_get_region(cc), &rect_src, screen, &rect_dst);
-	}
-	else
-	{
-	#if 0
-		SDL_LockSurface(screen);
-		SDL_LockSurface(map);
-
-		jint m_x0 = scr_x0 - map_min_x*CHUNK_XSIZE;
-		jint m_z = scr_z0 - map_min_z*CHUNK_ZSIZE;
-
-		jint m_xo0 = scr_xo, m_zo = scr_zo;
-
-		for (int s_y = 0; s_y < screen->h && m_z < map->h; s_y++)
+		for (jint reg_x = reg_x1; reg_x <= reg_x2; reg_x++)
 		{
-			if (m_z >= 0)
-			{
-				jint m_x = m_x0, m_xo = m_xo0;
-				for (int s_x = 0; s_x < screen->w && m_x < map->w; s_x++)
-				{
-					if (m_x >= 0)
-					{
-						void *s = (unsigned char *)screen->pixels + s_y*screen->pitch + 4*s_x;
-						void *m = (unsigned char *)map->pixels + m_z*map->pitch + 4*m_x;
-						*(Uint32 *)s = *(Uint32 *)m;
-					}
+			struct coord rc = { .x = reg_x*REGION_SIZE, .z = reg_z*REGION_SIZE };
 
-					if (++m_xo == map_scale)
-						m_xo = 0, m_x++;
+			SDL_Surface *regs = map_get_region(rc, 0);
+			if (!regs)
+				continue; /* nothing to draw */
+
+			SDL_LockSurface(regs);
+
+			/* try to find where to place the region */
+
+			int reg_sx = (reg_x*REGION_XSIZE - scr_x1)*map_scale - scr_x1o;
+			int reg_sy = (reg_z*REGION_ZSIZE - scr_z1)*map_scale - scr_z1o;
+
+			for (int reg_py = 0; reg_py < REGION_ZSIZE; reg_py++)
+			{
+				int y0 = reg_sy + reg_py*map_scale;
+				if (y0 < 0) continue;
+
+				for (int y = y0; y < y0+map_scale && y < screen->h; y++)
+				{
+					for (int reg_px = 0; reg_px < REGION_XSIZE; reg_px++)
+					{
+						int x0 = reg_sx + reg_px*map_scale;
+						if (x0 < 0) continue;
+
+						for (int x = x0; x < x0+map_scale && x < screen->w; x++)
+						{
+							void *s = (unsigned char *)screen->pixels + y*screen->pitch + 4*x;
+							void *m = (unsigned char *)regs->pixels + reg_py*regs->pitch + 4*reg_px;
+							*(Uint32 *)s = *(Uint32 *)m;
+						}
+					}
 				}
 			}
 
-			if (++m_zo == map_scale)
-				m_zo = 0, m_z++;
+			SDL_UnlockSurface(regs);
 		}
-
-		SDL_UnlockSurface(map);
-		SDL_UnlockSurface(screen);
-	#endif
 	}
+
+	SDL_UnlockSurface(screen);
 
 	g_mutex_unlock(map_mutex);
 
