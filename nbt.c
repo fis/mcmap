@@ -118,6 +118,44 @@ void nbt_free(gpointer tag)
 	g_free(tag);
 }
 
+jint nbt_blob_len(struct nbt_tag *s)
+{
+	if (s->type != NBT_TAG_BLOB || s->type != NBT_TAG_STR)
+		dief("nbt_blob_len: not a blob or a string: %d", s->type);
+
+	return s->data.blobv.len;
+}
+
+unsigned char *nbt_blob_data(struct nbt_tag *s)
+{
+	if (s->type != NBT_TAG_BLOB || s->type != NBT_TAG_STR)
+		dief("nbt_blob_len: not a blob or a string: %d", s->type);
+
+	return s->data.blobv.data;
+}
+
+struct nbt_tag *nbt_struct_field(struct nbt_tag *s, const char *name)
+{
+	if (s->type != NBT_TAG_STRUCT)
+		dief("nbt_struct_field: not a structure: %d", s->type);
+
+	size_t namelen = strlen(name);
+
+	for (guint i = 0; i < s->data.structv->len; i++)
+	{
+		struct nbt_tag *field = g_ptr_array_index(s->data.structv, i);
+
+		if (((field->namelen[0] << 8) | field->namelen[1]) != namelen)
+			continue;
+		if (memcmp(field->name, name, namelen) != 0)
+			continue;
+
+		return field;
+	}
+
+	return 0;
+}
+
 void nbt_struct_add(struct nbt_tag *s, struct nbt_tag *field)
 {
 	if (s->type != NBT_TAG_STRUCT)
