@@ -96,9 +96,10 @@ jshort player_health = 0;
 
 jint ceiling_y = CHUNK_YSIZE;
 
-static SDL_Surface *map = 0;
-static jint map_min_x = 0, map_min_z = 0;
-static jint map_max_x = 0, map_max_z = 0;
+GHashTable *regions = 0;
+SDL_PixelFormat *screen_fmt = 0;
+jint map_min_x = 0, map_min_z = 0;
+jint map_max_x = 0, map_max_z = 0;
 static jint map_y = 0;
 static int map_darken = 0;
 static unsigned map_rshift, map_gshift, map_bshift;
@@ -122,29 +123,180 @@ static inline Uint32 pack_rgb(struct rgb rgb)
 
 void map_init(SDL_Surface *screen)
 {
-	SDL_PixelFormat *fmt = screen->format;
-
-	map = SDL_CreateRGBSurface(SDL_SWSURFACE, CHUNK_XSIZE, CHUNK_ZSIZE, 32, fmt->Rmask, fmt->Gmask, fmt->Bmask, 0);
-	map_rshift = fmt->Rshift;
-	map_gshift = fmt->Gshift;
-	map_bshift = fmt->Bshift;
-
-	if (!map)
-		die("SDL map surface init");
-
+	screen_fmt = screen->format;
+	map_rshift = screen_fmt->Rshift;
+	map_gshift = screen_fmt->Gshift;
+	map_bshift = screen_fmt->Bshift;
+	regions = g_hash_table_new(coord_hash, coord_equal);
 	map_mutex = g_mutex_new();
-
 	map_flags |= MAP_FLAG_CHOP;
-
 #ifdef FEAT_FULLCHUNK
 	map_flags |= MAP_FLAG_LIGHTS;
 #endif
+}
+
+static SDL_Surface *map_create_region(struct coord cc)
+{
+	struct coord *key = g_new(struct coord, 1);
+	SDL_Surface *region = SDL_CreateRGBSurface(SDL_SWSURFACE, REGION_XSIZE, REGION_ZSIZE, 32, screen_fmt->Rmask, screen_fmt->Gmask, screen_fmt->Bmask, 0);
+	if (!region)
+		die("SDL map surface init");
+	*key = cc;
+	g_hash_table_insert(regions, key, region);
+	return region;
+}
+
+static SDL_Surface *map_get_region(struct coord cc)
+{
+	cc.x = REGION_IDX(cc.x);
+	cc.z = REGION_IDX(cc.z);
+	SDL_Surface *region = g_hash_table_lookup(regions, &cc);
+	return region ? region : map_create_region(cc);
 }
 
 inline void map_repaint(void)
 {
 	SDL_Event e = { .type = MCMAP_EVENT_REPAINT };
 	SDL_PushEvent(&e);
+}
+
+void map_update_chunk(jint cx, jint cz)
+{
+	jint cxo = REGION_OFF(cx);
+	jint czo = REGION_OFF(cz);
+
+	struct coord cc = { .x = cx, .z = cz };
+	struct chunk *c = world_chunk(&cc, 0);
+
+	SDL_Surface *region = map_get_region(cc);
+	SDL_LockSurface(region);
+	Uint32 pitch = region->pitch;
+
+	if (!c)
+	{
+		SDL_Rect r = { .x = cxo*CHUNK_XSIZE, .y = czo*CHUNK_ZSIZE, .w = CHUNK_XSIZE, .h = CHUNK_ZSIZE };
+		SDL_FillRect(region, &r, pack_rgb(special_colors[COLOR_UNLOADED]));
+		SDL_UnlockSurface(region);
+		return;
+	}
+
+	unsigned char *pixels = (unsigned char *)region->pixels + czo*CHUNK_ZSIZE*pitch + cxo*CHUNK_XSIZE*4;
+
+	unsigned char *blocks = &c->blocks[0][0][0];
+	unsigned blocks_pitch = CHUNK_YSIZE;
+
+	if (map_mode == MAP_MODE_TOPO)
+	{
+		blocks = &c->height[0][0];
+		blocks_pitch = 1;
+	}
+
+	unsigned blocks_xpitch = CHUNK_ZSIZE*blocks_pitch;
+
+	for (jint bz = 0; bz < CHUNK_ZSIZE; bz++)
+	{
+		Uint32 *p = (Uint32*)pixels;
+		unsigned char *b = blocks;
+
+		for (jint bx = 0; bx < CHUNK_XSIZE; bx++)
+		{
+			Uint32 y = c->height[bx][bz];
+
+			/* select basic color */
+
+			struct rgb rgb;
+
+			if (map_mode == MAP_MODE_TOPO)
+			{
+				Uint32 v = *b;
+				if (v < 64)
+					rgb = RGB(4*v, 4*v, 0);
+				else
+					rgb = RGB(255, 255-4*(v-64), 0);
+			}
+			else
+			{
+				if (map_mode == MAP_MODE_CROSS)
+					y = map_y;
+				else if (map_flags & MAP_FLAG_CHOP && y >= ceiling_y)
+				{
+					y = ceiling_y - 1;
+					while (air(b[y]) && y > 1)
+						y--;
+				}
+
+				rgb = block_colors[b[y]];
+			}
+
+			/* apply shadings and such */
+
+			#define TRANSFORM_RGB(expr) \
+				do { \
+					Uint8 x; \
+					x = rgb.r; rgb.r = (expr); \
+					x = rgb.g; rgb.g = (expr); \
+					x = rgb.b; rgb.b = (expr); \
+				} while (0)
+
+#ifdef FEAT_FULLCHUNK
+
+#define LIGHT_EXP1 60800
+#define LIGHT_EXP2 64000
+
+			if (map_flags & MAP_FLAG_LIGHTS)
+			{
+				int ly = y+1;
+				if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
+
+				int lv_block = c->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2],
+					lv_day = c->light_sky[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2];
+
+				if (ly & 1)
+					lv_block >>= 4, lv_day >>= 4;
+				else
+					lv_block &= 0xf, lv_day &= 0xf;
+
+				lv_day -= map_darken;
+				if (lv_day < 0) lv_day = 0;
+				Uint32 block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
+
+				Uint32 lf = 0x10000;
+
+				for (int i = lv_block; i < 15; i++)
+					lf = (lf*block_exp) >> 16;
+				for (int i = lv_day; i < 15; i++)
+					lf = (lf*LIGHT_EXP1) >> 16;
+
+				TRANSFORM_RGB((x*lf) >> 16);
+			}
+#endif /* FEAT_FULLCHUNK */
+
+			if (water(c->blocks[bx][bz][y]))
+			{
+				if (map_mode == MAP_MODE_TOPO)
+					rgb = block_colors[0x08];
+
+				jint h = y;
+				while (--h)
+					if (water(c->blocks[bx][bz][h]))
+						TRANSFORM_RGB(x*7/8);
+					else
+						break;
+			}
+
+#undef TRANSFORM_RGB
+
+			/* update bitmap */
+
+			*p++ = pack_rgb(rgb);
+			b += blocks_xpitch;
+		}
+
+		pixels += pitch;
+		blocks += blocks_pitch;
+	}
+
+	SDL_UnlockSurface(region);
 }
 
 void map_update(jint x1, jint x2, jint z1, jint z2)
@@ -159,157 +311,15 @@ void map_update(jint x1, jint x2, jint z1, jint z2)
 
 		map_min_x = x1; map_max_x = x2;
 		map_min_z = z1; map_max_z = z2;
-
-		jint xs = x2 - x1 + 1, zs = z2 - z1 + 1;
-
-		Uint32 rmask = map->format->Rmask, gmask = map->format->Gmask, bmask = map->format->Bmask;
-
-		SDL_FreeSurface(map);
-		map = SDL_CreateRGBSurface(SDL_SWSURFACE, xs*CHUNK_XSIZE, zs*CHUNK_ZSIZE, 32, rmask, gmask, bmask, 0);
-		if (!map)
-			die("SDL map resize");
 	}
-
-	SDL_LockSurface(map);
-	Uint32 pitch = map->pitch;
 
 	for (jint cz = z1; cz <= z2; cz++)
 	{
-		jint czo = cz - map_min_z;
-
 		for (jint cx = x1; cx <= x2; cx++)
 		{
-			jint cxo = cx - map_min_x;
-
-			struct coord cc = { .x = cx, .z = cz };
-			struct chunk *c = world_chunk(&cc, 0);
-
-			if (!c)
-			{
-				SDL_Rect r = { .x = cxo*CHUNK_XSIZE, .y = czo*CHUNK_ZSIZE, .w = CHUNK_XSIZE, .h = CHUNK_ZSIZE };
-				SDL_FillRect(map, &r, pack_rgb(special_colors[COLOR_UNLOADED]));
-				continue;
-			}
-
-			unsigned char *pixels = (unsigned char *)map->pixels + czo*CHUNK_ZSIZE*pitch + cxo*CHUNK_XSIZE*4;
-
-			unsigned char *blocks = &c->blocks[0][0][0];
-			unsigned blocks_pitch = CHUNK_YSIZE;
-
-			if (map_mode == MAP_MODE_TOPO)
-			{
-				blocks = &c->height[0][0];
-				blocks_pitch = 1;
-			}
-
-			unsigned blocks_xpitch = CHUNK_ZSIZE*blocks_pitch;
-
-			for (jint bz = 0; bz < CHUNK_ZSIZE; bz++)
-			{
-				Uint32 *p = (Uint32*)pixels;
-				unsigned char *b = blocks;
-
-				for (jint bx = 0; bx < CHUNK_XSIZE; bx++)
-				{
-					Uint32 y = c->height[bx][bz];
-
-					/* select basic color */
-
-					struct rgb rgb;
-
-					if (map_mode == MAP_MODE_TOPO)
-					{
-						Uint32 v = *b;
-						if (v < 64)
-							rgb = RGB(4*v, 4*v, 0);
-						else
-							rgb = RGB(255, 255-4*(v-64), 0);
-					}
-					else
-					{
-						if (map_mode == MAP_MODE_CROSS)
-							y = map_y;
-						else if (map_flags & MAP_FLAG_CHOP && y >= ceiling_y)
-						{
-							y = ceiling_y - 1;
-							while (air(b[y]) && y > 1)
-								y--;
-						}
-
-						rgb = block_colors[b[y]];
-					}
-
-					/* apply shadings and such */
-
-					#define TRANSFORM_RGB(expr) \
-						do { \
-							Uint8 x; \
-							x = rgb.r; rgb.r = (expr); \
-							x = rgb.g; rgb.g = (expr); \
-							x = rgb.b; rgb.b = (expr); \
-						} while (0)
-
-#ifdef FEAT_FULLCHUNK
-
-#define LIGHT_EXP1 60800
-#define LIGHT_EXP2 64000
-
-					if (map_flags & MAP_FLAG_LIGHTS)
-					{
-						int ly = y+1;
-						if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
-
-						int lv_block = c->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2],
-							lv_day = c->light_sky[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2];
-
-						if (ly & 1)
-							lv_block >>= 4, lv_day >>= 4;
-						else
-							lv_block &= 0xf, lv_day &= 0xf;
-
-						lv_day -= map_darken;
-						if (lv_day < 0) lv_day = 0;
-						Uint32 block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
-
-						Uint32 lf = 0x10000;
-
-						for (int i = lv_block; i < 15; i++)
-							lf = (lf*block_exp) >> 16;
-						for (int i = lv_day; i < 15; i++)
-							lf = (lf*LIGHT_EXP1) >> 16;
-
-						TRANSFORM_RGB((x*lf) >> 16);
-					}
-#endif /* FEAT_FULLCHUNK */
-
-					if (water(c->blocks[bx][bz][y]))
-					{
-						if (map_mode == MAP_MODE_TOPO)
-							rgb = block_colors[0x08];
-
-						jint h = y;
-						while (--h)
-							if (water(c->blocks[bx][bz][h]))
-								TRANSFORM_RGB(x*7/8);
-							else
-								break;
-					}
-
-#undef TRANSFORM_RGB
-
-					/* update bitmap */
-
-					*p++ = pack_rgb(rgb);
-					b += blocks_xpitch;
-				}
-
-				pixels += pitch;
-				blocks += blocks_pitch;
-			}
+			map_update_chunk(cx, cz);
 		}
 	}
-
-	SDL_UnlockSurface(map);
 
 	g_mutex_unlock(map_mutex);
 
@@ -595,51 +605,20 @@ void map_draw(SDL_Surface *screen)
 
 	if (map_scale == 1)
 	{
-		SDL_Rect rect_dst = { .x = 0, .y = 0, .w = screen->w, .h = screen->h };
+		SDL_Rect rect_dst = { .x = 0, .y = 0, .w = REGION_XSIZE, .h = REGION_ZSIZE };
 		SDL_Rect rect_src = {
-			.x = scr_x0 - map_min_x*CHUNK_XSIZE,
-			.y = scr_z0 - map_min_z*CHUNK_ZSIZE,
-			.w = screen->w,
-			.h = screen->h
+			.x = 0,
+			.y = 0,
+			.w = REGION_ZSIZE,
+			.h = REGION_XSIZE
 		};
 
-		if (rect_src.x < 0)
-		{
-			int d = -rect_src.x;
-			rect_dst.x += d;
-			rect_src.w -= d;
-			rect_dst.w -= d;
-			rect_src.x = 0;
-		}
-
-		if (rect_src.y < 0)
-		{
-			int d = -rect_src.y;
-			rect_dst.y += d;
-			rect_src.h -= d;
-			rect_dst.h -= d;
-			rect_src.y = 0;
-		}
-
-		if (rect_src.x + rect_src.w > map->w)
-		{
-			int d = map->w - (rect_src.x + rect_src.w);
-			rect_src.w -= d;
-			rect_dst.w -= d;
-		}
-
-		if (rect_src.y + rect_src.h > map->h)
-		{
-			int d = map->h - (rect_src.y + rect_src.h);
-			rect_src.h -= d;
-			rect_dst.h -= d;
-		}
-
-		if (rect_dst.w > 0 && rect_dst.h > 0)
-			SDL_BlitSurface(map, &rect_src, screen, &rect_dst);
+		struct coord cc = { .x = player_x/16, .z = player_z/16 };
+		SDL_BlitSurface(map_get_region(cc), &rect_src, screen, &rect_dst);
 	}
 	else
 	{
+	#if 0
 		SDL_LockSurface(screen);
 		SDL_LockSurface(map);
 
@@ -673,6 +652,7 @@ void map_draw(SDL_Surface *screen)
 
 		SDL_UnlockSurface(map);
 		SDL_UnlockSurface(screen);
+	#endif
 	}
 
 	g_mutex_unlock(map_mutex);

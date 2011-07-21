@@ -45,13 +45,14 @@ extern jint chunk_max_x, chunk_max_z;
 extern volatile int world_running;
 
 void world_init(void);
+void world_destroy(void);
 
 gpointer world_thread(gpointer data);
 
 struct chunk *world_chunk(struct coord *coord, int gen);
 unsigned char *world_stack(jint x, jint z, int gen);
 
-void world_handle_chunk(jint x0, jint y0, jint z0, jint xs, jint ys, jint zs, struct buffer zb, struct buffer zb_meta, struct buffer zb_light_blocks, struct buffer zb_light_sky);
+gboolean world_handle_chunk(jint x0, jint y0, jint z0, jint xs, jint ys, jint zs, struct buffer zb, struct buffer zb_meta, struct buffer zb_light_blocks, struct buffer zb_light_sky, gboolean update_map);
 
 jint world_getheight(jint x, jint z);
 

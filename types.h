@@ -26,7 +26,7 @@ struct coord
 struct buffer
 {
 	unsigned len;
-        unsigned char *data;
+	unsigned char *data;
 };
 
 #define OFFSET_BUFFER(buf, n) { (buf).len - (n), (buf).data + (n) }

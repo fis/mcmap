@@ -5,6 +5,15 @@
 
 #define MCMAP_EVENT_REPAINT SDL_USEREVENT
 
+#define REGION_XSIZE (CHUNK_XSIZE*32)
+#define REGION_ZSIZE (CHUNK_ZSIZE*32)
+
+#define REGION_BITS 5
+#define REGION_SIZE (1 << REGION_BITS)
+/* relies on implementation-defined arithmetic shift behaviour */
+#define REGION_IDX(coord) ((coord) >> REGION_BITS)
+#define REGION_OFF(coord) ((coord) & (REGION_SIZE-1))
+
 struct rgb
 {
 	Uint8 r;
@@ -26,6 +35,10 @@ enum map_mode
 #define MAP_FLAG_LIGHTS 0x02
 #define MAP_FLAG_NIGHT 0x04
 #define MAP_FLAG_CHOP 0x08
+
+//extern SDL_Surface *map;
+//extern jint map_min_x, map_min_z;
+//extern jint map_max_x, map_max_z;
 
 extern double player_dx, player_dy, player_dz;
 extern jint player_x, player_y, player_z;

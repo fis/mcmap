@@ -23,10 +23,13 @@ enum compression
 	COMPRESSION_ZLIB = 2
 };
 
-gchar *world;
+//gchar *world;
 
+#if 0
 static void process_region(gchar *filename, jint x, jint z)
 {
+	world_init();
+
 	gchar *region;
 	GError *error = NULL;
 	gboolean ok = g_file_get_contents(filename, &region, NULL, &error);
@@ -55,12 +58,16 @@ static void process_region(gchar *filename, jint x, jint z)
 		struct buffer zb_light_sky = nbt_blob(nbt_struct_field(chunk, "SkyLight"));
 		jint cx = x*32 + i%32;
 		jint cz = z*32 + i/32;
-		world_handle_chunk(cx*16, 0, cz*16, CHUNK_XSIZE, CHUNK_YSIZE, CHUNK_ZSIZE, zb, zb_meta, zb_light_blocks, zb_light_sky);
+		world_handle_chunk(cx*16, 0, cz*16, CHUNK_XSIZE, CHUNK_YSIZE, CHUNK_ZSIZE, zb, zb_meta, zb_light_blocks, zb_light_sky, TRUE);
 	}
+
+	world_destroy();
 }
+#endif
 
 int mcmap_main(int argc, char **argv)
 {
+#if 0
 	setlocale(LC_ALL, "");
 
 	/* command line option grokking */
@@ -88,14 +95,13 @@ int mcmap_main(int argc, char **argv)
 	log_print("[INFO] Starting mapping process.");
 
 	g_thread_init(0);
-	world_init();
 
 	putenv("SDL_VIDEODRIVER=dummy");
 
 	if (SDL_Init(SDL_INIT_VIDEO) != 0)
 		die("Failed to initialize SDL.");
 
-	SDL_Surface *screen = SDL_SetVideoMode(999, 999, 32, SDL_SWSURFACE);
+	SDL_Surface *screen = SDL_SetVideoMode(16, 16, 32, SDL_SWSURFACE);
 
 	if (!screen)
 		dief("Failed to create SDL surface: %s", SDL_GetError());
@@ -125,10 +131,13 @@ int mcmap_main(int argc, char **argv)
 	g_dir_close(regions);
 
 	log_print("[INFO] Saving map...");
-	if (IMG_SavePNG("map.png", screen, 9) != 0)
+	world_init();
+	if (IMG_SavePNG("map.png", map, 9) != 0)
 		dief("Failed to create PNG: %s", SDL_GetError());
 
 	log_print("[INFO] Mapping complete.");
 
+	return 0;
+#endif
 	return 0;
 }
