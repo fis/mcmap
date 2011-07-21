@@ -143,6 +143,12 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 
 	jint yupds = ys;
 
+	if (ys < 0)
+	{
+		log_print("[WARN] Invalid chunk size! Probably WorldEdit; go yell at the author.");
+		return FALSE;
+	}
+
 	if (y0 > CHUNK_YSIZE)
 		stopf("too high chunk update: %d..%d", y0, y0+ys-1);
 	else if (y0 + ys > CHUNK_YSIZE)
