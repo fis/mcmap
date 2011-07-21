@@ -20,7 +20,7 @@ struct nbt_tag
 	{
 		int intv;
 		long long longv;
-		double doublev;
+		jdouble doublev;
 		struct buffer blobv;
 		GPtrArray *structv;
 	} data;
@@ -297,6 +297,7 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 	jint t;
 	jlong tl;
 	jbyte tb;
+	jfloat tf;
 	unsigned char *p;
 
 	struct nbt_tag *sub;
@@ -335,7 +336,12 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 		break;
 
 	case NBT_TAG_FLOAT:
-		die("nbt parse_tag: NBT_TAG_FLOAT unimplemented");
+		if (len < 4) die("truncated NBT tag: short float");
+		p = (unsigned char *)&tf;
+		p[0] = data[3]; p[1] = data[2]; p[2] = data[1]; p[3] = data[0];
+		*taglen += 4;
+		tag->data.doublev = tf;
+		break;
 
 	case NBT_TAG_DOUBLE:
 		if (len < 8) die("truncated NBT tag: short double");
