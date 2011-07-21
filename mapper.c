@@ -23,6 +23,43 @@ enum compression
 	COMPRESSION_ZLIB = 2
 };
 
+gchar *world;
+
+static void process_region(int x, int z)
+{
+	gchar *filename = g_strdup_printf("%s/region/r.%d.%d.mcr", world, x, z);
+	gchar *region;
+
+	GError *error;
+	gsize len;
+	gboolean ok = g_file_get_contents(filename, &region, &len, &error);
+	g_free(filename);
+	if (!ok)
+		dief("Couldn't read %s: %s", filename, error->message);
+
+	/* for each chunk... */
+	for (int i = 0; i < 1024; i++)
+	{
+		gchar *p = region + i*4;
+		uint32_t offset = (p[0] << 16) | (p[1] << 8) | p[2];
+		/* seek there */
+		p = region + offset*4096;
+		printf("%ld bytes from EOF\n", (region + len) - p);
+		/* and process it */
+		uint32_t len = (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
+		enum compression comp = p[4];
+		if (comp != COMPRESSION_ZLIB)
+			dief("Wrong compression type %d", comp);
+		struct buffer buf = { len, (unsigned char *)(p + 5) };
+		struct nbt_tag *chunk = nbt_uncompress(buf);
+		struct buffer zb = nbt_blob(nbt_struct_field(chunk, "Blocks"));
+		struct buffer zb_meta = nbt_blob(nbt_struct_field(chunk, "Data"));
+		struct buffer zb_light_blocks = nbt_blob(nbt_struct_field(chunk, "BlockLight"));
+		struct buffer zb_light_sky = nbt_blob(nbt_struct_field(chunk, "SkyLight"));
+		world_handle_chunk(0, 0, 0, CHUNK_XSIZE, CHUNK_YSIZE, CHUNK_ZSIZE, zb, zb_meta, zb_light_blocks, zb_light_sky);
+	}
+}
+
 int mcmap_main(int argc, char **argv)
 {
 	setlocale(LC_ALL, "");
@@ -38,9 +75,7 @@ int mcmap_main(int argc, char **argv)
 
 	g_option_context_add_main_entries(gopt, gopt_entries, 0);
 	if (!g_option_context_parse(gopt, &argc, &argv, &gopt_error))
-	{
 		die(gopt_error->message);
-	}
 
 	if (argc != 2)
 	{
@@ -48,6 +83,8 @@ int mcmap_main(int argc, char **argv)
 		fputs(usage, stderr);
 		return 1;
 	}
+
+	world = (gchar *) argv[1];
 
 	log_print("[INFO] Mapping process starting...");
 
@@ -68,18 +105,7 @@ int mcmap_main(int argc, char **argv)
 	map_setscale(1, 0);
 
 	log_print("[INFO] Processing region (0,0)...");
-
-	gchar *region;
-	g_file_get_contents("/home/elliott/.minecraft/saves/server/region/r.0.0.mcr", &region, NULL, NULL);
-	region += 8192;
-	uint32_t len = (region[0] << 24) | (region[1] << 16) | (region[2] << 8) | region[3];
-	enum compression comp = region[4];
-	if (comp != COMPRESSION_ZLIB)
-		dief("Wrong compression type %d", comp);
-	struct buffer buf = { len, (unsigned char *)(region + 5) };
-
-	struct nbt_tag *chunk = nbt_uncompress(buf);
-	log_print("%p", nbt_struct_field(chunk, "Blocks"));
+	process_region(0, 0);
 
 	log_print("[INFO] Saving map...");
 	map_draw(screen);

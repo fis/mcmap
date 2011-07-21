@@ -117,7 +117,7 @@ void nbt_free(gpointer tag)
 
 struct buffer nbt_blob(struct nbt_tag *s)
 {
-	if (s->type != NBT_TAG_BLOB || s->type != NBT_TAG_STR)
+	if (s->type != NBT_TAG_BLOB && s->type != NBT_TAG_STR)
 		dief("nbt_blob: not a blob or a string: %d", s->type);
 
 	return s->data.blobv;
