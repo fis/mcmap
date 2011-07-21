@@ -18,5 +18,7 @@ LDFLAGS += -Lwin/SDL-1.2.14/lib -lSDL
 
 EXE := .exe
 
+$(OBJDIR)/mcmapper$(EXE): LDFLAGS += -lpng
+
 win32-res.o: win32.rc win32-res.h
 	$(WINDRES) -O coff $< $@

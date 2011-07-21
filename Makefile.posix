@@ -5,6 +5,8 @@ libs := gthread-2.0 sdl
 
 include Makefile.common
 
+$(OBJDIR)/mcmapper$(EXE): LDFLAGS += -lpng
+
 CFLAGS += -DPLATFORM_POSIX
 CFLAGS += $(shell pkg-config --cflags $(libs))
 

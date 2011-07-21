@@ -84,9 +84,9 @@ jint world_getheight(jint x, jint z)
 	return c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
 }
 
-static void handle_chunk(jint x0, jint y0, jint z0,
-                         jint xs, jint ys, jint zs,
-                         unsigned zlen, unsigned char *zdata)
+static void handle_compressed_chunk(jint x0, jint y0, jint z0,
+                                    jint xs, jint ys, jint zs,
+                                    unsigned zlen, unsigned char *zdata)
 {
 	static unsigned char zbuf[256*1024];
 	int err;
@@ -117,6 +117,24 @@ static void handle_chunk(jint x0, jint y0, jint z0,
 		stopf("broken decompressed chunk length: %d != %d and < %d",
 		      (int)zbuf_len, (int)(5*xs*ys*zs+1)/2, xs*ys*zs);
 
+	struct buffer zb = { zbuf_len, zbuf };
+#ifdef FEAT_FULLCHUNK
+	struct buffer zb_meta = OFFSET_BUFFER(zb, xs*ys*zs);
+	struct buffer zb_light_blocks = OFFSET_BUFFER(zb_meta, (xs*ys*zs+1)/2);
+	struct buffer zb_light_sky = OFFSET_BUFFER(zb_light_blocks, (xs*ys*zs+1)/2);
+#else
+	struct buffer zb_meta = { 0, 0 };
+	struct buffer zb_light_blocks = { 0, 0 };
+	struct buffer zb_light_sky = { 0, 0 };
+#endif
+	world_handle_chunk(x0, y0, z0, xs, ys, zs, zb, zb_meta, zb_light_blocks, zb_light_sky);
+}
+
+void world_handle_chunk(jint x0, jint y0, jint z0,
+                        jint xs, jint ys, jint zs,
+                        struct buffer zb, struct buffer zb_meta,
+                        struct buffer zb_light_blocks, struct buffer zb_light_sky)
+{
 	struct coord current_chunk = { .x = -0x80000000, .z = -0x80000000 };
 	struct chunk *c = 0;
 
@@ -129,14 +147,6 @@ static void handle_chunk(jint x0, jint y0, jint z0,
 
 	jint c_min_x = INT_MAX, c_min_z = INT_MAX;
 	jint c_max_x = INT_MIN, c_max_z = INT_MIN;
-
-	unsigned char *zb = zbuf;
-#ifdef FEAT_FULLCHUNK
-	unsigned char *zb_meta = zbuf + xs*ys*zs;
-	unsigned char *zb_light_blocks = zb_meta + (xs*ys*zs+1)/2;
-	unsigned char *zb_light_sky = zb_light_blocks + (xs*ys*zs+1)/2;
-#endif
-
 	int changed = 0;
 
 	for (jint x = x0; x < x0+xs; x++)
@@ -151,22 +161,22 @@ static void handle_chunk(jint x0, jint y0, jint z0,
 				current_chunk = cc;
 			}
 
-			if (!changed && memcmp(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, yupds) != 0)
+			if (!changed && memcmp(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb.data, yupds) != 0)
 				changed = 1;
 
-			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb, yupds);
-			zb += ys;
+			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb.data, yupds);
+			ADVANCE_BUFFER(zb, ys);
 
 #ifdef FEAT_FULLCHUNK
-			if (zb_meta + (ys+1)/2 - zbuf <= zbuf_len)
-				memcpy(&c->meta[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_meta, (yupds+1)/2);
-			if (zb_light_blocks + (ys+1)/2 - zbuf <= zbuf_len)
-				memcpy(&c->light_blocks[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_blocks, (yupds+1)/2);
-			if (zb_light_sky + (ys+1)/2 - zbuf <= zbuf_len)
-				memcpy(&c->light_sky[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_sky, (yupds+1)/2);
-			zb_meta += (ys+1)/2;
-			zb_light_blocks += (ys+1)/2;
-			zb_light_sky += (ys+1)/2;
+			if ((ys+1)/2 <= zb_meta.len)
+				memcpy(&c->meta[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_meta.data, (yupds+1)/2);
+			if ((ys+1)/2 <= zb_light_blocks.len)
+				memcpy(&c->light_blocks[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_blocks.data, (yupds+1)/2);
+			if ((ys+1)/2 <= zb_light_sky.len)
+				memcpy(&c->light_sky[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_sky.data, (yupds+1)/2);
+			ADVANCE_BUFFER(zb_meta, (ys+1)/2);
+			ADVANCE_BUFFER(zb_light_blocks, (ys+1)/2);
+			ADVANCE_BUFFER(zb_light_sky, (ys+1)/2);
 #endif
 
 			jint h = c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
@@ -389,9 +399,9 @@ gpointer world_thread(gpointer data)
 		{
 		case PACKET_CHUNK:
 			p = &packet->bytes[packet->field_offset[6]];
-			handle_chunk(packet_int(packet, 0), packet_int(packet, 1), packet_int(packet, 2),
-			             packet_int(packet, 3)+1, packet_int(packet, 4)+1, packet_int(packet, 5)+1,
-			             (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3], &p[4]);
+			handle_compressed_chunk(packet_int(packet, 0), packet_int(packet, 1), packet_int(packet, 2),
+			                        packet_int(packet, 3)+1, packet_int(packet, 4)+1, packet_int(packet, 5)+1,
+			                        (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3], &p[4]);
 			break;
 
 		case PACKET_MULTI_SET_BLOCK:
