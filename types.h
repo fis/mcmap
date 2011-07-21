@@ -10,6 +10,10 @@ typedef int16_t jshort;
 typedef int32_t jint;
 typedef int64_t jlong;
 
+/* hope your system has suitable IEEE-compatible types... */
+typedef float jfloat;
+typedef double jdouble;
+
 /* 2d points for hash table keys */
 
 struct coord
