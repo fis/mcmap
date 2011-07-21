@@ -31,6 +31,10 @@ struct nbt_tag *nbt_new_struct(char *name);
 
 void nbt_free(gpointer tag);
 
+jint nbt_blob_len(struct nbt_tag *s);
+unsigned char *nbt_blob_data(struct nbt_tag *s);
+
+struct nbt_tag *nbt_struct_field(struct nbt_tag *s, const char *name);
 void nbt_struct_add(struct nbt_tag *s, struct nbt_tag *field);
 
 unsigned char *nbt_compress(struct nbt_tag *tag, unsigned *len);
