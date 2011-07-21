@@ -197,4 +197,6 @@ int mcmap_main(int argc, char **argv)
 	/* start the user interface side */
 
 	start_ui(!opt.nomap, opt.scale, !opt.wndsize, wnd_w, wnd_h);
+
+	return 0;
 }

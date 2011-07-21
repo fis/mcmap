@@ -19,4 +19,13 @@ struct coord
 
 #define COORD_EQUAL(a,b) ((a).x == (b).x && (a).z == (b).z)
 
+struct buffer
+{
+	unsigned len;
+        unsigned char *data;
+};
+
+#define OFFSET_BUFFER(buf, n) { (buf).len - (n), (buf).data + (n) }
+#define ADVANCE_BUFFER(buf, n) do { (buf).len -= n; (buf).data += n; } while (0)
+
 #endif /* MCMAP_TYPES_H */

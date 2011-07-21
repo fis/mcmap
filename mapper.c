@@ -11,6 +11,7 @@
 #include "common.h"
 #include "map.h"
 #include "world.h"
+#include "nbt.h"
 
 #include "IMG_savepng.h"
 
@@ -66,8 +67,12 @@ int mcmap_main(int argc, char **argv)
 	map_init(screen);
 	map_setscale(1, 0);
 
-        struct coord cc = { .x = 0, .z = 0 };
-	world_chunk(&cc, 1);
+	gchar *region;
+	g_file_get_contents("/home/elliott/.minecraft/saves/server/region/r.0.0.mcr", &region, NULL, NULL);
+	region += 8191;
+	uint32_t len = (region[0] << 24) | (region[1] << 16) | (region[2] << 8) | region[3];
+	struct buffer buf = { len, (unsigned char *)(region + 3) };
+	nbt_uncompress(buf);
 
 	map_draw(screen);
 
@@ -76,4 +81,6 @@ int mcmap_main(int argc, char **argv)
 		dief("Failed to create PNG: %s", SDL_GetError());
 		return 1;
 	}
+
+	return 0;
 }

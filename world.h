@@ -39,15 +39,6 @@ struct entity
 	jint ax, ay, az; /* in absolute-int format */
 };
 
-struct buffer
-{
-	unsigned len;
-	unsigned char *data;
-};
-
-#define OFFSET_BUFFER(buf, n) { (buf).len - (n), (buf).data + (n) }
-#define ADVANCE_BUFFER(buf, n) do { (buf).len -= n; (buf).data += n; } while (0)
-
 extern jint chunk_min_x, chunk_min_z;
 extern jint chunk_max_x, chunk_max_z;
 

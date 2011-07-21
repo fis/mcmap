@@ -360,13 +360,13 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 	return tag;
 }
 
-struct nbt_tag *nbt_uncompress(unsigned char *data, unsigned len)
+struct nbt_tag *nbt_uncompress(struct buffer buf)
 {
 	GByteArray *arr = g_byte_array_new();
 
 	z_stream zs;
-	zs.next_in = data;
-	zs.avail_in = len;
+	zs.next_in = buf.data;
+	zs.avail_in = buf.len;
 	zs.zalloc = Z_NULL;
 	zs.zfree = Z_NULL;
 	zs.opaque = Z_NULL;

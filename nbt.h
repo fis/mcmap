@@ -34,6 +34,6 @@ void nbt_free(gpointer tag);
 void nbt_struct_add(struct nbt_tag *s, struct nbt_tag *field);
 
 unsigned char *nbt_compress(struct nbt_tag *tag, unsigned *len);
-struct nbt_tag *nbt_uncompress(unsigned char *data, unsigned len);
+struct nbt_tag *nbt_uncompress(struct buffer buf);
 
 #endif /* MCMAP_NBT_H */
