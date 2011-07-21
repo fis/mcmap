@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h> /* NihilistDandy needed this */
 #include <unistd.h>
 #include <errno.h>
 #include <glib.h>
