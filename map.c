@@ -655,17 +655,17 @@ void map_draw(SDL_Surface *screen)
 			for (int reg_py = 0; reg_py < REGION_ZSIZE; reg_py++)
 			{
 				int y0 = reg_sy + reg_py*map_scale;
-				if (y0 < 0) continue;
-
 				for (int y = y0; y < y0+map_scale && y < screen->h; y++)
 				{
+					if (y < 0) continue;
+
 					for (int reg_px = 0; reg_px < REGION_XSIZE; reg_px++)
 					{
 						int x0 = reg_sx + reg_px*map_scale;
-						if (x0 < 0) continue;
-
 						for (int x = x0; x < x0+map_scale && x < screen->w; x++)
 						{
+							if (x < 0) continue;
+
 							void *s = (unsigned char *)screen->pixels + y*screen->pitch + 4*x;
 							void *m = (unsigned char *)regs->pixels + reg_py*regs->pitch + 4*reg_px;
 							*(Uint32 *)s = *(Uint32 *)m;
