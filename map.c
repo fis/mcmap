@@ -143,6 +143,12 @@ static SDL_Surface *map_create_region(struct coord cc)
 		die("SDL map surface init");
 	*key = cc;
 	g_hash_table_insert(regions, key, region);
+
+	SDL_LockSurface(region);
+	SDL_Rect r = { .x = 0, .y = 0, .w = REGION_XSIZE, .h = REGION_ZSIZE };
+	SDL_FillRect(region, &r, pack_rgb(special_colors[COLOR_UNLOADED]));
+	SDL_UnlockSurface(region);
+
 	return region;
 }
 
@@ -168,17 +174,12 @@ void map_update_chunk(jint cx, jint cz)
 	struct coord cc = { .x = cx, .z = cz };
 	struct chunk *c = world_chunk(&cc, 0);
 
+	if (!c)
+		return;
+
 	SDL_Surface *region = map_get_region(cc, 1);
 	SDL_LockSurface(region);
 	Uint32 pitch = region->pitch;
-
-	if (!c)
-	{
-		SDL_Rect r = { .x = cxo*CHUNK_XSIZE, .y = czo*CHUNK_ZSIZE, .w = CHUNK_XSIZE, .h = CHUNK_ZSIZE };
-		SDL_FillRect(region, &r, pack_rgb(special_colors[COLOR_UNLOADED]));
-		SDL_UnlockSurface(region);
-		return;
-	}
 
 	unsigned char *pixels = (unsigned char *)region->pixels + czo*CHUNK_ZSIZE*pitch + cxo*CHUNK_XSIZE*4;
 
