@@ -25,26 +25,23 @@ enum compression
 
 gchar *world;
 
-static void process_region(int x, int z)
+static void process_region(gchar *filename, jint x, jint z)
 {
-	gchar *filename = g_strdup_printf("%s/region/r.%d.%d.mcr", world, x, z);
 	gchar *region;
-
 	GError *error = NULL;
-	gsize regionsz;
-	gboolean ok = g_file_get_contents(filename, &region, &regionsz, &error);
-	g_free(filename);
+	gboolean ok = g_file_get_contents(filename, &region, NULL, &error);
 	if (!ok)
 		die(error->message);
 
 	/* for each chunk... */
 	for (int i = 0; i < 1024; i++)
 	{
-		gchar *p = region + i*4;
+		unsigned char *p = (unsigned char *)(region + i*4);
 		uint32_t offset = (p[0] << 16) | (p[1] << 8) | p[2];
+		if (offset == 0)
+			continue;
 		/* seek there */
-		p = region + offset*4096;
-		printf("%ld bytes from EOF\n", (region + regionsz) - p);
+		p = (unsigned char *)(region + offset*4096);
 		/* and process it */
 		uint32_t len = (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
 		enum compression comp = p[4];
@@ -56,7 +53,9 @@ static void process_region(int x, int z)
 		struct buffer zb_meta = nbt_blob(nbt_struct_field(chunk, "Data"));
 		struct buffer zb_light_blocks = nbt_blob(nbt_struct_field(chunk, "BlockLight"));
 		struct buffer zb_light_sky = nbt_blob(nbt_struct_field(chunk, "SkyLight"));
-		world_handle_chunk(0, 0, 0, CHUNK_XSIZE, CHUNK_YSIZE, CHUNK_ZSIZE, zb, zb_meta, zb_light_blocks, zb_light_sky);
+		jint cx = x*32 + i%32;
+		jint cz = z*32 + i/32;
+		world_handle_chunk(cx*16, 0, cz*16, CHUNK_XSIZE, CHUNK_YSIZE, CHUNK_ZSIZE, zb, zb_meta, zb_light_blocks, zb_light_sky);
 	}
 }
 
@@ -86,7 +85,7 @@ int mcmap_main(int argc, char **argv)
 
 	world = (gchar *) argv[1];
 
-	log_print("[INFO] Mapping process starting...");
+	log_print("[INFO] Starting mapping process.");
 
 	g_thread_init(0);
 	world_init();
@@ -104,11 +103,28 @@ int mcmap_main(int argc, char **argv)
 	map_init(screen);
 	map_setscale(1, 0);
 
-	log_print("[INFO] Processing region (0,0)...");
-	process_region(0, 0);
+	gchar *dirname = g_strconcat(world, "/region", NULL);
+	GError *error = NULL;
+	GDir *regions = g_dir_open(dirname, 0, &error);
+	g_free(dirname);
+	if (!regions)
+		die(error->message);
+	gchar *filename = NULL;
+	while ((filename = (gchar *) g_dir_read_name(regions)))
+	{
+		gchar xbuf[64], ybuf[64];
+		if (sscanf(filename, "r.%[^.].%[^.].mcr", xbuf, ybuf) < 1)
+			continue;
+		jint x = (jint) strtol(xbuf, NULL, 36);
+		jint y = (jint) strtol(ybuf, NULL, 36);
+		log_print("[INFO] Processing region (%d,%d)", x, y);
+		gchar *full_path = g_strconcat(world, "/region/", filename, NULL);
+		process_region(full_path, x, y);
+		g_free(full_path);
+	}
+	g_dir_close(regions);
 
 	log_print("[INFO] Saving map...");
-	map_draw(screen);
 	if (IMG_SavePNG("map.png", screen, 9) != 0)
 		dief("Failed to create PNG: %s", SDL_GetError());
 
