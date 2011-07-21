@@ -31,8 +31,8 @@ static void process_region(int x, int z)
 	gchar *region;
 
 	GError *error = NULL;
-	gsize len;
-	gboolean ok = g_file_get_contents(filename, &region, &len, &error);
+	gsize regionsz;
+	gboolean ok = g_file_get_contents(filename, &region, &regionsz, &error);
 	g_free(filename);
 	if (!ok)
 		die(error->message);
@@ -44,7 +44,7 @@ static void process_region(int x, int z)
 		uint32_t offset = (p[0] << 16) | (p[1] << 8) | p[2];
 		/* seek there */
 		p = region + offset*4096;
-		printf("%ld bytes from EOF\n", (region + len) - p);
+		printf("%ld bytes from EOF\n", (region + regionsz) - p);
 		/* and process it */
 		uint32_t len = (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
 		enum compression comp = p[4];
