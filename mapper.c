@@ -17,6 +17,12 @@
 
 /* standalone mapper */
 
+enum compression
+{
+	COMPRESSION_GZIP = 1,
+	COMPRESSION_ZLIB = 2
+};
+
 int mcmap_main(int argc, char **argv)
 {
 	setlocale(LC_ALL, "");
@@ -51,18 +57,12 @@ int mcmap_main(int argc, char **argv)
 	putenv("SDL_VIDEODRIVER=dummy");
 
 	if (SDL_Init(SDL_INIT_VIDEO) != 0)
-	{
 		die("Failed to initialize SDL.");
-		return 1;
-	}
 
 	SDL_Surface *screen = SDL_SetVideoMode(999, 999, 32, SDL_SWSURFACE);
 
 	if (!screen)
-	{
 		dief("Failed to create SDL surface: %s", SDL_GetError());
-		return 1;
-	}
 
 	map_init(screen);
 	map_setscale(1, 0);
@@ -73,16 +73,16 @@ int mcmap_main(int argc, char **argv)
 	g_file_get_contents("/home/elliott/.minecraft/saves/server/region/r.0.0.mcr", &region, NULL, NULL);
 	region += 8192;
 	uint32_t len = (region[0] << 24) | (region[1] << 16) | (region[2] << 8) | region[3];
+	enum compression comp = region[4];
+	if (comp != COMPRESSION_ZLIB)
+		dief("Wrong compression type %d", comp);
 	struct buffer buf = { len, (unsigned char *)(region + 5) };
-	nbt_uncompress(buf);
+	struct nbt_tag *chunk = nbt_uncompress(buf);
 
 	log_print("[INFO] Saving map...");
 	map_draw(screen);
 	if (IMG_SavePNG("map.png", screen, 9) != 0)
-	{
 		dief("Failed to create PNG: %s", SDL_GetError());
-		return 1;
-	}
 
 	log_print("[INFO] Mapping complete.");
 
