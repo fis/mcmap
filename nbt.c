@@ -21,10 +21,7 @@ struct nbt_tag
 		int intv;
 		long long longv;
 		double doublev;
-		struct {
-			int len;
-			unsigned char *data;
-		} blobv;
+		struct buffer blobv;
 		GPtrArray *structv;
 	} data;
 };
@@ -118,20 +115,12 @@ void nbt_free(gpointer tag)
 	g_free(tag);
 }
 
-jint nbt_blob_len(struct nbt_tag *s)
+struct buffer nbt_blob(struct nbt_tag *s)
 {
 	if (s->type != NBT_TAG_BLOB || s->type != NBT_TAG_STR)
-		dief("nbt_blob_len: not a blob or a string: %d", s->type);
+		dief("nbt_blob: not a blob or a string: %d", s->type);
 
-	return s->data.blobv.len;
-}
-
-unsigned char *nbt_blob_data(struct nbt_tag *s)
-{
-	if (s->type != NBT_TAG_BLOB || s->type != NBT_TAG_STR)
-		dief("nbt_blob_len: not a blob or a string: %d", s->type);
-
-	return s->data.blobv.data;
+	return s->data.blobv;
 }
 
 struct nbt_tag *nbt_struct_field(struct nbt_tag *s, const char *name)

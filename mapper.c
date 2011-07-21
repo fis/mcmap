@@ -77,7 +77,9 @@ int mcmap_main(int argc, char **argv)
 	if (comp != COMPRESSION_ZLIB)
 		dief("Wrong compression type %d", comp);
 	struct buffer buf = { len, (unsigned char *)(region + 5) };
+
 	struct nbt_tag *chunk = nbt_uncompress(buf);
+	log_print("%p", nbt_struct_field(chunk, "Blocks"));
 
 	log_print("[INFO] Saving map...");
 	map_draw(screen);
