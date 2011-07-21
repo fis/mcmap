@@ -30,12 +30,12 @@ static void process_region(int x, int z)
 	gchar *filename = g_strdup_printf("%s/region/r.%d.%d.mcr", world, x, z);
 	gchar *region;
 
-	GError *error;
+	GError *error = NULL;
 	gsize len;
 	gboolean ok = g_file_get_contents(filename, &region, &len, &error);
 	g_free(filename);
 	if (!ok)
-		dief("Couldn't read %s: %s", filename, error->message);
+		die(error->message);
 
 	/* for each chunk... */
 	for (int i = 0; i < 1024; i++)
