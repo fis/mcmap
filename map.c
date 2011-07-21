@@ -45,6 +45,7 @@ static struct rgb block_colors[256] = {
 	[0x15] = {65,  102, 245}, /* lapis lazuli ore */
 	[0x16] = {65,  102, 245}, /* lapis lazuli block */
 	[0x18] = {245, 245, 69},  /* sandstone */
+	[0x1f] = {34,  180, 0},   /* tall grass (same as grass) */
 	[0x23] = {240, 240, 240}, /* cloth */
 	[0x25] = {137, 180, 0},   /* yellow flower */
 	[0x26] = {122, 130, 0},   /* red flower */
