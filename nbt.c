@@ -269,6 +269,7 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 
 	jint t;
 	jlong tl;
+	jbyte tb;
 	unsigned char *p;
 
 	struct nbt_tag *sub;
@@ -339,7 +340,24 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 		break;
 
 	case NBT_TAG_ARRAY:
-		die("nbt parse_tag: NBT_TAG_ARRAY unimplemented");
+		tag->data.structv = g_ptr_array_new_with_free_func(nbt_free);
+		tb = data[0]; /* type tag byte for the elements */
+		t = (jint)((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3]); /* element count; TODO macroize this finally */
+		data += 5; len -= 5; *taglen += 5;
+		for (jint i = 0; i < t; i++)
+		{
+			gchar old[3] = { data[-3], data[-2], data[-1] }; /* TODO this is horrible, HORRIBLE */
+			data[-3] = tb; /* fake a NBT tag byte for the recursive call */
+			data[-2] = 0; data[-1] = 0; /* fake an empty name too */
+			if ((sub = parse_tag(data-3, len+3, &sublen)) == 0)
+				die ("bad NBT tag: failed parsing an array element");
+			g_ptr_array_add(tag->data.structv, sub);
+			memcpy(&data[-3], old, 3); /* restore the clobbered bytes */
+			data += sublen - 3;
+			len -= sublen - 3;
+			*taglen += sublen - 3;
+		}
+		break;
 
 	case NBT_TAG_STRUCT:
 		tag->data.structv = g_ptr_array_new_with_free_func(nbt_free);
