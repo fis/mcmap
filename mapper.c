@@ -75,9 +75,9 @@ int mcmap_main(int argc, char **argv)
 	uint32_t len = (region[0] << 24) | (region[1] << 16) | (region[2] << 8) | region[3];
 	enum compression comp = region[4];
 	if (comp != COMPRESSION_ZLIB)
-		die("Wrong compression type.");
+		dief("Wrong compression type %d", comp);
 	struct buffer buf = { len, (unsigned char *)(region + 5) };
-	nbt_uncompress(buf);
+	struct nbt_tag *chunk = nbt_uncompress(buf);
 
 	log_print("[INFO] Saving map...");
 	map_draw(screen);
