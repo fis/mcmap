@@ -8,6 +8,7 @@
 #include "common.h"
 #include "config.h"
 #include "map.h"
+#include "block.h"
 #include "world.h"
 #include "proxy.h"
 
@@ -222,7 +223,7 @@ void map_update_chunk(jint cx, jint cz)
 				else if (map_flags & MAP_FLAG_CHOP && y >= ceiling_y)
 				{
 					y = ceiling_y - 1;
-					while (air(b[y]) && y > 1)
+					while (IS_AIR(b[y]) && y > 1)
 						y--;
 				}
 
@@ -239,10 +240,10 @@ void map_update_chunk(jint cx, jint cz)
 					x = rgb.b; rgb.b = (expr); \
 				} while (0)
 
-#ifdef FEAT_FULLCHUNK
+			#ifdef FEAT_FULLCHUNK
 
-#define LIGHT_EXP1 60800
-#define LIGHT_EXP2 64000
+			#define LIGHT_EXP1 60800
+			#define LIGHT_EXP2 64000
 
 			if (map_flags & MAP_FLAG_LIGHTS)
 			{
@@ -270,22 +271,23 @@ void map_update_chunk(jint cx, jint cz)
 
 				TRANSFORM_RGB((x*lf) >> 16);
 			}
-#endif /* FEAT_FULLCHUNK */
 
-			if (water(c->blocks[bx][bz][y]))
+			#endif /* FEAT_FULLCHUNK */
+
+			if (IS_WATER(c->blocks[bx][bz][y]))
 			{
 				if (map_mode == MAP_MODE_TOPO)
 					rgb = block_colors[0x08];
 
 				jint h = y;
 				while (--h)
-					if (water(c->blocks[bx][bz][h]))
+					if (IS_WATER(c->blocks[bx][bz][h]))
 						TRANSFORM_RGB(x*7/8);
 					else
 						break;
 			}
 
-#undef TRANSFORM_RGB
+			#undef TRANSFORM_RGB
 
 			/* update bitmap */
 
@@ -357,7 +359,7 @@ void map_update_ceiling()
 	if (stack && player_y >= 0 && player_y < CHUNK_YSIZE)
 	{
 		for (ceiling_y = player_y + 2; ceiling_y < CHUNK_YSIZE; ceiling_y++)
-			if (!hollow(stack[ceiling_y]))
+			if (!IS_HOLLOW(stack[ceiling_y]))
 				break;
 		if (ceiling_y != old_ceiling_y)
 			map_update(map_min_x, map_max_x, map_min_z, map_max_z);

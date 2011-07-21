@@ -10,9 +10,4 @@
  */
 #define FEAT_FULLCHUNK 1
 
-/*
- * FEAT_SAFE_TELEPORT: Experimental "safe" (read: murderous) teleport.
- */
-/* #define FEAT_SAFE_TELEPORT 1 */
-
 #endif /* MCMAP_CONFIG_H */

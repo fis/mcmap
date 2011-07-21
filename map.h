@@ -14,15 +14,6 @@
 #define REGION_XSIZE (CHUNK_XSIZE*REGION_SIZE)
 #define REGION_ZSIZE (CHUNK_ZSIZE*REGION_SIZE)
 
-struct rgb
-{
-	Uint8 r;
-	Uint8 g;
-	Uint8 b;
-};
-
-#define RGB(rv, gv, bv) ((struct rgb){ .r = (rv), .g = (gv), .b = (bv) })
-
 enum map_mode
 {
 	MAP_MODE_NOCHANGE,
