@@ -67,6 +67,8 @@ int mcmap_main(int argc, char **argv)
 	map_init(screen);
 	map_setscale(1, 0);
 
+	log_print("[INFO] Processing region (0,0)...");
+
 	gchar *region;
 	g_file_get_contents("/home/elliott/.minecraft/saves/server/region/r.0.0.mcr", &region, NULL, NULL);
 	region += 8192;
@@ -74,13 +76,15 @@ int mcmap_main(int argc, char **argv)
 	struct buffer buf = { len, (unsigned char *)(region + 5) };
 	nbt_uncompress(buf);
 
+	log_print("[INFO] Saving map...");
 	map_draw(screen);
-
 	if (IMG_SavePNG("map.png", screen, 9) != 0)
 	{
 		dief("Failed to create PNG: %s", SDL_GetError());
 		return 1;
 	}
+
+	log_print("[INFO] Mapping complete.");
 
 	return 0;
 }
