@@ -395,7 +395,7 @@ struct nbt_tag *nbt_uncompress(struct buffer buf)
 
 	inflateEnd(&zs);
 
-	if (arr->len < 3 || memcmp(arr->data, "\xa0\x00", 3) != 0)
+	if (arr->len < 3 || memcmp(arr->data, "\x0a\x00", 3) != 0)
 		die("nbt_uncompress: invalid header in uncompressed NBT");
 
 	unsigned t;
