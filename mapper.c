@@ -69,9 +69,9 @@ int mcmap_main(int argc, char **argv)
 
 	gchar *region;
 	g_file_get_contents("/home/elliott/.minecraft/saves/server/region/r.0.0.mcr", &region, NULL, NULL);
-	region += 8191;
+	region += 8192;
 	uint32_t len = (region[0] << 24) | (region[1] << 16) | (region[2] << 8) | region[3];
-	struct buffer buf = { len, (unsigned char *)(region + 3) };
+	struct buffer buf = { len, (unsigned char *)(region + 5) };
 	nbt_uncompress(buf);
 
 	map_draw(screen);

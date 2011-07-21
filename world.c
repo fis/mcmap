@@ -100,13 +100,13 @@ static void handle_compressed_chunk(jint x0, jint y0, jint z0,
 	};
 
 	if ((err = inflateInit(&zstr)) != Z_OK)
-		stopf("chunk update decompression: inflateInit: %d", err);
+		stopf("chunk update decompression: inflateInit: %s", zError(err));
 
 	while (zstr.avail_in)
 	{
 		err = inflate(&zstr, Z_PARTIAL_FLUSH);
 		if (err != Z_OK && err != Z_STREAM_END)
-			stopf("chunk update decompression: inflate: %d", err);
+			stopf("chunk update decompression: inflate: %s", zError(err));
 		if (err == Z_STREAM_END)
 			break;
 	}

@@ -234,7 +234,7 @@ unsigned char *nbt_compress(struct nbt_tag *tag, unsigned *len)
 	g_byte_array_unref(arr);
 
 	if (ret != Z_OK)
-		dief("zlib broke badly: %d", ret);
+		dief("zlib broke badly: %s", zError(ret));
 
 	*len = clen;
 	return cbuf;
@@ -370,8 +370,10 @@ struct nbt_tag *nbt_uncompress(struct buffer buf)
 	zs.zalloc = Z_NULL;
 	zs.zfree = Z_NULL;
 	zs.opaque = Z_NULL;
-	if (inflateInit(&zs) != Z_OK)
-		die("zlib broke: inflateInit");
+
+	int ret = inflateInit(&zs);
+	if (ret != Z_OK)
+		dief("zlib broke: inflateInit: %s", zError(ret));
 
 	unsigned char zbuf[4096];
 
@@ -384,7 +386,7 @@ struct nbt_tag *nbt_uncompress(struct buffer buf)
 		if (ret == Z_STREAM_END)
 			break;
 		if (ret != Z_OK)
-			die("zlib broke: inflate");
+			dief("zlib broke: inflate: %s", zError(ret));
 		if (zs.next_out == zbuf)
 			continue;
 
