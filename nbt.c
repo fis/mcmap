@@ -342,7 +342,7 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 	case NBT_TAG_ARRAY:
 		tag->data.structv = g_ptr_array_new_with_free_func(nbt_free);
 		tb = data[0]; /* type tag byte for the elements */
-		t = (jint)((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3]); /* element count; TODO macroize this finally */
+		t = (jint)((data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4]); /* element count; TODO macroize this finally */
 		data += 5; len -= 5; *taglen += 5;
 		for (jint i = 0; i < t; i++)
 		{
@@ -401,14 +401,14 @@ struct nbt_tag *nbt_uncompress(struct buffer buf)
 		zs.avail_out = sizeof zbuf;
 		int ret = inflate(&zs, Z_NO_FLUSH);
 
+		if (ret != Z_OK && ret != Z_STREAM_END)
+			dief("zlib broke: inflate: %s", zError(ret));
+
+		if (zs.next_out != zbuf)
+			g_byte_array_append(arr, zbuf, zs.next_out - zbuf);
+
 		if (ret == Z_STREAM_END)
 			break;
-		if (ret != Z_OK)
-			dief("zlib broke: inflate: %s", zError(ret));
-		if (zs.next_out == zbuf)
-			continue;
-
-		g_byte_array_append(arr, zbuf, zs.next_out - zbuf);
 	}
 
 	inflateEnd(&zs);
