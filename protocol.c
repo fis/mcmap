@@ -69,19 +69,18 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 		return buf[buf_pos++];
 	}
 
-	int buf_get_i16(void)
+	jshort buf_get_jshort(void)
 	{
 		if (!buf_skip(2))
-			die("out of data while getting i16");
-		int v = (buf[buf_pos-2] << 8) | buf[buf_pos-1];
-		return v >= 0x8000 ? v - 0x10000 : v;
+			die("out of data while getting jshort");
+		return jshort_read(&buf[buf_pos-2]);
 	}
 
-	int buf_get_i32(void)
+	jint buf_get_jint(void)
 	{
 		if (!buf_skip(4))
-			die("out of data while getting i32");
-		return (buf[buf_pos-4] << 24) | (buf[buf_pos-3] << 16) | (buf[buf_pos-2] << 8) | buf[buf_pos-1];
+			die("out of data while getting jint");
+		return jint_read(&buf[buf_pos-4]);
 	}
 
 	int t = buf_getc();
@@ -132,43 +131,43 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 			break;
 
 		case FIELD_STRING:
-			t = buf_get_i16();
+			t = buf_get_jshort();
 			if (!buf_skip(t*2)) return 0;
 			break;
 
 		case FIELD_STRING_UTF8:
-			t = buf_get_i16();
+			t = buf_get_jshort();
 			if (!buf_skip(t)) return 0;
 			break;
 
 		case FIELD_ITEM:
-			t = buf_get_i16();
+			t = buf_get_jshort();
 			if (t != -1)
 				if (!buf_skip(3)) return 0;
 			break;
 
 		case FIELD_BYTE_ARRAY:
-			t = buf_get_i32();
+			t = buf_get_jint();
 			if (!buf_skip(t)) return 0;
 			break;
 
 		case FIELD_BLOCK_ARRAY:
-			t = buf_get_i16();
+			t = buf_get_jshort();
 			if (!buf_skip(4*t)) return 0;
 			break;
 
 		case FIELD_ITEM_ARRAY:
-			t = buf_get_i16();
+			t = buf_get_jshort();
 			for (int i = 0; i < t; i++)
 			{
-				short itype = buf_get_i16();
+				jshort itype = buf_get_jshort();
 				if (itype != -1)
 					if (!buf_skip(3)) return 0;
 			}
 			break;
 
 		case FIELD_EXPLOSION_ARRAY:
-			t = buf_get_i32();
+			t = buf_get_jint();
 			if (!buf_skip(3*t)) return 0;
 			break;
 
@@ -188,14 +187,14 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 				case 0: if (!buf_skip(1)) return 0; break;
 				case 1: if (!buf_skip(2)) return 0; break;
 				case 2: case 3: if (!buf_skip(4)) return 0; break;
-				case 4: t = buf_get_i16(); if (!buf_skip(t)) return 0; break;
+				case 4: t = buf_get_jshort(); if (!buf_skip(t)) return 0; break;
 				case 5: if (!buf_skip(5)) return 0; break;
 				}
 			}
 			break;
 
 		case FIELD_OBJECT_DATA:
-			t = buf_get_i32();
+			t = buf_get_jint();
 			if (t > 0)
 				if (!buf_skip(6)) return 0; // Skip 3 short
 			break;
@@ -278,7 +277,7 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 		case FIELD_BYTE:
 			t = va_arg(ap, int);
 			{
-				signed char v = t;
+				jbyte v = t;
 				g_byte_array_append(data, (unsigned char *)&v, 1);
 				offset++;
 			}
@@ -286,52 +285,37 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 
 		case FIELD_SHORT:
 			t = va_arg(ap, int);
-			{
-				unsigned char v[2] = { t >> 8, t };
-				g_byte_array_append(data, v, 2);
-				offset += 2;
-			}
+			g_byte_array_set_size(data, offset + 2);
+			jshort_write(data->data + offset, t);
+			offset += 2;
 			break;
 
 		case FIELD_INT:
 			t = va_arg(ap, int);
-			{
-				unsigned char v[4] = { t >> 24, t >> 16, t >> 8, t };
-				g_byte_array_append(data, v, 4);
-				offset += 4;
-			}
+			g_byte_array_set_size(data, offset + 4);
+			jint_write(data->data + offset, t);
+			offset += 4;
 			break;
 
 		case FIELD_LONG:
 			tl = va_arg(ap, long long);
-			{
-				unsigned char v[8] = {
-					tl >> 56, tl >> 48, tl >> 40, tl >> 32,
-					tl >> 24, tl >> 16, tl >> 8, tl
-				};
-				g_byte_array_append(data, v, 8);
-				offset += 8;
-			}
+			g_byte_array_set_size(data, offset + 8);
+			jlong_write(data->data + offset, tl);
+			offset += 8;
 			break;
 
 		case FIELD_FLOAT:
 			td = va_arg(ap, double);
-			{
-				unsigned char *p = (unsigned char *)&td;
-				unsigned char v[4] = { p[3], p[2], p[1], p[0] };
-				g_byte_array_append(data, v, 4);
-				offset += 4;
-			}
+			g_byte_array_set_size(data, offset + 4);
+			jfloat_write(data->data + offset, td);
+			offset += 4;
 			break;
 
 		case FIELD_DOUBLE:
 			td = va_arg(ap, double);
-			{
-				unsigned char *p = (unsigned char *)&td;
-				unsigned char v[8] = { p[7], p[6], p[5], p[4], p[3], p[2], p[1], p[0] };
-				g_byte_array_append(data, v, 8);
-				offset += 8;
-			}
+			g_byte_array_set_size(data, offset + 8);
+			jdouble_write(data->data + offset, td);
+			offset += 8;
 			break;
 
 		case FIELD_STRING:
@@ -342,7 +326,8 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 				gchar *conv = g_convert((gchar*)tp, -1, "UTF16BE", "UTF8", NULL, &conv_len, &error);
 				if (!conv)
 					dief("g_convert UTF8->UTF16BE failed (error: %s, string: '%s')", error->message, (char*)tp);
-				unsigned char lenb[2] = { (conv_len/2) >> 8, (conv_len/2) };
+				unsigned char lenb[2];
+				jshort_write(lenb, conv_len);
 				g_byte_array_append(data, lenb, 2);
 				g_byte_array_append(data, (unsigned char*)conv, conv_len);
 				offset += 2 + conv_len;
@@ -354,7 +339,8 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 			tp = va_arg(ap, unsigned char *);
 			{
 				int len = strlen((char *)tp);
-				unsigned char lenb[2] = { len >> 8, len };
+				unsigned char lenb[2];
+				jshort_write(lenb, len);
 				g_byte_array_append(data, lenb, 2);
 				g_byte_array_append(data, tp, len);
 				offset += 2 + len;
@@ -400,19 +386,17 @@ int packet_nfields(packet_t *packet)
 jint packet_int(packet_t *packet, unsigned field)
 {
 	unsigned char *p = &packet->bytes[packet->field_offset[field]];
-	int t = 0;
 
 	switch (packet_format[packet->id].ftype[field])
 	{
 	case FIELD_BYTE:
-		return *(signed char *)p;
+		return *(jbyte *)p;
 
 	case FIELD_SHORT:
-		t = (p[0] << 8) | p[1];
-		return t >= 0x8000 ? t - 0x10000 : t;
+		return jshort_read(p);
 
 	case FIELD_INT:
-		return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
+		return jint_read(p);
 
 	default:
 		dief("can't interpret field type %d as int (packet 0x%02x, field %u)",
@@ -425,11 +409,7 @@ jlong packet_long(packet_t *packet, unsigned field)
 	if (packet_format[packet->id].ftype[field] == FIELD_LONG)
 	{
 		unsigned char *p = &packet->bytes[packet->field_offset[field]];
-		return
-			((long long)p[0] << 56) | ((long long)p[1] << 48) |
-			((long long)p[2] << 40) | ((long long)p[3] << 32) |
-			((long long)p[4] << 24) | ((long long)p[5] << 16) |
-			((long long)p[6] << 8) | p[7];
+		return jlong_read(p);
 	}
 	else
 		return packet_int(packet, field);
@@ -439,26 +419,13 @@ double packet_double(packet_t *packet, unsigned field)
 {
 	unsigned char *p = &packet->bytes[packet->field_offset[field]];
 
-	union {
-		float f;
-		unsigned char b[4];
-	} bfloat;
-
-	union {
-		double d;
-		unsigned char b[8];
-	} bdouble;
-
 	switch (packet_format[packet->id].ftype[field])
 	{
 	case FIELD_FLOAT:
-		bfloat.b[0] = p[3]; bfloat.b[1] = p[2]; bfloat.b[2] = p[1]; bfloat.b[3] = p[0];
-		return bfloat.f;
+		return jfloat_read(p);
 
 	case FIELD_DOUBLE:
-		bdouble.b[0] = p[7]; bdouble.b[1] = p[6]; bdouble.b[2] = p[5]; bdouble.b[3] = p[4];
-		bdouble.b[4] = p[3]; bdouble.b[5] = p[2]; bdouble.b[6] = p[1]; bdouble.b[7] = p[0];
-		return bdouble.d;
+		return jdouble_read(p);
 
 	default:
 		return packet_int(packet, field);
@@ -475,7 +442,7 @@ unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
 	switch (packet_format[packet->id].ftype[field])
 	{
 	case FIELD_STRING:
-		l = (p[0] << 8) | p[1];
+		l = jshort_read(p);
 		{
 			GError *error = NULL;
 			gsize conv_len;
@@ -487,7 +454,7 @@ unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
 		break;
 
 	case FIELD_STRING_UTF8:
-		l = (p[0] << 8) | p[1];
+		l = jshort_read(p);
 		str = (unsigned char *)g_strndup((gchar*)&p[2], l);
 		break;
 
