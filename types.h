@@ -40,6 +40,8 @@ struct rgba
 	uint8_t a;
 };
 
+#define RGBA(rv, gv, bv, av) ((struct rgba){ .r = (rv), .g = (gv), .b = (bv), .a = (av)})
+
 struct buffer
 {
 	unsigned len;
