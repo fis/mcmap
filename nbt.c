@@ -171,7 +171,6 @@ static void format_tag(GByteArray *arr, struct nbt_tag *tag, int only_payload)
 	}
 
 	guint at = arr->len;
-	unsigned char *p;
 
 	switch (tag->type)
 	{
@@ -186,53 +185,38 @@ static void format_tag(GByteArray *arr, struct nbt_tag *tag, int only_payload)
 
 	case NBT_TAG_SHORT:
 		g_byte_array_set_size(arr, at + 2);
-		arr->data[at]   = tag->data.intv >> 8;
-		arr->data[at+1] = tag->data.intv;
+		jshort_write(arr->data + at, tag->data.intv);
 		break;
 
 	case NBT_TAG_INT:
 		g_byte_array_set_size(arr, at + 4);
-		arr->data[at]   = tag->data.intv >> 24;
-		arr->data[at+1] = tag->data.intv >> 16;
-		arr->data[at+2] = tag->data.intv >> 8;
-		arr->data[at+3] = tag->data.intv;
+		jint_write(arr->data + at, tag->data.intv);
 		break;
 
 	case NBT_TAG_LONG:
 		g_byte_array_set_size(arr, at + 8);
-		arr->data[at]   = tag->data.longv >> 56;
-		arr->data[at+1] = tag->data.longv >> 48;
-		arr->data[at+2] = tag->data.longv >> 40;
-		arr->data[at+3] = tag->data.longv >> 32;
-		arr->data[at+4] = tag->data.longv >> 24;
-		arr->data[at+5] = tag->data.longv >> 16;
-		arr->data[at+6] = tag->data.longv >> 8;
-		arr->data[at+7] = tag->data.longv;
+		jlong_write(arr->data + at, tag->data.longv);
 		break;
 
 	case NBT_TAG_FLOAT:
-		die("nbt format_tag: NBT_TAG_FLOAT unimplemented");
+		g_byte_array_set_size(arr, at + 4);
+		jfloat_write(arr->data + at, tag->data.doublev);
+		break;
 
 	case NBT_TAG_DOUBLE:
 		g_byte_array_set_size(arr, at + 8);
-		p = (unsigned char *)&tag->data.doublev;
-		arr->data[at+7] = p[0]; arr->data[at+6] = p[1]; arr->data[at+5] = p[2]; arr->data[at+4] = p[3];
-		arr->data[at+3] = p[4]; arr->data[at+2] = p[5]; arr->data[at+1] = p[6]; arr->data[at]   = p[7];
+		jdouble_write(arr->data + at, tag->data.doublev);
 		break;
 
 	case NBT_TAG_BLOB:
 		g_byte_array_set_size(arr, at + 4 + tag->data.blobv.len);
-		arr->data[at]   = tag->data.blobv.len >> 24;
-		arr->data[at+1] = tag->data.blobv.len >> 16;
-		arr->data[at+2] = tag->data.blobv.len >> 8;
-		arr->data[at+3] = tag->data.blobv.len;
+		jint_write(arr->data + at, tag->data.blobv.len);
 		memcpy(&arr->data[at+4], tag->data.blobv.data, tag->data.blobv.len);
 		break;
 
 	case NBT_TAG_STR:
 		g_byte_array_set_size(arr, at + 2 + tag->data.blobv.len);
-		arr->data[at]   = tag->data.blobv.len >> 8;
-		arr->data[at+1] = tag->data.blobv.len;
+		jshort_write(arr->data + at, tag->data.blobv.len);
 		memcpy(&arr->data[at+2], tag->data.blobv.data, tag->data.blobv.len);
 		break;
 
@@ -283,7 +267,7 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 	if (len < 3)
 		die("truncated NBT tag: short namelen");
 
-	int namelen = (data[1] << 8) | data[2];
+	int namelen = jshort_read(&data[1]);
 
 	if (len < 3+namelen)
 		die("truncated NBT tag: short name");
@@ -295,10 +279,7 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 	*taglen = 3 + namelen;
 
 	jint t;
-	jlong tl;
 	jbyte tb;
-	jfloat tf;
-	unsigned char *p;
 
 	struct nbt_tag *sub;
 	unsigned sublen;
@@ -313,50 +294,37 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 
 	case NBT_TAG_SHORT:
 		if (len < 2) die("truncated NBT tag: short short");
-		tag->data.intv = (jshort)((data[0] << 8) | data[1]);
+		tag->data.intv = jshort_read(data);
 		*taglen += 2;
 		break;
 
 	case NBT_TAG_INT:
 		if (len < 4) die("truncated NBT tag: short int");
-		tag->data.intv = (jint)((data[0] << 24) |
-		                        (data[1] << 16) |
-		                        (data[2] << 8)  |
-		                         data[3]);
+		tag->data.intv = jint_read(data);
 		*taglen += 4;
 		break;
 
 	case NBT_TAG_LONG:
 		if (len < 8) die("truncated NBT tag: short long");
-		tl = 0;
-		for (int i = 0; i < 8; i++)
-			tl = (tl << 8) | data[i];
-		tag->data.longv = tl;
+		tag->data.longv = jlong_read(data);
 		*taglen += 8;
 		break;
 
 	case NBT_TAG_FLOAT:
 		if (len < 4) die("truncated NBT tag: short float");
-		p = (unsigned char *)&tf;
-		p[0] = data[3]; p[1] = data[2]; p[2] = data[1]; p[3] = data[0];
+		tag->data.doublev = jfloat_read(data);
 		*taglen += 4;
-		tag->data.doublev = tf;
 		break;
 
 	case NBT_TAG_DOUBLE:
 		if (len < 8) die("truncated NBT tag: short double");
-		p = (unsigned char *)&tag->data.doublev;
-		p[0] = data[7]; p[1] = data[6]; p[2] = data[5]; p[3] = data[4];
-		p[4] = data[3]; p[5] = data[2]; p[6] = data[1]; p[7] = data[0];
+		tag->data.doublev = jdouble_read(data);
 		*taglen += 8;
 		break;
 
 	case NBT_TAG_BLOB:
 		if (len < 4) die("truncated NBT tag: short blob len");
-		t = (jint)((data[0] << 24) |
-		           (data[1] << 16) |
-		           (data[2] << 8)  |
-		            data[3]);
+		t = jint_read(data);
 		if (len < 4+t) die("truncated NBT tag: short blob data");
 		tag->data.blobv.len = t;
 		tag->data.blobv.data = g_memdup(&data[4], t);
@@ -365,7 +333,7 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 
 	case NBT_TAG_STR:
 		if (len < 2) die("truncated NBT tag: short str len");
-		t = (jshort)((data[0] << 8) | data[1]);
+		t = jshort_read(data);
 		if (len < 2+t) die("truncated NBT tag: short str data");
 		tag->data.blobv.len = t;
 		tag->data.blobv.data = g_memdup(&data[2], t);
@@ -375,7 +343,7 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 	case NBT_TAG_ARRAY:
 		tag->data.structv = g_ptr_array_new_with_free_func(nbt_free);
 		tb = data[0]; /* type tag byte for the elements */
-		t = (jint)((data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4]); /* element count; TODO macroize this finally */
+		t = jint_read(data + 1);
 		data += 5; len -= 5; *taglen += 5;
 		for (jint i = 0; i < t; i++)
 		{
