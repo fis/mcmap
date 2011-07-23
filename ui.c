@@ -90,7 +90,8 @@ void start_ui(gboolean map, gint scale, gboolean resizable, int wnd_w, int wnd_h
 				break;
 
 			case SDL_ACTIVEEVENT:
-				map_focused = e.active.gain && (e.active.state & SDL_APPMOUSEFOCUS);
+				if (e.active.state & SDL_APPMOUSEFOCUS)
+					map_focused = e.active.gain;
 				break;
 
 			case SDL_VIDEOEXPOSE:
