@@ -660,7 +660,7 @@ void map_draw(SDL_Surface *screen)
 	world_entities(map_draw_entity_marker, screen);
 
 	SDL_Rect r = { .x = 0, .y = screen->h - 24, .w = screen->w, .h = 24 };
-	SDL_FillRect(screen, &r, pack_rgb(RGB(0, 0, 0)));
+	SDL_FillRect(screen, &r, 0);
 
 	if (!map_focused) goto no_block_info;
 

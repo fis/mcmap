@@ -393,6 +393,7 @@ void world_init(void)
 	anentity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
 }
 
+// FIXME: bad
 void world_destroy(void)
 {
 	g_hash_table_destroy(chunk_table);
