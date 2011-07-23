@@ -6,6 +6,7 @@
 
 #include <glib.h>
 #include <SDL.h>
+#include <SDL_ttf.h>
 
 #include "cmd.h"
 #include "config.h"
@@ -34,7 +35,9 @@ void start_ui(gboolean map, gint scale, gboolean resizable, int wnd_w, int wnd_h
 		Uint32 videoflags = SDL_SWSURFACE;
 		if (resizable) videoflags |= SDL_RESIZABLE;
 
-		screen = SDL_SetVideoMode(wnd_w, wnd_h, 32, videoflags);
+		map_w = wnd_w;
+		map_h = wnd_h;
+		screen = SDL_SetVideoMode(wnd_w, wnd_h + 24, 32, videoflags);
 
 		if (!screen)
 		{
@@ -64,6 +67,7 @@ void start_ui(gboolean map, gint scale, gboolean resizable, int wnd_w, int wnd_h
 			switch (e.type)
 			{
 			case SDL_QUIT:
+				TTF_Quit();
 				SDL_Quit();
 				exit(0);
 				return;
@@ -77,11 +81,16 @@ void start_ui(gboolean map, gint scale, gboolean resizable, int wnd_w, int wnd_h
 				break;
 
 			case SDL_VIDEORESIZE:
+				/* the map doesn't seem to like being zero pixels high */
+				if (e.resize.h < 36) e.resize.h = 36;
+				map_w = e.resize.w;
+				map_h = e.resize.h - 24;
 				screen = SDL_SetVideoMode(e.resize.w, e.resize.h, 32, SDL_SWSURFACE|SDL_RESIZABLE);
 				repaint = 1;
 				break;
 
 			case SDL_VIDEOEXPOSE:
+			case SDL_MOUSEMOTION:
 			case MCMAP_EVENT_REPAINT:
 				repaint = 1;
 				break;
@@ -167,10 +176,10 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 
 static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen)
 {
-	if (e->button == SDL_BUTTON_RIGHT)
+	if (e->button == SDL_BUTTON_RIGHT && e->y < map_h)
 	{
 		/* teleport */
-		int x, z;
+		jint x, z;
 		map_s2w(screen, e->x, e->y, &x, &z, 0, 0);
 		teleport(x, z);
 	}

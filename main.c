@@ -6,6 +6,7 @@
 
 #include <glib.h>
 #include <SDL.h>
+#include <SDL_ttf.h>
 
 #include "cmd.h"
 #include "config.h"
@@ -209,7 +210,10 @@ int mcmap_main(int argc, char **argv)
 
 	/* required because sometimes SDL initialisation fails after g_thread_init */
 	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
-		die("Failed to initialize SDL.");
+		dief("Failed to initialize SDL: %s", SDL_GetError());
+
+	if (TTF_Init() != 0)
+		dief("Failed to initialize SDL_ttf: %s", TTF_GetError());
 
 	g_thread_init(0);
 	start_proxy(sock_cli, sock_srv);

@@ -33,6 +33,7 @@ extern struct rgba block_colors[256];
 //extern jint map_min_x, map_min_z;
 //extern jint map_max_x, map_max_z;
 
+extern int map_w, map_h;
 extern double player_dx, player_dy, player_dz;
 extern jint player_x, player_y, player_z;
 extern jshort player_health;

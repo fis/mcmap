@@ -15,4 +15,4 @@ ifeq ($(shell uname),Darwin)
         CFLAGS += -fnested-functions
 endif
 
-LDFLAGS ?= $(shell pkg-config --libs $(libs)) -lz -lreadline
+LDFLAGS ?= $(shell pkg-config --libs $(libs)) -lz -lreadline -lSDL_ttf

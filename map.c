@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <SDL.h>
+#include <SDL_ttf.h>
 
 #include <glib.h>
 
@@ -38,7 +39,9 @@ jshort player_health = 0;
 jint ceiling_y = CHUNK_YSIZE;
 
 GHashTable *regions = 0;
+TTF_Font *map_font = 0;
 SDL_PixelFormat *screen_fmt = 0;
+jint map_w = 0, map_h = 0;
 jint map_min_x = 0, map_min_z = 0;
 jint map_max_x = 0, map_max_z = 0;
 static jint map_y = 0;
@@ -74,6 +77,8 @@ void map_init(SDL_Surface *screen)
 #ifdef FEAT_FULLCHUNK
 	map_flags |= MAP_FLAG_LIGHTS;
 #endif
+
+	map_font = TTF_OpenFont("DejaVuSansMono-Bold.ttf", 13);
 }
 
 static SDL_Surface *map_create_region(struct coord cc)
@@ -441,12 +446,12 @@ void map_setscale(int scale, int relative)
 
 void map_s2w(SDL_Surface *screen, int sx, int sy, jint *x, jint *z, jint *xo, jint *zo)
 {
-	/* Pixel screen->w/2 equals middle (rounded down) of block player_x.
-	 * Pixel screen->w/2 - (map_scale-1)/2 equals left edge of block player_x.
+	/* Pixel map_w/2 equals middle (rounded down) of block player_x.
+	 * Pixel map_w/2 - (map_scale-1)/2 equals left edge of block player_x.
 	 * Compute offset from there, divide by scale, round toward negative. */
 
-	int px = screen->w/2 - (map_scale-1)/2;
-	int py = screen->h/2 - (map_scale-1)/2;
+	int px = map_w/2 - (map_scale-1)/2;
+	int py = map_h/2 - (map_scale-1)/2;
 
 	int dx = sx - px, dy = sy - py;
 
@@ -462,8 +467,8 @@ void map_s2w(SDL_Surface *screen, int sx, int sy, jint *x, jint *z, jint *xo, ji
 
 void map_w2s(SDL_Surface *screen, jint x, jint z, int *sx, int *sy)
 {
-	int px = screen->w/2 - (map_scale-1)/2;
-	int py = screen->h/2 - (map_scale-1)/2;
+	int px = map_w/2 - (map_scale-1)/2;
+	int py = map_h/2 - (map_scale-1)/2;
 
 	*sx = px + (x - player_x)*map_scale;
 	*sy = py + (z - player_z)*map_scale;
@@ -542,7 +547,7 @@ static void map_draw_entity_marker(struct entity *e, void *userdata)
 	ex += (map_scale - map_scale_indicator)/2;
 	ey += (map_scale - map_scale_indicator)/2;
 
-	if (ex < 0 || ey < 0 || ex+map_scale_indicator > screen->w || ey+map_scale_indicator > screen->h)
+	if (ex < 0 || ey < 0 || ex+map_scale_indicator > map_w || ey+map_scale_indicator > map_h)
 		return;
 
 	SDL_Rect r = { .x = ex, .y = ey, .w = map_scale_indicator, .h = map_scale_indicator };
@@ -574,8 +579,8 @@ void map_draw(SDL_Surface *screen)
 	scr_x2 = scr_x1;
 	scr_z2 = scr_z1;
 
-	scr_x2o = scr_x1o + screen->w;
-	scr_z2o = scr_z1o + screen->h;
+	scr_x2o = scr_x1o + map_w;
+	scr_z2o = scr_z1o + map_h;
 
 	scr_x2 += scr_x2o / map_scale;
 	scr_z2 += scr_z2o / map_scale;
@@ -617,14 +622,14 @@ void map_draw(SDL_Surface *screen)
 			for (int reg_py = 0; reg_py < REGION_ZSIZE; reg_py++)
 			{
 				int y0 = reg_sy + reg_py*map_scale;
-				for (int y = y0; y < y0+map_scale && y < screen->h; y++)
+				for (int y = y0; y < y0+map_scale && y < map_h; y++)
 				{
 					if (y < 0) continue;
 
 					for (int reg_px = 0; reg_px < REGION_XSIZE; reg_px++)
 					{
 						int x0 = reg_sx + reg_px*map_scale;
-						for (int x = x0; x < x0+map_scale && x < screen->w; x++)
+						for (int x = x0; x < x0+map_scale && x < map_w; x++)
 						{
 							if (x < 0) continue;
 
@@ -649,7 +654,60 @@ void map_draw(SDL_Surface *screen)
 	map_draw_player_marker(screen);
 	world_entities(map_draw_entity_marker, screen);
 
+	SDL_Rect r = { .x = 0, .y = screen->h - 24, .w = screen->w, .h = 24 };
+	SDL_FillRect(screen, &r, pack_rgb(RGB(0, 0, 0)));
+
+	int mx, my;
+	SDL_GetMouseState(&mx, &my);
+	if (my >= map_h) goto no_block_info;
+
+	jint hx, hz;
+	map_s2w(screen, mx, my, &hx, &hz, 0, 0);
+
+	struct coord hcc = { .x = CHUNK_XIDX(hx), .z = CHUNK_ZIDX(hz) };
+	struct chunk *hc = world_chunk(&hcc, 0);
+	hc = world_chunk(&hcc, 0);
+	if (!hc) goto no_block_info;
+
+	jint hcx = CHUNK_XOFF(hx);
+	jint hcz = CHUNK_ZOFF(hz);
+	jint hcy = hc->height[hcx][hcz];
+
+	unsigned char block = hc->blocks[hcx][hcz][hcy];
+
+	SDL_Color white = {255, 255, 255};
+	SDL_Color black = {0, 0, 0};
+
+	gchar *left_text;
+	if (IS_WATER(block))
+	{
+		int depth = 1;
+		jint h = hcy;
+		// FIXME: Off-by-one when water goes into void? Also in corresponding map_update code.
+		while (--h && IS_WATER(hc->blocks[hcx][hcz][h]))
+			depth++;
+		left_text = g_strdup_printf("water (%d deep)", depth);
+	}
+	else
+		left_text = g_strdup_printf("%s", block_info[block].name);
+
+	SDL_Surface *left_surface = TTF_RenderText_Shaded(map_font, left_text, white, black);
+	SDL_Rect left_src = { .x = 0, .y = 0, .w = left_surface->w, .h = left_surface->h };
+	SDL_Rect left_dst = { .x = 4, .y = screen->h - 22, .w = left_src.w, .h = left_src.h };
+	SDL_BlitSurface(left_surface, &left_src, screen, &left_dst);
+	g_free(left_text);
+
+	gchar *right_text = g_strdup_printf("x: %-5d z: %-5d y: %-3d", hx, hz, hc->height[hcx][hcz]);
+	SDL_Surface *right_surface = TTF_RenderText_Shaded(map_font, right_text, white, black);
+	SDL_Rect right_src = { .x = 0, .y = 0, .w = right_surface->w, .h = right_surface->h };
+	int right_offset_width;
+	TTF_SizeText(map_font, "x: 00000, z: 00000, y: 000", &right_offset_width, NULL);
+	SDL_Rect right_dst = { .x = screen->w - 4 - right_offset_width, .y = screen->h - 22, .w = right_src.w, .h = right_src.h };
+	SDL_BlitSurface(right_surface, &right_src, screen, &right_dst);
+	g_free(right_text);
+
 	/* update screen buffers */
 
+no_block_info:
 	SDL_UpdateRect(screen, 0, 0, screen->w, screen->h);
 }
