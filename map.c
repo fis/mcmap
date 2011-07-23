@@ -232,9 +232,23 @@ void map_update_chunk(jint cx, jint cz)
 
 			/* update bitmap */
 
-			// TODO: In surface mode, look downwards to find an appropriate block
-			// to shade with the alpha
-			*p++ = pack_rgb(IGNORE_ALPHA(rgba));
+			// TODO: Search more than one down (i.e. recurse for alpha)
+			struct rgb tinted;
+			if (rgba.a < 255)
+			{
+				struct rgb down_one;
+				if (y > 0)
+					down_one = IGNORE_ALPHA(block_colors[c->blocks[bx][bz][y-1]]);
+				else
+					down_one = IGNORE_ALPHA(block_colors[0x07]);
+				tinted.r = (down_one.r * (255 - rgba.a) + rgba.r * rgba.a)/255;
+				tinted.g = (down_one.g * (255 - rgba.a) + rgba.g * rgba.a)/255;
+				tinted.b = (down_one.b * (255 - rgba.a) + rgba.b * rgba.a)/255;
+			}
+			else
+				tinted = IGNORE_ALPHA(rgba);
+
+			*p++ = pack_rgb(tinted);
 			b += blocks_xpitch;
 		}
 
