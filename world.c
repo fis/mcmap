@@ -119,6 +119,11 @@ static gboolean handle_compressed_chunk(jint x0, jint y0, jint z0,
 		stopf("broken decompressed chunk length: %d != %d and < %d",
 		      (int)zbuf_len, (int)(5*xs*ys*zs+1)/2, xs*ys*zs);
 
+	if (y0 > CHUNK_YSIZE)
+		stopf("too high chunk update: %d..%d", y0, y0+ys-1);
+	else if (y0 + ys > CHUNK_YSIZE)
+		ys = CHUNK_YSIZE - y0;
+
 	struct buffer zb = { zbuf_len, zbuf };
 #ifdef FEAT_FULLCHUNK
 	struct buffer zb_meta = OFFSET_BUFFER(zb, xs*ys*zs);
@@ -141,18 +146,11 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 	struct coord current_chunk = { .x = -0x80000000, .z = -0x80000000 };
 	struct chunk *c = 0;
 
-	jint yupds = ys;
-
 	if (ys < 0)
 	{
 		log_print("[WARN] Invalid chunk size! Probably WorldEdit; go yell at the author.");
 		return FALSE;
 	}
-
-	if (y0 > CHUNK_YSIZE)
-		stopf("too high chunk update: %d..%d", y0, y0+ys-1);
-	else if (y0 + ys > CHUNK_YSIZE)
-		yupds = CHUNK_YSIZE - y0;
 
 	jint c_min_x = INT_MAX, c_min_z = INT_MAX;
 	jint c_max_x = INT_MIN, c_max_z = INT_MIN;
@@ -170,19 +168,19 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 				current_chunk = cc;
 			}
 
-			if (!changed && memcmp(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb.data, yupds) != 0)
+			if (!changed && memcmp(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb.data, ys) != 0)
 				changed = TRUE;
 
-			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb.data, yupds);
+			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb.data, ys);
 			ADVANCE_BUFFER(zb, ys);
 
 #ifdef FEAT_FULLCHUNK
 			if ((ys+1)/2 <= zb_meta.len)
-				memcpy(&c->meta[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_meta.data, (yupds+1)/2);
+				memcpy(&c->meta[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_meta.data, (ys+1)/2);
 			if ((ys+1)/2 <= zb_light_blocks.len)
-				memcpy(&c->light_blocks[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_blocks.data, (yupds+1)/2);
+				memcpy(&c->light_blocks[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_blocks.data, (ys+1)/2);
 			if ((ys+1)/2 <= zb_light_sky.len)
-				memcpy(&c->light_sky[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_sky.data, (yupds+1)/2);
+				memcpy(&c->light_sky[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_sky.data, (ys+1)/2);
 			ADVANCE_BUFFER(zb_meta, (ys+1)/2);
 			ADVANCE_BUFFER(zb_light_blocks, (ys+1)/2);
 			ADVANCE_BUFFER(zb_light_sky, (ys+1)/2);
@@ -190,9 +188,9 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 
 			jint h = c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
 
-			if (y0+yupds >= h)
+			if (y0+ys >= h)
 			{
-				jint newh = y0 + yupds;
+				jint newh = y0 + ys;
 				if (newh >= CHUNK_YSIZE)
 					newh = CHUNK_YSIZE - 1;
 
