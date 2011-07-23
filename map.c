@@ -421,8 +421,8 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 		     modenames[map_mode],
 		     (mode == MAP_MODE_CROSS && map_flags & MAP_FLAG_FOLLOW_Y ? " (follow)" : ""),
 		     (mode == MAP_MODE_SURFACE && map_flags & MAP_FLAG_CHOP ? " (chop)" : ""),
-		     (map_flags & MAP_FLAG_LIGHTS ? " (lights)" : ""),
-		     ((map_flags & MAP_FLAG_LIGHTS) && (map_flags & MAP_FLAG_NIGHT) ? " (night)" : ""));
+		     (mode == MAP_MODE_SURFACE && map_flags & MAP_FLAG_LIGHTS ? " (lights)" : ""),
+		     (mode == MAP_MODE_SURFACE && (map_flags & MAP_FLAG_LIGHTS) && (map_flags & MAP_FLAG_NIGHT) ? " (night)" : ""));
 
 	map_update(map_min_x, map_max_x, map_min_z, map_max_z);
 }

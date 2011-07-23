@@ -221,6 +221,8 @@ int mcmap_main(int argc, char **argv)
 		dief("Failed to load font file: %s", TTF_GetError());
 	g_free(font_filename);
 
+	SDL_EnableUNICODE(1);
+
 	g_thread_init(0);
 	start_proxy(sock_cli, sock_srv);
 

@@ -116,47 +116,53 @@ void start_ui(gboolean map, gint scale, gboolean resizable, int wnd_w, int wnd_h
 
 static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 {
-	switch (e->keysym.sym)
+	switch (e->keysym.unicode)
 	{
-	case SDLK_1:
+	case '1':
 		map_setmode(MAP_MODE_SURFACE, 0, 0, 0);
 		*repaint = 1;
 		break;
 
-	case SDLK_2:
+	case '2':
 		map_setmode(MAP_MODE_CROSS, MAP_FLAG_FOLLOW_Y, 0, 0);
 		*repaint = 1;
 		break;
 
-	case SDLK_3:
+	case '3':
 		map_setmode(MAP_MODE_CROSS, 0, MAP_FLAG_FOLLOW_Y, 0);
 		*repaint = 1;
 		break;
 
-	case SDLK_4:
+	case '4':
 		map_setmode(MAP_MODE_TOPO, 0, 0, 0);
 		*repaint = 1;
 		break;
 
-	case SDLK_c:
+	case 'c':
 		map_setmode(MAP_MODE_SURFACE, 0, 0, MAP_FLAG_CHOP);
 		map_update_ceiling();
 		*repaint = 1;
 		break;
 
 #ifdef FEAT_FULLCHUNK
-	case SDLK_n:
+	case 'n':
 		/* TODO: handle if map mode != lights */
 		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_NIGHT);
 		*repaint = 1;
 		break;
 
-	case SDLK_l:
+	case 'l':
 		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
 		*repaint = 1;
 		break;
 #endif
-
+	case 0:
+		break;
+	default:
+		return;
+	}
+	switch (e->keysym.sym)
+	{
 	case SDLK_UP:
 		map_update_alt(+1, 1);
 		break;
