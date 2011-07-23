@@ -172,10 +172,20 @@ static struct rgb map_block_color(struct chunk *c, unsigned char *b, jint bx, ji
 
 	/* alpha transform */
 
-	if (rgba.a == 255 || y == 0)
+	if (rgba.a == 255 || y == 1)
 		return IGNORE_ALPHA(rgba);
 
-	struct rgb below = map_block_color(c, b, bx, bz, y-1);
+	int below_y = y - 1;
+	while (IS_AIR(b[below_y]) && below_y > 1)
+	{
+		below_y--;
+		rgba.r = (block_colors[0x00].r * (255 - rgba.a) + rgba.r * rgba.a)/255;
+		rgba.g = (block_colors[0x00].g * (255 - rgba.a) + rgba.r * rgba.a)/255;
+		rgba.b = (block_colors[0x00].b * (255 - rgba.a) + rgba.r * rgba.a)/255;
+	}
+
+	// TODO: Stop going below when the colour stops changing
+	struct rgb below = map_block_color(c, b, bx, bz, below_y);
 
 	return RGB((below.r * (255 - rgba.a) + rgba.r * rgba.a)/255,
 	           (below.g * (255 - rgba.a) + rgba.g * rgba.a)/255,
@@ -681,6 +691,7 @@ void map_draw(SDL_Surface *screen)
 		int depth = 1;
 		jint h = hcy;
 		// FIXME: Off-by-one when water goes into void? Also in corresponding map_update code.
+		// I think not, since bottom bedrock is at y=1.
 		while (--h && IS_WATER(hc->blocks[hcx][hcz][h]))
 			depth++;
 		left_text = g_strdup_printf("water (%d deep)", depth);

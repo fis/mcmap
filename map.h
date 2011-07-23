@@ -31,9 +31,9 @@ enum map_mode
 
 extern struct rgba block_colors[256];
 
-//extern SDL_Surface *map;
-//extern jint map_min_x, map_min_z;
-//extern jint map_max_x, map_max_z;
+extern GHashTable *regions;
+extern jint map_min_x, map_min_z;
+extern jint map_max_x, map_max_z;
 
 extern TTF_Font *map_font;
 extern int map_w, map_h;

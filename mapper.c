@@ -23,13 +23,10 @@ enum compression
 	COMPRESSION_ZLIB = 2
 };
 
-//gchar *world;
+gchar *world;
 
-#if 0
 static void process_region(gchar *filename, jint x, jint z)
 {
-	world_init();
-
 	gchar *region;
 	GError *error = NULL;
 	gboolean ok = g_file_get_contents(filename, &region, NULL, &error);
@@ -59,15 +56,12 @@ static void process_region(gchar *filename, jint x, jint z)
 		jint cx = x*32 + i%32;
 		jint cz = z*32 + i/32;
 		world_handle_chunk(cx*16, 0, cz*16, CHUNK_XSIZE, CHUNK_YSIZE, CHUNK_ZSIZE, zb, zb_meta, zb_light_blocks, zb_light_sky, TRUE);
+		if (i%10 == 0) log_print("%d", i);
 	}
-
-	world_destroy();
 }
-#endif
 
 int mcmap_main(int argc, char **argv)
 {
-#if 0
 	setlocale(LC_ALL, "");
 
 	/* command line option grokking */
@@ -106,38 +100,39 @@ int mcmap_main(int argc, char **argv)
 	if (!screen)
 		dief("Failed to create SDL surface: %s", SDL_GetError());
 
+	world_init();
 	map_init(screen);
 	map_setscale(1, 0);
 
+
 	gchar *dirname = g_strconcat(world, "/region", NULL);
 	GError *error = NULL;
-	GDir *regions = g_dir_open(dirname, 0, &error);
+	GDir *world_dir = g_dir_open(dirname, 0, &error);
 	g_free(dirname);
-	if (!regions)
+	if (!world_dir)
 		die(error->message);
 	gchar *filename = NULL;
-	while ((filename = (gchar *) g_dir_read_name(regions)))
+	while ((filename = (gchar *) g_dir_read_name(world_dir)))
 	{
-		gchar xbuf[64], ybuf[64];
-		if (sscanf(filename, "r.%[^.].%[^.].mcr", xbuf, ybuf) < 1)
+		gchar xbuf[64], zbuf[64];
+		if (sscanf(filename, "r.%[^.].%[^.].mcr", xbuf, zbuf) < 1)
 			continue;
 		jint x = (jint) strtol(xbuf, NULL, 36);
-		jint y = (jint) strtol(ybuf, NULL, 36);
-		log_print("[INFO] Processing region (%d,%d)", x, y);
+		jint z = (jint) strtol(zbuf, NULL, 36);
+		log_print("[INFO] Processing region (%d,%d)", x, z);
 		gchar *full_path = g_strconcat(world, "/region/", filename, NULL);
-		process_region(full_path, x, y);
+		process_region(full_path, x, z);
 		g_free(full_path);
+		break;
 	}
-	g_dir_close(regions);
+	g_dir_close(world_dir);
 
 	log_print("[INFO] Saving map...");
-	world_init();
-	if (IMG_SavePNG("map.png", map, 9) != 0)
+	struct coord cc = {0,1};
+	if (IMG_SavePNG("map.png", (SDL_Surface *) g_hash_table_lookup(regions, &cc), 9) != 0)
 		dief("Failed to create PNG: %s", SDL_GetError());
 
 	log_print("[INFO] Mapping complete.");
 
-	return 0;
-#endif
 	return 0;
 }
