@@ -56,7 +56,6 @@ static void process_region(gchar *filename, jint x, jint z)
 		jint cx = x*32 + i%32;
 		jint cz = z*32 + i/32;
 		world_handle_chunk(cx*16, 0, cz*16, CHUNK_XSIZE, CHUNK_YSIZE, CHUNK_ZSIZE, zb, zb_meta, zb_light_blocks, zb_light_sky, TRUE);
-		if (i%10 == 0) log_print("%d", i);
 	}
 }
 
@@ -95,7 +94,7 @@ int mcmap_main(int argc, char **argv)
 	if (SDL_Init(SDL_INIT_VIDEO) != 0)
 		die("Failed to initialize SDL.");
 
-	SDL_Surface *screen = SDL_SetVideoMode(16, 16, 32, SDL_SWSURFACE);
+	SDL_Surface *screen = SDL_SetVideoMode(9999, 9999, 32, SDL_SWSURFACE);
 
 	if (!screen)
 		dief("Failed to create SDL surface: %s", SDL_GetError());
@@ -103,7 +102,9 @@ int mcmap_main(int argc, char **argv)
 	world_init();
 	map_init(screen);
 	map_setscale(1, 0);
-
+	player_x = 0;
+	player_y = 64;
+	player_z = 0;
 
 	gchar *dirname = g_strconcat(world, "/region", NULL);
 	GError *error = NULL;
@@ -123,13 +124,15 @@ int mcmap_main(int argc, char **argv)
 		gchar *full_path = g_strconcat(world, "/region/", filename, NULL);
 		process_region(full_path, x, z);
 		g_free(full_path);
-		break;
 	}
 	g_dir_close(world_dir);
 
+	log_print("[INFO] Rendering map...");
+//	map_update(map_min_x, map_min_z, map_max_x, map_max_z);
+
 	log_print("[INFO] Saving map...");
-	struct coord cc = {0,1};
-	if (IMG_SavePNG("map.png", (SDL_Surface *) g_hash_table_lookup(regions, &cc), 9) != 0)
+	map_draw(screen);
+	if (IMG_SavePNG("map.png", screen, 9) != 0)
 		dief("Failed to create PNG: %s", SDL_GetError());
 
 	log_print("[INFO] Mapping complete.");

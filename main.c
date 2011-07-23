@@ -124,7 +124,7 @@ int mcmap_main(int argc, char **argv)
 
 	load_colors(default_colors);
 
-	gchar *filename = g_strconcat(getenv("HOME"), "/.mcmap/colors", NULL);
+	gchar *filename = g_strconcat(g_get_home_dir(), "/.mcmap/colors", NULL);
 	gchar *colors;
 	GError *error = NULL;
 	if (g_file_get_contents(filename, &colors, NULL, &error))
@@ -217,6 +217,8 @@ int mcmap_main(int argc, char **argv)
 
 	gchar *font_filename = g_strconcat(g_path_get_dirname(argv[0]), "/../DejaVuSansMono-Bold.ttf", NULL);
 	map_font = TTF_OpenFont(font_filename, 13);
+	if (map_font == NULL)
+		dief("Failed to load font file: %s", TTF_GetError());
 	g_free(font_filename);
 
 	g_thread_init(0);
