@@ -678,7 +678,7 @@ void map_draw(SDL_Surface *screen)
 
 	jint hcx = CHUNK_XOFF(hx);
 	jint hcz = CHUNK_ZOFF(hz);
-	jint hcy = hc->height[hcx][hcz];
+	jint hcy = map_mode == MAP_MODE_CROSS ? map_y : hc->height[hcx][hcz];
 
 	unsigned char block = hc->blocks[hcx][hcz][hcy];
 
@@ -705,7 +705,7 @@ void map_draw(SDL_Surface *screen)
 	SDL_BlitSurface(left_surface, &left_src, screen, &left_dst);
 	g_free(left_text);
 
-	gchar *right_text = g_strdup_printf("x: %-5d z: %-5d y: %-3d", hx, hz, hc->height[hcx][hcz]);
+	gchar *right_text = g_strdup_printf("x: %-5d z: %-5d y: %-3d", hx, hz, hcy);
 	SDL_Surface *right_surface = TTF_RenderText_Shaded(map_font, right_text, white, black);
 	SDL_Rect right_src = { .x = 0, .y = 0, .w = right_surface->w, .h = right_surface->h };
 	int right_offset_width;
