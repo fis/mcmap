@@ -2,6 +2,7 @@
 #define MCMAP_MAP_H 1
 
 #include <SDL_ttf.h>
+#include "world.h"
 #include "types.h"
 
 #define MCMAP_EVENT_REPAINT SDL_USEREVENT

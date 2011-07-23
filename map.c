@@ -110,6 +110,77 @@ inline void map_repaint(void)
 	SDL_PushEvent(&e);
 }
 
+// FIXME: Should we transform alpha too?
+#define TRANSFORM_RGB(expr) \
+	do { \
+		Uint8 x; \
+		x = rgba.r; rgba.r = (expr); \
+		x = rgba.g; rgba.g = (expr); \
+		x = rgba.b; rgba.b = (expr); \
+	} while (0)
+
+static struct rgba map_water_color(struct chunk *c, struct rgba rgba, jint bx, jint bz, Uint32 y)
+{
+	while (--y && IS_WATER(c->blocks[bx][bz][y]))
+		TRANSFORM_RGB(x*7/8);
+	return rgba;
+}
+
+static struct rgb map_block_color(struct chunk *c, unsigned char *b, jint bx, jint bz, Uint32 y)
+{
+	struct rgba rgba = block_colors[b[y]];
+
+	/* apply shadings and such */
+
+	#ifdef FEAT_FULLCHUNK
+
+	#define LIGHT_EXP1 60800
+	#define LIGHT_EXP2 64000
+
+	if (map_flags & MAP_FLAG_LIGHTS)
+	{
+		int ly = y+1;
+		if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
+
+		int lv_block = c->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2];
+		int lv_day = c->light_sky[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2];
+
+		if (ly & 1)
+			lv_block >>= 4, lv_day >>= 4;
+		else
+			lv_block &= 0xf, lv_day &= 0xf;
+
+		lv_day -= map_darken;
+		if (lv_day < 0) lv_day = 0;
+		Uint32 block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
+
+		Uint32 lf = 0x10000;
+
+		for (int i = lv_block; i < 15; i++)
+			lf = (lf*block_exp) >> 16;
+		for (int i = lv_day; i < 15; i++)
+			lf = (lf*LIGHT_EXP1) >> 16;
+
+		TRANSFORM_RGB((x*lf) >> 16);
+	}
+
+	#endif /* FEAT_FULLCHUNK */
+
+	if (IS_WATER(b[y]))
+		rgba = map_water_color(c, rgba, bx, bz, y);
+
+	/* alpha transform */
+
+	if (rgba.a == 255 || y == 0)
+		return IGNORE_ALPHA(rgba);
+
+	struct rgb below = map_block_color(c, b, bx, bz, y-1);
+
+	return RGB((below.r * (255 - rgba.a) + rgba.r * rgba.a)/255,
+	           (below.g * (255 - rgba.a) + rgba.g * rgba.a)/255,
+	           (below.b * (255 - rgba.a) + rgba.b * rgba.a)/255);
+}
+
 void map_update_chunk(jint cx, jint cz)
 {
 	jint cxo = REGION_OFF(cx);
@@ -149,109 +220,34 @@ void map_update_chunk(jint cx, jint cz)
 
 			/* select basic color */
 
-			struct rgba rgba;
+			struct rgb rgb;
 
 			if (map_mode == MAP_MODE_TOPO)
 			{
 				Uint32 v = *b;
-				if (v < 64)
-					rgba = RGBA_OPAQUE(4*v, 4*v, 0);
+				if (IS_WATER(c->blocks[bx][bz][y]))
+					rgb = IGNORE_ALPHA(map_water_color(c, block_colors[0x08], bx, bz, y));
+				else if (v < 64)
+					rgb = RGB(4*v, 4*v, 0);
 				else
-					rgba = RGBA_OPAQUE(255, 255-4*(v-64), 0);
+					rgb = RGB(255, 255-4*(v-64), 0);
 			}
-			else
+			else if (map_mode == MAP_MODE_CROSS)
+				rgb = IGNORE_ALPHA(block_colors[b[map_y]]);
+			else if (map_mode == MAP_MODE_SURFACE)
 			{
-				if (map_mode == MAP_MODE_CROSS)
-					y = map_y;
-				else if (map_flags & MAP_FLAG_CHOP && y >= ceiling_y)
+				if (map_flags & MAP_FLAG_CHOP && y >= ceiling_y)
 				{
 					y = ceiling_y - 1;
 					while (IS_AIR(b[y]) && y > 1)
 						y--;
 				}
-
-				rgba = block_colors[b[y]];
-			}
-
-			/* apply shadings and such */
-
-			// FIXME: Should we transform alpha too?
-			#define TRANSFORM_RGB(expr) \
-				do { \
-					Uint8 x; \
-					x = rgba.r; rgba.r = (expr); \
-					x = rgba.g; rgba.g = (expr); \
-					x = rgba.b; rgba.b = (expr); \
-				} while (0)
-
-			#ifdef FEAT_FULLCHUNK
-
-			#define LIGHT_EXP1 60800
-			#define LIGHT_EXP2 64000
-
-			if (map_flags & MAP_FLAG_LIGHTS)
-			{
-				int ly = y+1;
-				if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
-
-				int lv_block = c->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2],
-					lv_day = c->light_sky[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2];
-
-				if (ly & 1)
-					lv_block >>= 4, lv_day >>= 4;
-				else
-					lv_block &= 0xf, lv_day &= 0xf;
-
-				lv_day -= map_darken;
-				if (lv_day < 0) lv_day = 0;
-				Uint32 block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
-
-				Uint32 lf = 0x10000;
-
-				for (int i = lv_block; i < 15; i++)
-					lf = (lf*block_exp) >> 16;
-				for (int i = lv_day; i < 15; i++)
-					lf = (lf*LIGHT_EXP1) >> 16;
-
-				TRANSFORM_RGB((x*lf) >> 16);
-			}
-
-			#endif /* FEAT_FULLCHUNK */
-
-			if (IS_WATER(c->blocks[bx][bz][y]))
-			{
-				if (map_mode != MAP_MODE_SURFACE)
-					rgba = block_colors[0x08];
-
-				jint h = y;
-				while (--h)
-					if (IS_WATER(c->blocks[bx][bz][h]))
-						TRANSFORM_RGB(x*7/8);
-					else
-						break;
-			}
-
-			#undef TRANSFORM_RGB
-
-			/* update bitmap */
-
-			// TODO: Search more than one down (i.e. recurse for alpha)
-			struct rgb tinted;
-			if (rgba.a < 255)
-			{
-				struct rgb down_one;
-				if (y > 0)
-					down_one = IGNORE_ALPHA(block_colors[c->blocks[bx][bz][y-1]]);
-				else
-					down_one = IGNORE_ALPHA(block_colors[0x07]);
-				tinted.r = (down_one.r * (255 - rgba.a) + rgba.r * rgba.a)/255;
-				tinted.g = (down_one.g * (255 - rgba.a) + rgba.g * rgba.a)/255;
-				tinted.b = (down_one.b * (255 - rgba.a) + rgba.b * rgba.a)/255;
+				rgb = map_block_color(c, b, bx, bz, y);
 			}
 			else
-				tinted = IGNORE_ALPHA(rgba);
+				wtff("invalid map_mode %d", map_mode);
 
-			*p++ = pack_rgb(tinted);
+			*p++ = pack_rgb(rgb);
 			b += blocks_xpitch;
 		}
 
