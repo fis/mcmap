@@ -327,7 +327,7 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 				if (!conv)
 					dief("g_convert UTF8->UTF16BE failed (error: %s, string: '%s')", error->message, (char*)tp);
 				unsigned char lenb[2];
-				jshort_write(lenb, conv_len);
+				jshort_write(lenb, conv_len/2);
 				g_byte_array_append(data, lenb, 2);
 				g_byte_array_append(data, (unsigned char*)conv, conv_len);
 				offset += 2 + conv_len;
