@@ -21,72 +21,12 @@ enum special_color_names
 	COLOR_MAX_SPECIAL
 };
 
-#define AIR_COLOR {135, 206, 235}
-static struct rgb block_colors[256] = {
-	[0x00] = AIR_COLOR,       /* air */
-	[0x01] = {180, 180, 180}, /* stone */
-	[0x02] = {34,  180, 0},   /* grass */
-	[0x03] = {158, 123, 18},  /* dirt */
-	[0x04] = {128, 128, 128}, /* cobblestone */
-	[0x05] = {133, 78,  0},   /* wood */
-	[0x06] = {0,   132, 0},   /* sapling */
-	[0x07] = {0,   0,   0},   /* bedrock */
-	[0x08] = {39,  161, 225}, /* water */
-	[0x09] = {39,  161, 225}, /* stationary water */
-	[0x0a] = {255, 81,  0},   /* lava */
-	[0x0b] = {255, 81,  0},   /* stationary lava */
-	[0x0c] = {245, 245, 69},  /* sand */
-	[0x0d] = {222, 190, 160}, /* gravel */
-	[0x0e] = {255, 180, 0},   /* gold ore */
-	[0x0f] = {92,  92,  92},  /* iron ore */
-	[0x10] = {51,  51,  51},  /* coal ore */
-	[0x11] = {95,  55,  0},   /* log */
-	[0x12] = {0,   132, 0},   /* leaves */
-	[0x14] = {185, 234, 231}, /* glass */
-	[0x15] = {65,  102, 245}, /* lapis lazuli ore */
-	[0x16] = {65,  102, 245}, /* lapis lazuli block */
-	[0x18] = {245, 245, 69},  /* sandstone */
-	[0x1f] = {34,  180, 0},   /* tall grass (same as grass) */
-	[0x23] = {240, 240, 240}, /* cloth */
-	[0x25] = {137, 180, 0},   /* yellow flower */
-	[0x26] = {122, 130, 0},   /* red flower */
-	[0x29] = {255, 180, 0},   /* gold block */
-	[0x2a] = {92,  92,  92},  /* iron block */
-	[0x2b] = {180, 180, 180}, /* double step */
-	[0x2c] = {180, 180, 180}, /* step */
-	[0x2d] = {160, 0,   0},   /* brick */
-	[0x30] = {0,   255, 0},   /* mossy cobble */
-	[0x31] = {61,  0,   61},  /* obsidian */
-	[0x32] = {255, 255, 0},   /* torch */
-	[0x33] = {255, 108, 0},   /* fire */
-	[0x35] = {133, 78,  0},   /* wooden stairs */
-	[0x37] = {160, 0,   0},   /* redstone wire */
-	[0x38] = {0,   255, 255}, /* diamond ore */
-	[0x39] = {0,   255, 255}, /* diamond block */
-	[0x3c] = {114, 76,  9},   /* soil */
-	[0x41] = AIR_COLOR,       /* ladder */
-	[0x43] = {128, 128, 128}, /* cobblestone stairs */
-	[0x45] = AIR_COLOR,       /* lever */
-	[0x49] = {160, 0,   0},   /* redstone ore */
-	[0x4a] = {160, 0,   0},   /* redstone ore (lit) */
-	[0x4b] = {160, 0,   0},   /* redstone torch (off) */
-	[0x4c] = {160, 0,   0},   /* redstone torch (on) */
-	[0x4d] = AIR_COLOR,       /* stone button */
-	[0x4e] = AIR_COLOR,       /* snow layer */
-	[0x4f] = {211, 255, 255}, /* ice */
-	[0x50] = {238, 255, 255}, /* snow */
-	[0x52] = {165, 42,  42},  /* clay */
-	[0x53] = {0,   255, 0},   /* reed^H^H^H^Hsugar cane */
-	[0x56] = {246, 156, 0},   /* pumpkin */
-	[0x57] = {121, 17,  0},   /* netherstone */
-	[0x58] = {107, 43,  15},  /* slow sand */
-	[0x59] = {186, 157, 0},   /* lightstone */
-	[0x5b] = {246, 156, 0},   /* pumpkin (lit) */
-};
+struct rgba block_colors[256];
 
-static struct rgb special_colors[COLOR_MAX_SPECIAL] = {
-	[COLOR_PLAYER] = {255, 0, 255},
-	[COLOR_UNLOADED] = {16, 16, 16},
+// TODO: Move this out, make it configurable
+static struct rgba special_colors[COLOR_MAX_SPECIAL] = {
+	[COLOR_PLAYER] = {255, 0, 255, 255},
+	[COLOR_UNLOADED] = {16, 16, 16, 255},
 };
 
 /* map graphics code */
@@ -147,7 +87,7 @@ static SDL_Surface *map_create_region(struct coord cc)
 
 	SDL_LockSurface(region);
 	SDL_Rect r = { .x = 0, .y = 0, .w = REGION_XSIZE, .h = REGION_ZSIZE };
-	SDL_FillRect(region, &r, pack_rgb(special_colors[COLOR_UNLOADED]));
+	SDL_FillRect(region, &r, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_UNLOADED])));
 	SDL_UnlockSurface(region);
 
 	return region;
@@ -206,15 +146,15 @@ void map_update_chunk(jint cx, jint cz)
 
 			/* select basic color */
 
-			struct rgb rgb;
+			struct rgba rgba;
 
 			if (map_mode == MAP_MODE_TOPO)
 			{
 				Uint32 v = *b;
 				if (v < 64)
-					rgb = RGB(4*v, 4*v, 0);
+					rgba = RGBA_OPAQUE(4*v, 4*v, 0);
 				else
-					rgb = RGB(255, 255-4*(v-64), 0);
+					rgba = RGBA_OPAQUE(255, 255-4*(v-64), 0);
 			}
 			else
 			{
@@ -227,17 +167,18 @@ void map_update_chunk(jint cx, jint cz)
 						y--;
 				}
 
-				rgb = block_colors[b[y]];
+				rgba = block_colors[b[y]];
 			}
 
 			/* apply shadings and such */
 
+			// FIXME: Should we transform alpha too?
 			#define TRANSFORM_RGB(expr) \
 				do { \
 					Uint8 x; \
-					x = rgb.r; rgb.r = (expr); \
-					x = rgb.g; rgb.g = (expr); \
-					x = rgb.b; rgb.b = (expr); \
+					x = rgba.r; rgba.r = (expr); \
+					x = rgba.g; rgba.g = (expr); \
+					x = rgba.b; rgba.b = (expr); \
 				} while (0)
 
 			#ifdef FEAT_FULLCHUNK
@@ -276,8 +217,8 @@ void map_update_chunk(jint cx, jint cz)
 
 			if (IS_WATER(c->blocks[bx][bz][y]))
 			{
-				if (map_mode == MAP_MODE_TOPO)
-					rgb = block_colors[0x08];
+				if (map_mode != MAP_MODE_SURFACE)
+					rgba = block_colors[0x08];
 
 				jint h = y;
 				while (--h)
@@ -291,7 +232,9 @@ void map_update_chunk(jint cx, jint cz)
 
 			/* update bitmap */
 
-			*p++ = pack_rgb(rgb);
+			// TODO: In surface mode, look downwards to find an appropriate block
+			// to shade with the alpha
+			*p++ = pack_rgb(IGNORE_ALPHA(rgba));
 			b += blocks_xpitch;
 		}
 
@@ -548,7 +491,8 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 		int sx = x0 + txx*ix + txy*iy;
 		int sy = y0 + tyx*ix + tyy*iy;
 		Uint32 *p = (Uint32 *)&pixels[sy*pitch + sx*4];
-		*p = pack_rgb(special_colors[COLOR_PLAYER]);
+		// TODO: Handle alpha in surface mode
+		*p = pack_rgb(IGNORE_ALPHA(special_colors[COLOR_PLAYER]));
 	}
 
 	/* draw the triangle shape */
@@ -588,7 +532,8 @@ static void map_draw_entity_marker(struct entity *e, void *userdata)
 		return;
 
 	SDL_Rect r = { .x = ex, .y = ey, .w = map_scale_indicator, .h = map_scale_indicator };
-	SDL_FillRect(screen, &r, pack_rgb(special_colors[COLOR_PLAYER]));
+	// TODO: handle alpha in surface mode
+	SDL_FillRect(screen, &r, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_PLAYER])));
 }
 
 void map_draw(SDL_Surface *screen)
@@ -596,7 +541,7 @@ void map_draw(SDL_Surface *screen)
 	/* clear the window */
 
 	SDL_Rect rect_screen = { .x = 0, .y = 0, .w = screen->w, .h = screen->h };
-	SDL_FillRect(screen, &rect_screen, 0);
+	SDL_FillRect(screen, &rect_screen, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_UNLOADED])));
 
 	/* draw the map */
 

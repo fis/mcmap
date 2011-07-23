@@ -13,6 +13,7 @@
 #include "common.h"
 #include "console.h"
 #include "map.h"
+#include "block.h"
 #include "world.h"
 #include "proxy.h"
 #include "ui.h"
@@ -27,6 +28,8 @@ struct options opt = {
 	.wndsize = 0,
 	.jumpfile = 0,
 };
+
+void load_colors(gchar **lines);
 
 /* main application */
 
@@ -116,6 +119,26 @@ int mcmap_main(int argc, char **argv)
 		g_free(jump_file);
 	}
 
+	/* load colors */
+
+	load_colors(default_colors);
+
+	gchar *filename = g_strconcat(getenv("HOME"), "/.mcmap/colors", NULL);
+	gchar *colors;
+	GError *error = NULL;
+	if (g_file_get_contents(filename, &colors, NULL, &error))
+	{
+		gchar **lines = g_strsplit_set(colors, "\n", 0);
+		load_colors(lines);
+		g_free(colors);
+		g_strfreev(lines);
+	}
+	else if (error->code != G_FILE_ERROR_NOENT)
+	{
+		die(error->message);
+	}
+	g_free(filename);
+
 	/* initialization stuff */
 
 	/* wait for a client to connect to us */
@@ -196,4 +219,38 @@ int mcmap_main(int argc, char **argv)
 	start_ui(!opt.nomap, opt.scale, !opt.wndsize, wnd_w, wnd_h);
 
 	return 0;
+}
+
+void load_colors(gchar **lines)
+{
+	int line_number = 0;
+
+	while (*lines)
+	{
+		line_number++;
+		gchar *line = *lines++;
+
+		if (line[0] == '#' || line[0] == '\0') continue;
+
+		char block_name[256];
+		struct rgba color;
+		int fields = sscanf(line, "%[^:]:%hhu%hhu%hhu%hhu", block_name, &color.r, &color.g, &color.b, &color.a);
+		if (fields < 4)
+			dief("Invalid configuration line at ~/.mcmap/colors:%d: %s", line_number, line);
+		else if (fields == 4)
+			color.a = 255;
+
+		gboolean ok = FALSE;
+		for (int block = 0; block < sizeof(block_info)/sizeof(struct block_info); block++)
+		{
+			if (block_info[block].name && strcmp(block_info[block].name, block_name) == 0)
+			{
+				/* don't break out; multiple blocks can have the same name */
+				ok = TRUE;
+				block_colors[block] = color;
+			}
+		}
+		if (!ok)
+			dief("Invalid block name at ~/.mcmap/colors:%d: %s", line_number, block_name);
+	}
 }

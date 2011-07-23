@@ -27,6 +27,8 @@ enum map_mode
 #define MAP_FLAG_NIGHT 0x04
 #define MAP_FLAG_CHOP 0x08
 
+extern struct rgba block_colors[256];
+
 //extern SDL_Surface *map;
 //extern jint map_min_x, map_min_z;
 //extern jint map_max_x, map_max_z;

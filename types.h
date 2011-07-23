@@ -75,6 +75,8 @@ struct rgba
 };
 
 #define RGBA(rv, gv, bv, av) ((struct rgba){ .r = (rv), .g = (gv), .b = (bv), .a = (av)})
+#define RGBA_OPAQUE(rv, gv, bv) RGBA(rv, gv, bv, 255)
+#define IGNORE_ALPHA(rgba) RGB((rgba).r, (rgba).g, (rgba).b)
 
 struct buffer
 {
