@@ -662,14 +662,20 @@ void map_draw(SDL_Surface *screen)
 	SDL_Rect r = { .x = 0, .y = screen->h - 24, .w = screen->w, .h = 24 };
 	SDL_FillRect(screen, &r, 0);
 
-	if (!map_focused) goto no_block_info;
-
-	int mx, my;
-	SDL_GetMouseState(&mx, &my);
-	if (my >= map_h) goto no_block_info;
-
 	jint hx, hz;
-	map_s2w(screen, mx, my, &hx, &hz, 0, 0);
+	if (map_focused)
+	{
+		int mx, my;
+		SDL_GetMouseState(&mx, &my);
+		if (my >= map_h) goto no_block_info;
+
+		map_s2w(screen, mx, my, &hx, &hz, 0, 0);
+	}
+	else
+	{
+		hx = player_x;
+		hz = player_z;
+	}
 
 	struct coord hcc = { .x = CHUNK_XIDX(hx), .z = CHUNK_ZIDX(hz) };
 	struct chunk *hc = world_chunk(&hcc, 0);
@@ -678,7 +684,9 @@ void map_draw(SDL_Surface *screen)
 
 	jint hcx = CHUNK_XOFF(hx);
 	jint hcz = CHUNK_ZOFF(hz);
-	jint hcy = map_mode == MAP_MODE_CROSS ? map_y : hc->height[hcx][hcz];
+	jint hcy = map_focused ? (map_mode == MAP_MODE_CROSS ? map_y
+	                                                     : hc->height[hcx][hcz])
+	                       : player_y;
 
 	unsigned char block = hc->blocks[hcx][hcz][hcy];
 
