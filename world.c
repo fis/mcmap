@@ -176,11 +176,11 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 
 #ifdef FEAT_FULLCHUNK
 			if ((ys+1)/2 <= zb_meta.len)
-				memcpy(&c->meta[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_meta.data, (ys+1)/2);
+				memcpy(&c->meta[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2) + y0/2], zb_meta.data, (ys+1)/2);
 			if ((ys+1)/2 <= zb_light_blocks.len)
-				memcpy(&c->light_blocks[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_blocks.data, (ys+1)/2);
+				memcpy(&c->light_blocks[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2) + y0/2], zb_light_blocks.data, (ys+1)/2);
 			if ((ys+1)/2 <= zb_light_sky.len)
-				memcpy(&c->light_sky[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2)], zb_light_sky.data, (ys+1)/2);
+				memcpy(&c->light_sky[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2) + y0/2], zb_light_sky.data, (ys+1)/2);
 			ADVANCE_BUFFER(zb_meta, (ys+1)/2);
 			ADVANCE_BUFFER(zb_light_blocks, (ys+1)/2);
 			ADVANCE_BUFFER(zb_light_sky, (ys+1)/2);
