@@ -612,6 +612,7 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 	SDL_UnlockSurface(screen);
 }
 
+static void map_draw_entity_marker(struct entity *e, void *userdata) __attribute__ ((unused));
 static void map_draw_entity_marker(struct entity *e, void *userdata)
 {
 	SDL_Surface *screen = userdata;
@@ -638,6 +639,75 @@ void map_draw(SDL_Surface *screen)
 
 	/* draw the map */
 
+	SDL_LockSurface(screen);
+
+	struct coord cc;
+	struct chunk *c = 0;
+	int c_valid = 0;
+
+	for (jint y = 0; y < map_h; y += map_scale)
+	{
+		for (jint x = 0; x < map_w; x += map_scale)
+		{
+			/* probe chunks to find the color */
+
+			jint wy = CHUNK_YSIZE-1;
+			struct rgb rgb = IGNORE_ALPHA(block_colors[0]);
+
+			while (wy >= 0)
+			{
+				/* convert screen coordinates to world coordinates */
+
+				jint nx = x / map_scale; /* "normalized" screen-coord */
+				jint ny = y / map_scale - (CHUNK_YSIZE - 1 - wy); /* depth offset */
+
+				jint wx = nx - ny;
+				jint wz = (nx + ny) >> 1; /* assumes arithmetic shift */
+
+				/* consider a block */
+
+				if (!c_valid || cc.x != CHUNK_XIDX(wx>>1) || cc.z != CHUNK_ZIDX(wz))
+				{
+					cc.x = CHUNK_XIDX(wx>>1);
+					cc.z = CHUNK_ZIDX(wz);
+					c = world_chunk(&cc, 0);
+					c_valid = 1;
+				}
+
+				if (c)
+				{
+					unsigned char block = c->blocks[CHUNK_XOFF(wx>>1)][CHUNK_ZOFF(wz)][wy];
+					if (!IS_AIR(block))
+					{
+						rgb = IGNORE_ALPHA(block_colors[block]);
+						break;
+					}
+				}
+
+				wy--;
+			}
+
+			/* dump map_scale pixels on screen */
+
+			Uint32 rgbv = pack_rgb(rgb);
+			Uint32 *s = (Uint32*)((unsigned char *)screen->pixels + y*screen->pitch + 4*x);
+
+			*s++ = rgbv;
+			for (jint xo = 1; xo < map_scale && x+xo < map_w; xo++)
+				*s++ = rgbv;
+		}
+
+		/* repeat previous row up to map-scale times */
+
+		for (jint yo = 1; yo < map_scale && y+yo < map_h; yo++)
+			memcpy((unsigned char *)screen->pixels + (y+yo)*screen->pitch,
+			       (unsigned char *)screen->pixels + y*screen->pitch,
+			       4 * map_w);
+	}
+
+	SDL_UnlockSurface(screen);
+
+#if 0
 	g_mutex_lock(map_mutex);
 
 	/* find top-left and bottom-right corners of screen in (sub)chunk coords */
@@ -733,6 +803,9 @@ void map_draw(SDL_Surface *screen)
 
 	map_draw_player_marker(screen);
 	world_entities(map_draw_entity_marker, screen);
+#endif
+
+	/* the status bar */
 
 	SDL_Rect r = { .x = 0, .y = screen->h - 24, .w = screen->w, .h = 24 };
 	SDL_FillRect(screen, &r, 0);
