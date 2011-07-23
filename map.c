@@ -684,9 +684,12 @@ void map_draw(SDL_Surface *screen)
 
 	jint hcx = CHUNK_XOFF(hx);
 	jint hcz = CHUNK_ZOFF(hz);
-	jint hcy = map_focused ? (map_mode == MAP_MODE_CROSS ? map_y
-	                                                     : hc->height[hcx][hcz])
-	                       : player_y;
+
+	jint hcy;
+	if (map_focused)
+		hcy = map_mode == MAP_MODE_CROSS ? map_y : hc->height[hcx][hcz];
+	else
+		hcy = player_y;
 
 	unsigned char block = hc->blocks[hcx][hcz][hcy];
 
