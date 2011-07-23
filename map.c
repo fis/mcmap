@@ -41,6 +41,7 @@ jint ceiling_y = CHUNK_YSIZE;
 GHashTable *regions = 0;
 TTF_Font *map_font = 0;
 SDL_PixelFormat *screen_fmt = 0;
+gboolean map_focused = FALSE;
 jint map_w = 0, map_h = 0;
 jint map_min_x = 0, map_min_z = 0;
 jint map_max_x = 0, map_max_z = 0;
@@ -650,6 +651,8 @@ void map_draw(SDL_Surface *screen)
 
 	SDL_Rect r = { .x = 0, .y = screen->h - 24, .w = screen->w, .h = 24 };
 	SDL_FillRect(screen, &r, pack_rgb(RGB(0, 0, 0)));
+
+	if (!map_focused) goto no_block_info;
 
 	int mx, my;
 	SDL_GetMouseState(&mx, &my);
