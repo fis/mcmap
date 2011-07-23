@@ -117,11 +117,6 @@ gpointer proxy_thread(gpointer data)
 		}
 		else
 		{
-			if (!cfg->client_to_server && p->id == PACKET_SPAWN_POSITION)
-			{
-				if (packet_must_free) packet_free(p);
-				p = packet_new(0, PACKET_SPAWN_POSITION, random(), random(), random());
-			}
 			if (!packet_write(sto, p))
 				dief("proxy thread (%s) write failed", desc);
 		}
