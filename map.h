@@ -1,6 +1,7 @@
 #ifndef MCMAP_MAP_H
 #define MCMAP_MAP_H 1
 
+#include <SDL_ttf.h>
 #include "types.h"
 
 #define MCMAP_EVENT_REPAINT SDL_USEREVENT
@@ -33,6 +34,7 @@ extern struct rgba block_colors[256];
 //extern jint map_min_x, map_min_z;
 //extern jint map_max_x, map_max_z;
 
+extern TTF_Font *map_font;
 extern int map_w, map_h;
 extern double player_dx, player_dy, player_dz;
 extern jint player_x, player_y, player_z;

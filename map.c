@@ -77,8 +77,6 @@ void map_init(SDL_Surface *screen)
 #ifdef FEAT_FULLCHUNK
 	map_flags |= MAP_FLAG_LIGHTS;
 #endif
-
-	map_font = TTF_OpenFont("DejaVuSansMono-Bold.ttf", 13);
 }
 
 static SDL_Surface *map_create_region(struct coord cc)
