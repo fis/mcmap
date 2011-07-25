@@ -1,7 +1,7 @@
 # mcmap/Makefile.posix  -*- mode: makefile -*-
 
 sources = posix.c
-libs := gthread-2.0 sdl
+libs := gthread-2.0 sdl SDL_ttf
 
 include Makefile.common
 
@@ -15,4 +15,4 @@ ifeq ($(shell uname),Darwin)
         CFLAGS += -fnested-functions
 endif
 
-LDFLAGS ?= $(shell pkg-config --libs $(libs)) -lz -lreadline -lSDL_ttf
+LDFLAGS ?= $(shell pkg-config --libs $(libs)) -lz -lreadline
