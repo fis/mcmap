@@ -88,11 +88,11 @@ void map_init(SDL_Surface *screen)
 #endif
 }
 
-static struct map_region *map_create_region(struct coord cc)
+static struct map_region *map_create_region(struct coord rc)
 {
 	struct map_region *region = g_new(struct map_region, 1);
 
-	region->key = cc;
+	region->key = rc;
 	region->surf = SDL_CreateRGBSurface(SDL_SWSURFACE, REGION_XSIZE, REGION_ZSIZE, 32,
 	                                    screen_fmt->Rmask, screen_fmt->Gmask, screen_fmt->Bmask, 0);
 	if (!region->surf)
@@ -115,10 +115,10 @@ static void map_destroy_region(gpointer rp)
 	g_free(rp);
 }
 
-static struct map_region *map_get_region(struct coord cc, int gen)
+static struct map_region *map_get_region(struct coord rc, int gen)
 {
-	struct map_region *region = g_hash_table_lookup(regions, &cc);
-	return region ? region : (gen ? map_create_region(cc) : 0);
+	struct map_region *region = g_hash_table_lookup(regions, &rc);
+	return region ? region : (gen ? map_create_region(rc) : 0);
 }
 
 inline void map_repaint(void)
@@ -314,7 +314,8 @@ void map_update_chunk(struct coord cc)
 	if (!c)
 		return;
 
-	struct map_region *region = map_get_region(cc, 1);
+	struct coord rc = { .x = REGION_IDX(cc.x), .z = REGION_IDX(cc.z) };
+	struct map_region *region = map_get_region(rc, 1);
 	region->dirty_flag = 1;
 	BITSET_SET(region->dirty_chunk, REGION_OFF(cc.z)*REGION_SIZE + REGION_OFF(cc.x));
 }
