@@ -105,6 +105,9 @@ static struct map_region *map_create_region(struct coord rc)
 	SDL_FillRect(region->surf, &r, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_UNLOADED])));
 	SDL_UnlockSurface(region->surf);
 
+	region->dirty_flag = 0;
+	memset(region->dirty_chunk, 0, sizeof region->dirty_chunk);
+
 	return region;
 }
 
