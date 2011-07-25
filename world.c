@@ -18,11 +18,7 @@
 #include "nbt.h"
 #include "world.h"
 
-static GHashTable *chunk_table = 0;
-
-jint chunk_min_x = 0, chunk_min_z = 0;
-jint chunk_max_x = 0, chunk_max_z = 0;
-
+static GHashTable *region_table = 0;
 static GHashTable *entity_table = 0;
 static GHashTable *anentity_table = 0;
 static GMutex *entity_mutex = 0;
@@ -36,31 +32,52 @@ static jint spawn_x = 0, spawn_y = 0, spawn_z = 0;
 
 volatile int world_running = 1;
 
+static void region_free(gpointer gp)
+{
+	struct region *region = gp;
+	for (int i = 0; i < NELEMS(region->chunks); i++)
+		for (int j = 0; j < NELEMS(region->chunks[i]); j++)
+			g_free(region->chunks[i][j]);
+	g_free(region);
+}
+
+struct region *world_region(struct coord *coord, int gen)
+{
+	struct region *region = g_hash_table_lookup(region_table, coord);
+
+	if (region)
+		return region;
+
+	if (!gen)
+		return NULL;
+
+	region = g_new(struct region, 1);
+	region->key = *coord;
+
+	/* Can't use g_malloc0; NULL might not be all-bits-zero */
+	for (int i = 0; i < NELEMS(region->chunks); i++)
+		for (int j = 0; j < NELEMS(region->chunks[i]); j++)
+			region->chunks[i][j] = NULL;
+
+	g_hash_table_insert(region_table, &region->key, region);
+
+	return region;
+}
+
 struct chunk *world_chunk(struct coord *coord, int gen)
 {
-	struct chunk *c = g_hash_table_lookup(chunk_table, coord);
-	if (c)
-		return c;
-	if (!gen)
+	struct region *region = world_region(coord, gen);
+
+	if (!region)
 		return 0;
 
-	c = g_malloc0(sizeof *c);
-	c->key = *coord;
-	g_hash_table_insert(chunk_table, &c->key, c);
+	jint x = coord->x;
+	jint z = coord->z;
 
-	jint x = coord->x, z = coord->z;
+	if (gen && !region->chunks[x][z])
+		region->chunks[x][z] = g_malloc0(sizeof(struct chunk));
 
-	if (x < chunk_min_x)
-		chunk_min_x = x;
-	if (x > chunk_max_x)
-		chunk_max_x = x;
-
-	if (z < chunk_min_z)
-		chunk_min_z = z;
-	if (z > chunk_max_z)
-		chunk_max_z = z;
-
-	return c;
+	return region->chunks[x][z];
 }
 
 unsigned char *world_stack(jint x, jint z, int gen)
@@ -124,6 +141,8 @@ static gboolean handle_compressed_chunk(jint x0, jint y0, jint z0,
 	else if (y0 + ys > CHUNK_YSIZE)
 		ys = CHUNK_YSIZE - y0;
 
+	// FIXME: These lengths are too big, because they include the buffers after them.
+	// Not really a problem, though.
 	struct buffer zb = { zbuf_len, zbuf };
 #ifdef FEAT_FULLCHUNK
 	struct buffer zb_meta = OFFSET_BUFFER(zb, xs*ys*zs);
@@ -385,21 +404,10 @@ void world_entities(void (*callback)(struct entity *e, void *userdata), void *us
 
 void world_init(void)
 {
-	chunk_table = g_hash_table_new_full(coord_hash, coord_equal, 0, g_free);
+	region_table = g_hash_table_new_full(coord_hash, coord_equal, 0, region_free);
 	entity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
 	entity_mutex = g_mutex_new();
 	anentity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
-}
-
-// FIXME: bad
-void world_destroy(void)
-{
-	g_hash_table_destroy(chunk_table);
-	g_hash_table_destroy(entity_table);
-	g_mutex_free(entity_mutex);
-	g_hash_table_destroy(anentity_table);
-	chunk_table = entity_table = anentity_table = 0;
-	entity_mutex = 0;
 }
 
 gpointer world_thread(gpointer data)
@@ -548,6 +556,9 @@ gpointer world_thread(gpointer data)
 
 /* world file IO routines */
 
+// FIXME: Make this work
+#if 0
+
 #ifdef FEAT_FULLCHUNK
 
 #define REG_XBITS 5
@@ -566,7 +577,7 @@ gpointer world_thread(gpointer data)
 
 #define SECT_SIZE 4096
 
-struct region
+struct disk_region
 {
 	struct coord key;
 	unsigned offsets[REG_ZSIZE][REG_XSIZE];
@@ -605,7 +616,7 @@ static char *base36_encode(jint value, char *buf, int bufsize)
 	return buf + bufsize + 1;
 }
 
-static void world_append_chunk(struct region *reg, struct chunk *c)
+static void world_append_chunk(struct disk_region *reg, struct chunk *c)
 {
 	/* dump the chunk data into compressed NBT */
 
@@ -713,7 +724,7 @@ int world_save(char *dir)
 		/* find the corresponding region */
 
 		struct coord rc = { .x = REG_XCOORD(c->key.x), .z = REG_ZCOORD(c->key.z) };
-		struct region *reg = g_hash_table_lookup(region_table, &rc);
+		struct disk_region *reg = g_hash_table_lookup(region_table, &rc);
 
 		if (!reg)
 		{
@@ -742,7 +753,7 @@ int world_save(char *dir)
 	g_hash_table_iter_init(&iter, region_table);
 	while (g_hash_table_iter_next(&iter, &ckey, &cvalue))
 	{
-		struct region *reg = cvalue;
+		struct disk_region *reg = cvalue;
 		unsigned char reghdr[REG_XZ*8];
 
 		for (int z = 0; z < REG_ZSIZE; z++)
@@ -775,3 +786,5 @@ int world_save(char *dir)
 }
 
 #endif /* FEAT_FULLCHUNK */
+
+#endif

@@ -32,7 +32,7 @@ static struct rgba special_colors[COLOR_MAX_SPECIAL] = {
 
 /* map graphics code */
 
-struct region
+struct map_region
 {
 	struct coord key;
 	SDL_Surface *surf;
@@ -51,8 +51,6 @@ TTF_Font *map_font = 0;
 SDL_PixelFormat *screen_fmt = 0;
 gboolean map_focused = TRUE;
 jint map_w = 0, map_h = 0;
-jint map_min_x = 0, map_min_z = 0;
-jint map_max_x = 0, map_max_z = 0;
 static jint map_y = 0;
 static int map_darken = 0;
 static unsigned map_rshift, map_gshift, map_bshift;
@@ -90,15 +88,15 @@ void map_init(SDL_Surface *screen)
 #endif
 }
 
-static struct region *map_create_region(struct coord cc)
+static struct map_region *map_create_region(struct coord cc)
 {
-	struct region *region = g_new(struct region, 1);
+	struct map_region *region = g_new(struct map_region, 1);
 
 	region->key = cc;
 	region->surf = SDL_CreateRGBSurface(SDL_SWSURFACE, REGION_XSIZE, REGION_ZSIZE, 32,
 	                                    screen_fmt->Rmask, screen_fmt->Gmask, screen_fmt->Bmask, 0);
 	if (!region->surf)
-		die("SDL map surface init");
+		dief("SDL map surface init: %s", SDL_GetError());
 
 	g_hash_table_insert(regions, &region->key, region);
 
@@ -112,16 +110,16 @@ static struct region *map_create_region(struct coord cc)
 
 static void map_destroy_region(gpointer rp)
 {
-	struct region *region = rp;
+	struct map_region *region = rp;
 	SDL_FreeSurface(region->surf);
 	g_free(rp);
 }
 
-static struct region *map_get_region(struct coord cc, unsigned create)
+static struct map_region *map_get_region(struct coord cc, unsigned create)
 {
 	cc.x = REGION_IDX(cc.x);
 	cc.z = REGION_IDX(cc.z);
-	struct region *region = g_hash_table_lookup(regions, &cc);
+	struct map_region *region = g_hash_table_lookup(regions, &cc);
 	return region ? region : (create ? map_create_region(cc) : 0);
 }
 
@@ -288,7 +286,7 @@ static void map_paint_chunk(SDL_Surface *region, jint cx, jint cz)
 	SDL_UnlockSurface(region);
 }
 
-static void map_paint_region(struct region *region)
+static void map_paint_region(struct map_region *region)
 {
 	jint cidx = 0;
 
@@ -319,7 +317,7 @@ void map_update_chunk(jint cx, jint cz)
 	if (!c)
 		return;
 
-	struct region *region = map_get_region(cc, 1);
+	struct map_region *region = map_get_region(cc, 1);
 	region->dirty_flag = 1;
 	BITSET_SET(region->dirty_chunk, REGION_OFF(cz)*REGION_SIZE + REGION_OFF(cx));
 }
@@ -328,27 +326,26 @@ void map_update(jint x1, jint x2, jint z1, jint z2)
 {
 	g_mutex_lock(map_mutex);
 
-	if (map_min_x != chunk_min_x || map_max_x != chunk_max_x
-	    || map_min_z != chunk_min_z || map_max_z != chunk_max_z)
-	{
-		x1 = chunk_min_x; x2 = chunk_max_x;
-		z1 = chunk_min_z; z2 = chunk_max_z;
-
-		map_min_x = x1; map_max_x = x2;
-		map_min_z = z1; map_max_z = z2;
-	}
-
 	for (jint cz = z1; cz <= z2; cz++)
-	{
 		for (jint cx = x1; cx <= x2; cx++)
-		{
 			map_update_chunk(cx, cz);
-		}
-	}
 
 	g_mutex_unlock(map_mutex);
-
 	map_repaint();
+}
+
+static void map_update_all()
+{
+	GHashTableIter region_iter;
+	struct map_region *region;
+
+	g_hash_table_iter_init(&region_iter, regions);
+
+	// FIXME all terrible
+	while (g_hash_table_iter_next(&region_iter, NULL, (gpointer *) &region))
+	{
+		map_update_chunk(region->key.x, region->key.z);
+	}
 }
 
 void map_update_player_pos(double x, double y, double z)
@@ -384,7 +381,7 @@ void map_update_ceiling()
 			if (!IS_HOLLOW(stack[ceiling_y]))
 				break;
 		if (ceiling_y != old_ceiling_y)
-			map_update(map_min_x, map_max_x, map_min_z, map_max_z);
+			map_update_all();
 	}
 }
 
@@ -420,7 +417,7 @@ void map_update_alt(jint y, int relative)
 
 	if (map_mode == MAP_MODE_CROSS)
 	{
-		map_update(map_min_x, map_max_x, map_min_z, map_max_z);
+		map_update_all();
 		map_repaint();
 	}
 }
@@ -445,7 +442,7 @@ void map_update_time(int daytime)
 	if (map_darken != darken && (map_flags & MAP_FLAG_LIGHTS) && (map_flags & MAP_FLAG_NIGHT))
 	{
 		map_darken = darken;
-		map_update(map_min_x, map_max_x, map_min_z, map_max_z);
+		map_update_all();
 		map_repaint();
 	}
 }
@@ -479,7 +476,7 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 		     (mode == MAP_MODE_SURFACE && map_flags & MAP_FLAG_LIGHTS ? " (lights)" : ""),
 		     (mode == MAP_MODE_SURFACE && (map_flags & MAP_FLAG_LIGHTS) && (map_flags & MAP_FLAG_NIGHT) ? " (night)" : ""));
 
-	map_update(map_min_x, map_max_x, map_min_z, map_max_z);
+	map_update_all();
 }
 
 void map_setscale(int scale, int relative)
@@ -669,7 +666,7 @@ void map_draw(SDL_Surface *screen)
 			/* get the region surface, paint it if dirty */
 
 			struct coord rc = { .x = reg_x*REGION_SIZE, .z = reg_z*REGION_SIZE };
-			struct region *region = map_get_region(rc, 0);
+			struct map_region *region = map_get_region(rc, 0);
 
 			if (!region)
 				continue; /* nothing to draw */

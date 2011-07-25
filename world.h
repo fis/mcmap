@@ -19,6 +19,21 @@
 #define CHUNK_XOFF(coord) ((coord) & (CHUNK_XSIZE-1))
 #define CHUNK_ZOFF(coord) ((coord) & (CHUNK_ZSIZE-1))
 
+#define REGION_BITS 5
+#define REGION_SIZE (1 << REGION_BITS)
+/* relies on implementation-defined arithmetic shift behaviour */
+#define REGION_IDX(coord) ((coord) >> REGION_BITS)
+#define REGION_OFF(coord) ((coord) & (REGION_SIZE-1))
+
+#define REGION_XSIZE (CHUNK_XSIZE*REGION_SIZE)
+#define REGION_ZSIZE (CHUNK_ZSIZE*REGION_SIZE)
+
+struct region
+{
+	struct coord key;
+	struct chunk *chunks[REGION_SIZE][REGION_SIZE];
+};
+
 struct chunk
 {
 	struct coord key;
@@ -38,9 +53,6 @@ struct entity
 	jint x, z;       /* in blocks */
 	jint ax, ay, az; /* in absolute-int format */
 };
-
-extern jint chunk_min_x, chunk_min_z;
-extern jint chunk_max_x, chunk_max_z;
 
 extern volatile int world_running;
 

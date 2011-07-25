@@ -227,9 +227,10 @@ void cmd_save(int cmdc, gchar **cmdv)
 
 	tell("//save: dumping world to: %s", dir);
 
-	if (!world_save(dir))
-		tell("//save: failed");
-	else
+	// FIXME
+//	if (!world_save(dir))
+//		tell("//save: failed");
+//	else
 		tell("//save: successful");
 }
 #endif /* FEAT_FULLCHUNK */

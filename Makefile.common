@@ -4,10 +4,10 @@ sources += block.c cmd.c common.c console.c map.c nbt.c protocol.c proxy.c ui.c 
 extra_sources += main.c mapper.c IMG_savepng.c
 
 ifdef debug
-	CFLAGS ?= -g
+	CFLAGS += -g
 	OBJDIR ?= build-debug
 else
-	CFLAGS ?= -O3
+	CFLAGS += -O3
 	OBJDIR ?= build
 endif
 
