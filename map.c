@@ -219,7 +219,7 @@ static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 
 	struct chunk *c = world_chunk(cc, 0);
 
-	if (!c)
+	if (!c /* just return always: */ || c) /* FIXME: for isometric test */
 		return;
 
 	SDL_LockSurface(region);
@@ -637,13 +637,28 @@ void map_draw(SDL_Surface *screen)
 	SDL_Rect rect_screen = { .x = 0, .y = 0, .w = screen->w, .h = screen->h };
 	SDL_FillRect(screen, &rect_screen, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_UNLOADED])));
 
-	/* draw the map */
-
-	SDL_LockSurface(screen);
+	/* a chunk-pointer-caching block accessor */
 
 	struct coord cc;
 	struct chunk *c = 0;
 	int c_valid = 0;
+
+	unsigned char get_block(jint x, jint y, jint z)
+	{
+		if (!c_valid || cc.x != CHUNK_XIDX(x) || cc.z != CHUNK_ZIDX(z))
+		{
+			cc.x = CHUNK_XIDX(x);
+			cc.z = CHUNK_ZIDX(z);
+			c = world_chunk(&cc, 0);
+			c_valid = 1;
+		}
+
+		return c ? c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y] : 0;
+	}
+
+	/* draw the map */
+
+	SDL_LockSurface(screen);
 
 	for (jint y = 0; y < map_h; y += map_scale)
 	{
@@ -664,24 +679,30 @@ void map_draw(SDL_Surface *screen)
 				jint wx = nx - ny;
 				jint wz = (nx + ny) >> 1; /* assumes arithmetic shift */
 
-				/* consider a block */
+				/* consider a potentially visible top surface */
 
-				if (!c_valid || cc.x != CHUNK_XIDX(wx>>1) || cc.z != CHUNK_ZIDX(wz))
+				unsigned char block = get_block(wx>>1, wy, wz);
+
+				if (!IS_AIR(block)) /* top surface visible */
 				{
-					cc.x = CHUNK_XIDX(wx>>1);
-					cc.z = CHUNK_ZIDX(wz);
-					c = world_chunk(&cc, 0);
-					c_valid = 1;
+					rgb = IGNORE_ALPHA(block_colors[block]);
+					break;
 				}
 
-				if (c)
+				/* consider a potentially visible front side */
+
+				wx++;
+				wz = (nx + ny - 1) >> 1;
+				block = get_block(wx>>1, wy, wz);
+
+				if (!IS_AIR(block))
 				{
-					unsigned char block = c->blocks[CHUNK_XOFF(wx>>1)][CHUNK_ZOFF(wz)][wy];
-					if (!IS_AIR(block))
-					{
-						rgb = IGNORE_ALPHA(block_colors[block]);
-						break;
-					}
+					unsigned mult = wx&1 ? 8 : 12;
+					rgb = IGNORE_ALPHA(block_colors[block]);
+					rgb.r = (rgb.r * mult) >> 4;
+					rgb.g = (rgb.g * mult) >> 4;
+					rgb.b = (rgb.b * mult) >> 4;
+					break;
 				}
 
 				wy--;
