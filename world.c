@@ -114,7 +114,7 @@ static gboolean handle_compressed_chunk(jint x0, jint y0, jint z0,
 	int err;
 
 	z_stream zstr = {
-		.next_in  = zdata,
+		.next_in = zdata,
 		.avail_in = zlen,
 		.next_out = zbuf,
 		.avail_out = sizeof zbuf

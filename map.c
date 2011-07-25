@@ -115,12 +115,10 @@ static void map_destroy_region(gpointer rp)
 	g_free(rp);
 }
 
-static struct map_region *map_get_region(struct coord cc, unsigned create)
+static struct map_region *map_get_region(struct coord cc, int gen)
 {
-	cc.x = REGION_IDX(cc.x);
-	cc.z = REGION_IDX(cc.z);
 	struct map_region *region = g_hash_table_lookup(regions, &cc);
-	return region ? region : (create ? map_create_region(cc) : 0);
+	return region ? region : (gen ? map_create_region(cc) : 0);
 }
 
 inline void map_repaint(void)
@@ -309,9 +307,8 @@ static void map_paint_region(struct map_region *region)
 	region->dirty_flag = 0;
 }
 
-void map_update_chunk(jint cx, jint cz)
+void map_update_chunk(struct coord cc)
 {
-	struct coord cc = { .x = cx, .z = cz };
 	struct chunk *c = world_chunk(&cc, 0);
 
 	if (!c)
@@ -319,7 +316,20 @@ void map_update_chunk(jint cx, jint cz)
 
 	struct map_region *region = map_get_region(cc, 1);
 	region->dirty_flag = 1;
-	BITSET_SET(region->dirty_chunk, REGION_OFF(cz)*REGION_SIZE + REGION_OFF(cx));
+	BITSET_SET(region->dirty_chunk, REGION_OFF(cc.z)*REGION_SIZE + REGION_OFF(cc.x));
+}
+
+void map_update_region(struct coord rc)
+{
+	struct region *r = world_region(&rc, 0);
+
+	if (!r)
+		return;
+
+	struct map_region *region = map_get_region(rc, 1);
+	region->dirty_flag = 1;
+	for (int i = 0; i < NELEMS(region->dirty_chunk); i++)
+		region->dirty_chunk[i] = ~0;
 }
 
 void map_update(jint x1, jint x2, jint z1, jint z2)
@@ -328,7 +338,7 @@ void map_update(jint x1, jint x2, jint z1, jint z2)
 
 	for (jint cz = z1; cz <= z2; cz++)
 		for (jint cx = x1; cx <= x2; cx++)
-			map_update_chunk(cx, cz);
+			map_update_chunk((struct coord){ .x = cx, .z = cz });
 
 	g_mutex_unlock(map_mutex);
 	map_repaint();
@@ -341,10 +351,9 @@ static void map_update_all()
 
 	g_hash_table_iter_init(&region_iter, regions);
 
-	// FIXME all terrible
 	while (g_hash_table_iter_next(&region_iter, NULL, (gpointer *) &region))
 	{
-		map_update_chunk(region->key.x, region->key.z);
+		map_update_region((struct coord){ .x = region->key.x, .z = region->key.z });
 	}
 }
 
@@ -665,7 +674,7 @@ void map_draw(SDL_Surface *screen)
 		{
 			/* get the region surface, paint it if dirty */
 
-			struct coord rc = { .x = reg_x*REGION_SIZE, .z = reg_z*REGION_SIZE };
+			struct coord rc = { .x = reg_x, .z = reg_z };
 			struct map_region *region = map_get_region(rc, 0);
 
 			if (!region)

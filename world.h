@@ -61,6 +61,7 @@ void world_destroy(void);
 
 gpointer world_thread(gpointer data);
 
+struct region *world_region(struct coord *coord, int gen);
 struct chunk *world_chunk(struct coord *coord, int gen);
 unsigned char *world_stack(jint x, jint z, int gen);
 
