@@ -8,8 +8,7 @@ include Makefile.common
 CC := i586-mingw32msvc-gcc
 WINDRES ?= i586-mingw32msvc-windres
 
-CFLAGS += -DWINVER=0x0501 -DPLATFORM_WIN32
-CFLAGS += -isystem . -DWINDOWS_H='"win/include/windows.h"'
+CFLAGS += -DWINVER=0x0501 -DPLATFORM_WIN32 -isystem .
 CFLAGS += -Iwin/glib/include -Iwin/glib/include/glib-2.0 -Iwin/glib/lib/glib-2.0/include
 CFLAGS += -Iwin/SDL-1.2.14/include/SDL
 
