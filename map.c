@@ -191,7 +191,7 @@ static struct rgb map_block_color(struct chunk *c, unsigned char *b, jint bx, ji
 
 	/* alpha transform */
 
-	if (rgba.a == 255 || y == 1)
+	if (rgba.a == 255 || y <= 1)
 		return IGNORE_ALPHA(rgba);
 
 	int below_y = y - 1;
