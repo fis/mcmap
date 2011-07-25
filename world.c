@@ -619,7 +619,7 @@ static char *base36_encode(jint value, char *buf, int bufsize)
 	return buf + bufsize + 1;
 }
 
-static void world_append_chunk(struct disk_region *reg, struct chunk *c)
+struct buffer world_append_chunk(struct disk_region *reg, struct chunk *c)
 {
 	/* dump the chunk data into compressed NBT */
 
@@ -640,10 +640,10 @@ static void world_append_chunk(struct disk_region *reg, struct chunk *c)
 
 	nbt_struct_add(data, nbt_new_int("TerrainPopulated", NBT_TAG_BYTE, 1));
 
-	unsigned clen;
-	unsigned char *cdata = nbt_compress(data, &clen);
-
+	struct buffer buf = nbt_compress(data);
 	nbt_free(data);
+	return buf;
+}
 
 	/* append it to our current region file */
 

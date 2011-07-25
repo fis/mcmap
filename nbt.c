@@ -231,7 +231,7 @@ static void format_tag(GByteArray *arr, struct nbt_tag *tag, int only_payload)
 	}
 }
 
-unsigned char *nbt_compress(struct nbt_tag *tag, unsigned *len)
+struct buffer nbt_compress(struct nbt_tag *tag)
 {
 	GByteArray *arr = g_byte_array_new();
 
@@ -247,8 +247,7 @@ unsigned char *nbt_compress(struct nbt_tag *tag, unsigned *len)
 	if (ret != Z_OK)
 		dief("zlib broke badly: %s", zError(ret));
 
-	*len = clen;
-	return cbuf;
+	return (struct buffer){ clen, cbuf };
 }
 
 static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
