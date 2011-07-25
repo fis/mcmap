@@ -714,7 +714,7 @@ int world_save(char *dir)
 	GHashTable *region_table = g_hash_table_new_full(coord_hash, coord_equal, 0, g_free);
 
 	g_snprintf(pathbuf, pathbufsize, "%s/region", dir);
-	mkdir(pathbuf, 0777); /* ignore errors; might already exist */
+	g_mkdir(pathbuf, 0777); /* ignore errors; might already exist */
 
 	GHashTableIter iter;
 	gpointer ckey, cvalue;
