@@ -696,25 +696,28 @@ void map_draw(SDL_Surface *screen)
 	SDL_Color white = {255, 255, 255};
 	SDL_Color black = {0, 0, 0};
 
-	gchar *left_text;
-	if (IS_WATER(block))
+	if (map_focused)
 	{
-		int depth = 1;
-		jint h = hcy;
-		// FIXME: Off-by-one when water goes into void? Also in corresponding map_update code.
-		// I think not, since bottom bedrock is at y=1.
-		while (--h && IS_WATER(hc->blocks[hcx][hcz][h]))
-			depth++;
-		left_text = g_strdup_printf("water (%d deep)", depth);
-	}
-	else
-		left_text = g_strdup_printf("%s", block_info[block].name);
+		gchar *left_text;
+		if (IS_WATER(block))
+		{
+			int depth = 1;
+			jint h = hcy;
+			// FIXME: Off-by-one when water goes into void? Also in corresponding map_update code.
+			// I think not, since bottom bedrock is at y=1.
+			while (--h && IS_WATER(hc->blocks[hcx][hcz][h]))
+				depth++;
+			left_text = g_strdup_printf("water (%d deep)", depth);
+		}
+		else
+			left_text = g_strdup_printf("%s", block_info[block].name);
 
-	SDL_Surface *left_surface = TTF_RenderText_Shaded(map_font, left_text, white, black);
-	SDL_Rect left_src = { .x = 0, .y = 0, .w = left_surface->w, .h = left_surface->h };
-	SDL_Rect left_dst = { .x = 4, .y = screen->h - 22, .w = left_src.w, .h = left_src.h };
-	SDL_BlitSurface(left_surface, &left_src, screen, &left_dst);
-	g_free(left_text);
+		SDL_Surface *left_surface = TTF_RenderText_Shaded(map_font, left_text, white, black);
+		SDL_Rect left_src = { .x = 0, .y = 0, .w = left_surface->w, .h = left_surface->h };
+		SDL_Rect left_dst = { .x = 4, .y = screen->h - 22, .w = left_src.w, .h = left_src.h };
+		SDL_BlitSurface(left_surface, &left_src, screen, &left_dst);
+		g_free(left_text);
+	}
 
 	gchar *right_text = g_strdup_printf("x: %-5d z: %-5d y: %-3d", hx, hz, hcy);
 	SDL_Surface *right_surface = TTF_RenderText_Shaded(map_font, right_text, white, black);
