@@ -66,18 +66,21 @@ struct region *world_region(struct coord *coord, int gen)
 
 struct chunk *world_chunk(struct coord *coord, int gen)
 {
-	struct region *region = world_region(coord, gen);
+	jint x = coord->x;
+	jint z = coord->z;
+
+	struct coord rcoord = { .x = REGION_IDX(x), .z = REGION_IDX(z) };
+	struct region *region = world_region(&rcoord, gen);
 
 	if (!region)
 		return 0;
 
-	jint x = coord->x;
-	jint z = coord->z;
+	jint xo = REGION_OFF(x), zo = REGION_OFF(z);
 
-	if (gen && !region->chunks[x][z])
-		region->chunks[x][z] = g_malloc0(sizeof(struct chunk));
+	if (gen && !region->chunks[xo][zo])
+		region->chunks[xo][zo] = g_malloc0(sizeof(struct chunk));
 
-	return region->chunks[x][z];
+	return region->chunks[xo][zo];
 }
 
 unsigned char *world_stack(jint x, jint z, int gen)
