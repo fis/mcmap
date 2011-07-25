@@ -18,7 +18,7 @@ static int opipe_read, opipe_write;
 static gpointer console_thread(gpointer userdata);
 
 void socket_init() {}
-void socket_prepare() {}
+void socket_prepare(socket_t socket) {}
 
 int socket_recv(socket_t socket, void *buf, int len, int flags)
 {
