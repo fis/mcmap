@@ -19,7 +19,7 @@ Building
 There's a Makefile; if you have SDL, glib and readline dev packages
 installed, and pkg-config knows where to find them, a simple `make`
 should suffice. (Although readline is actually just linked with
-`-lreadline`.)
+`-lreadline`. And we also depend on SDL_ttf.)
 
 Usage
 =====
