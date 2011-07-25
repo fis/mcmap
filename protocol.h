@@ -1,8 +1,8 @@
 #ifndef MCMAP_PROTOCOL_H
 #define MCMAP_PROTOCOL_H 1
 
-#include "types.h"
 #include "platform.h"
+#include "types.h"
 
 /* protocol mess */
 

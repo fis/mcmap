@@ -7,8 +7,6 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#undef RGB
-
 typedef SOCKET socket_t;
 
 #endif /* MCMAP_WIN32_H */

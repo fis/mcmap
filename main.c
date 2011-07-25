@@ -142,6 +142,8 @@ int mcmap_main(int argc, char **argv)
 
 	/* initialization stuff */
 
+	socket_init();
+
 	/* wait for a client to connect to us */
 
 	log_print("[INFO] Waiting for connection...");
