@@ -1,15 +1,53 @@
 #include <windows.h>
 #include <glib.h>
 
+#include "common.h"
 #include "platform.h"
 #include "win32-res.h"
 
 static int splash_argc = 0;
 static char** splash_argv = 0;
 
+void socket_init()
+{
+	WSADATA wsadata;
+	if (WSAStartup(MAKEWORD(2,2), &wsadata) != 0)
+		die("network setup: WSAStartup() failed");
+}
+
 socket_t make_socket(int domain, int type, int protocol)
 {
 	return WSASocket(domain, type, protocol, 0, 0, 0);
+}
+
+void socket_prepare(socket_t socket)
+{
+	/* Can't recv and send on one socket simultaneously: be non-blocking */
+	u_long yes = 1;
+	ioctlsocket(socket, FIONBIO, &yes);
+}
+
+int socket_recv(socket_t socket, void *buf, int len, int flags)
+{
+again:;
+	int got = recv(socket, buf, len, flags);
+	if (got <= 0 && WSAGetLastError() == WSAEWOULDBLOCK)
+	{
+		Sleep(100);
+		goto again;
+	}
+	return got;
+}
+int socket_send(socket_t socket, const void *buf, int len, int flags)
+{
+again:;
+	int sent = send(socket, buf, len, flags);
+	if (sent < 0 && WSAGetLastError() == WSAEWOULDBLOCK)
+	{
+		Sleep(100);
+		goto again;
+	}
+	return sent;
 }
 
 void console_init() { }

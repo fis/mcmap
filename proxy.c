@@ -33,6 +33,9 @@ gpointer proxy_thread(gpointer data);
 
 void start_proxy(socket_t sock_cli, socket_t sock_srv)
 {
+	socket_prepare(sock_cli);
+	socket_prepare(sock_srv);
+
 	iq_client = g_async_queue_new_full(packet_free);
 	iq_server = g_async_queue_new_full(packet_free);
 
