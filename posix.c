@@ -17,6 +17,18 @@ static int opipe_read, opipe_write;
 
 static gpointer console_thread(gpointer userdata);
 
+void socket_init() {}
+void socket_prepare() {}
+
+int socket_recv(socket_t socket, void *buf, int len, int flags)
+{
+	return (int)recv(socket, buf, (size_t)len, flags);
+}
+int socket_send(socket_t socket, const void *buf, int len, int flags)
+{
+	return (int)send(socket, buf, (size_t)len, flags);
+}
+
 /* readline input and log output interlacing */
 
 void console_init()
