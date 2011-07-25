@@ -57,6 +57,8 @@ struct coord
 
 #define COORD_EQUAL(a,b) ((a).x == (b).x && (a).z == (b).z)
 
+/* colors */
+
 struct rgb
 {
 	uint8_t r;
@@ -78,6 +80,8 @@ struct rgba
 #define RGBA_OPAQUE(rv, gv, bv) RGBA(rv, gv, bv, 255)
 #define IGNORE_ALPHA(rgba) RGB((rgba).r, (rgba).g, (rgba).b)
 
+/* general-purpose (bytes, len) buffers */
+
 struct buffer
 {
 	unsigned len;
@@ -86,5 +90,16 @@ struct buffer
 
 #define OFFSET_BUFFER(buf, n) { (buf).len - (n), (buf).data + (n) }
 #define ADVANCE_BUFFER(buf, n) do { (buf).len -= n; (buf).data += n; } while (0)
+
+/* fixed-size bitsets */
+
+/* FIXME:
+   maybe byte-arrays would be better, but...
+   this is at least least appropriately retro. */
+
+#define BITSET(name,len) uint8_t name[(len)>>3]
+#define BITSET_SET(set,idx) ((set)[(idx)>>3] |= 1 << ((idx) & 7))
+#define BITSET_CLEAR(set,idx) ((set)[(idx)>>3] &= ~(1 << ((idx) & 7)))
+#define BITSET_TEST(set,idx) ((set)[(idx)>>3] & 1 << ((idx) & 7))
 
 #endif /* MCMAP_TYPES_H */
