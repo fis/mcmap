@@ -6,7 +6,7 @@
 #include "win32-res.h"
 
 static int splash_argc = 0;
-static char** splash_argv = 0;
+static char **splash_argv = 0;
 
 void socket_init()
 {
@@ -38,6 +38,7 @@ again:;
 	}
 	return got;
 }
+
 int socket_send(socket_t socket, const void *buf, int len, int flags)
 {
 again:;
@@ -50,8 +51,8 @@ again:;
 	return sent;
 }
 
-void console_init() { }
-void console_cleanup() { }
+void console_init() {}
+void console_cleanup() {}
 
 static void splash_setargs(HWND hWnd)
 {
