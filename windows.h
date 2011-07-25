@@ -1,5 +1,5 @@
 #undef tell
-#undef RGB
+#pragma push_macro("RGB")
 #include_next <windows.h>
 #define tell mctell
-#define RGB MCRGB
+#pragma pop_macro("RGB")
