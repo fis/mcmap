@@ -99,7 +99,7 @@ int mcmap_main(int argc, char **argv)
 	if (!screen)
 		dief("Failed to create SDL surface: %s", SDL_GetError());
 
-	world_init();
+	world_init(0);
 	map_init(screen);
 	map_setscale(1, 0);
 	player_x = 0;

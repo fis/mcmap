@@ -222,8 +222,8 @@ int mcmap_main(int argc, char **argv)
 	g_free(font_filename);
 
 	SDL_EnableUNICODE(1);
-
 	g_thread_init(0);
+
 	start_proxy(sock_cli, sock_srv);
 
 	/* start the user interface side */

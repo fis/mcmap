@@ -338,6 +338,9 @@ void map_update_region(struct coord rc)
 
 void map_update(jint x1, jint x2, jint z1, jint z2)
 {
+	if (!map_mutex)
+		return; /* defensive code if called by world before map_init */
+
 	g_mutex_lock(map_mutex);
 
 	for (jint cz = z1; cz <= z2; cz++)

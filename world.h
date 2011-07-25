@@ -28,10 +28,13 @@
 #define REGION_XSIZE (CHUNK_XSIZE*REGION_SIZE)
 #define REGION_ZSIZE (CHUNK_ZSIZE*REGION_SIZE)
 
+struct region_file;
+
 struct region
 {
 	struct coord key;
 	struct chunk *chunks[REGION_SIZE][REGION_SIZE];
+	struct region_file *file; /* can be null when non-persistent */
 };
 
 struct chunk
@@ -56,7 +59,7 @@ struct entity
 
 extern volatile int world_running;
 
-void world_init(void);
+void world_init(const char *path);
 void world_destroy(void);
 
 gpointer world_thread(gpointer data);
@@ -70,6 +73,12 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0, jint xs, jint ys, jint zs
 jint world_getheight(jint x, jint z);
 
 void world_entities(void (*callback)(struct entity *e, void *userdata), void *userdata);
+
+struct region_file *world_regfile_open(const char *path);
+void world_regfile_sync(struct region *region);
+void world_regfile_load(struct region *region);
+
+void world_regfile_sync_all(void); /* FIXME testing code */
 
 int world_save(char *dir);
 

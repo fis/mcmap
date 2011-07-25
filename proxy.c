@@ -38,7 +38,8 @@ void start_proxy(socket_t sock_cli, socket_t sock_srv)
 
 	GAsyncQueue *packetq = g_async_queue_new_full(packet_free);
 
-	world_init();
+	/* TODO FIXME; call as world_init("world") or some-such to enable alpha-quality region persistence */
+	world_init(0);
 	g_thread_create(world_thread, packetq, FALSE, 0);
 
 	struct proxy_config *proxy_client_server = g_new(struct proxy_config, 2);

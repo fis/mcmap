@@ -172,12 +172,12 @@ void cmd_save(int cmdc, gchar **cmdv)
 
 	if (cmdc == 1)
 		dir = 0;
-	else if (cmdc == 2)
-		dir = cmdv[1];
 	else {
-		tell("usage: //save [dir]");
+		tell("usage: //save");
 		return;
 	}
+
+#if 0 /* OBSOLETED STUFF; remove when world-dir location better */
 
 	/* construct the target directory */
 
@@ -223,15 +223,12 @@ void cmd_save(int cmdc, gchar **cmdv)
 		return;
 	}
 
-	/* dump the world */
+#endif /* END OF OBSOLETED STUFF */
 
-	tell("//save: dumping world to: %s", dir);
+	/* TODO FIXME: here just for testing the on-disk syncing code */
 
-	// FIXME
-//	if (!world_save(dir))
-//		tell("//save: failed");
-//	else
-		tell("//save: successful");
+	tell("//save: calling world_regfile_sync_all");
+	world_regfile_sync_all();
 }
 #endif /* FEAT_FULLCHUNK */
 

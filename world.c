@@ -1,8 +1,10 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -32,6 +34,21 @@ static jint spawn_x = 0, spawn_y = 0, spawn_z = 0;
 
 volatile int world_running = 1;
 
+static char *world_path = 0;
+static char *region_path = 0;
+
+struct region_file
+{
+	int fd;
+	unsigned nsect;
+	unsigned char *contents;
+	unsigned offsets[REGION_SIZE][REGION_SIZE];
+	uint8_t sects[REGION_SIZE][REGION_SIZE];
+	jint tstamps[REGION_SIZE][REGION_SIZE];
+	unsigned char dirty_chunks[REGION_SIZE][REGION_SIZE];
+	GByteArray *sect_bitmap;
+};
+
 static void region_free(gpointer gp)
 {
 	struct region *region = gp;
@@ -39,6 +56,71 @@ static void region_free(gpointer gp)
 		for (int j = 0; j < NELEMS(region->chunks[i]); j++)
 			g_free(region->chunks[i][j]);
 	g_free(region);
+}
+
+static void entity_free(gpointer ep)
+{
+	struct entity *e = ep;
+	g_free(e->name);
+	g_free(e);
+}
+
+void world_init(const char *path)
+{
+	region_table = g_hash_table_new_full(coord_hash, coord_equal, 0, region_free);
+	entity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
+	entity_mutex = g_mutex_new();
+	anentity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
+
+	/* locate/create the world directory as required */
+
+	if (!path)
+		return;
+
+	world_path = g_strdup(path);
+	region_path = g_strdup_printf("%s/region", world_path);
+
+	if (g_file_test(world_path, G_FILE_TEST_EXISTS))
+	{
+		if (!g_file_test(world_path, G_FILE_TEST_IS_DIR))
+			dief("world directory not a directory: %s", world_path);
+	}
+	else
+	{
+		if (g_mkdir(world_path, 0777) != 0)
+			dief("unable to create world directory: %s", world_path);
+		if (g_mkdir(region_path, 0777) != 0)
+			dief("unable to create region directory: %s", region_path);
+	}
+
+	/* scan and index all existing region files */
+	/* TODO: maybe log something about this? shouldn't take long... */
+
+	GError *error = 0;
+	GDir *dir = g_dir_open(region_path, 0, &error);
+	if (!dir)
+		dief("unable to scan region directory contents: %s", error->message);
+
+	const gchar *region_file = 0;
+	while ((region_file = g_dir_read_name(dir)))
+	{
+		gchar xbuf[64], zbuf[64], *xend, *zend;
+		if (sscanf(region_file, "r.%63[^.].%63[^.].mcr", xbuf, zbuf) != 2)
+			continue; /* does not look like a proper region file */
+		jint x = strtol(xbuf, &xend, 36);
+		jint z = strtol(zbuf, &zend, 36);
+		if (!*xbuf || !*zbuf || *xend || *zend)
+			continue; /* x/z coords don't look like base36 numbers */
+
+		struct coord rc = { .x = x, .z = z };
+		struct region *region = world_region(&rc, 1);
+		gchar *region_file_path = g_strdup_printf("%s/%s", region_path, region_file);
+		region->file = world_regfile_open(region_file_path);
+		g_free(region_file_path);
+
+		/* TODO FIXME: debugging code: load all regions to memory at start */
+		world_regfile_load(region);
+	}
 }
 
 struct region *world_region(struct coord *coord, int gen)
@@ -58,6 +140,8 @@ struct region *world_region(struct coord *coord, int gen)
 	for (int i = 0; i < NELEMS(region->chunks); i++)
 		for (int j = 0; j < NELEMS(region->chunks[i]); j++)
 			region->chunks[i][j] = NULL;
+
+	region->file = 0;
 
 	g_hash_table_insert(region_table, &region->key, region);
 
@@ -188,6 +272,12 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 			{
 				c = world_chunk(&cc, 1);
 				current_chunk = cc;
+
+				/* TODO FIXME: marks dirty always, even when loading from disk; also unoptimal */
+				struct coord rc = { .x = REGION_IDX(cc.x), .z = REGION_IDX(cc.z) };
+				struct region *r = world_region(&rc, 0);
+				if (r && r->file)
+					r->file->dirty_chunks[REGION_OFF(cc.z)][REGION_OFF(cc.x)] = 1;
 			}
 
 			if (!changed && memcmp(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb.data, ys) != 0)
@@ -378,13 +468,6 @@ static void entity_move(jint id, jint x, jint y, jint z, int relative)
 		map_repaint();
 }
 
-static void entity_free(gpointer ep)
-{
-	struct entity *e = ep;
-	g_free(e->name);
-	g_free(e);
-}
-
 struct entity_walk_callback_data
 {
 	void (*callback)(struct entity *e, void *userdata);
@@ -399,18 +482,14 @@ static void entity_walk_callback(gpointer key, gpointer value, gpointer userdata
 
 void world_entities(void (*callback)(struct entity *e, void *userdata), void *userdata)
 {
+	/* defensive code if called by the UI before world_init */
+	if (!entity_mutex)
+		return;
+
 	struct entity_walk_callback_data d = { .callback = callback, .userdata = userdata };
 	g_mutex_lock(entity_mutex);
 	g_hash_table_foreach(entity_table, entity_walk_callback, &d);
 	g_mutex_unlock(entity_mutex);
-}
-
-void world_init(void)
-{
-	region_table = g_hash_table_new_full(coord_hash, coord_equal, 0, region_free);
-	entity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
-	entity_mutex = g_mutex_new();
-	anentity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
 }
 
 gpointer world_thread(gpointer data)
@@ -559,36 +638,19 @@ gpointer world_thread(gpointer data)
 
 /* world file IO routines */
 
-// FIXME: Make this work
-#if 0
-
-#ifdef FEAT_FULLCHUNK
-
-#define REG_XBITS 5
-#define REG_ZBITS 5
-
-#define REG_XSIZE (1 << REG_XBITS)
-#define REG_ZSIZE (1 << REG_ZBITS)
-
-#define REG_XZ (REG_XSIZE * REG_ZSIZE)
-
-#define REG_XCOORD(cx) ((cx) >> REG_XBITS)
-#define REG_ZCOORD(cz) ((cz) >> REG_ZBITS)
-
-#define REG_XOFF(cx) ((cx) & (REG_XSIZE - 1))
-#define REG_ZOFF(cz) ((cz) & (REG_ZSIZE - 1))
-
-#define SECT_SIZE 4096
-
-struct disk_region
+void world_regfile_sync_all(void)
 {
-	struct coord key;
-	unsigned offsets[REG_ZSIZE][REG_XSIZE];
-	unsigned char sects[REG_ZSIZE][REG_XSIZE];
-	jint tstamps[REG_ZSIZE][REG_XSIZE];
-	unsigned nsect;
-	int fd;
-};
+	/* FIXME testing code */
+	GHashTableIter region_iter;
+	struct region *region;
+	g_hash_table_iter_init(&region_iter, region_table);
+	while (g_hash_table_iter_next(&region_iter, NULL, (gpointer *)&region))
+	{
+		world_regfile_sync(region);
+	}
+}
+
+#define SECTOR_SIZE 4096
 
 static const char base36_chars[36] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
@@ -619,7 +681,7 @@ static char *base36_encode(jint value, char *buf, int bufsize)
 	return buf + bufsize + 1;
 }
 
-struct buffer world_append_chunk(struct disk_region *reg, struct chunk *c)
+static struct buffer compress_chunk(struct chunk *c)
 {
 	/* dump the chunk data into compressed NBT */
 
@@ -627,9 +689,11 @@ struct buffer world_append_chunk(struct disk_region *reg, struct chunk *c)
 
 	nbt_struct_add(data, nbt_new_blob("Blocks", NBT_TAG_BLOB, c->blocks, CHUNK_NBLOCKS));
 	nbt_struct_add(data, nbt_new_blob("Data", NBT_TAG_BLOB, c->meta, CHUNK_NBLOCKS/2));
+#ifdef FEAT_FULLCHUNK
 	nbt_struct_add(data, nbt_new_blob("BlockLight", NBT_TAG_BLOB, c->light_blocks, CHUNK_NBLOCKS/2));
 	nbt_struct_add(data, nbt_new_blob("SkyLight", NBT_TAG_BLOB, c->light_sky, CHUNK_NBLOCKS/2));
 	nbt_struct_add(data, nbt_new_blob("HeightMap", NBT_TAG_BLOB, c->height, CHUNK_XSIZE*CHUNK_ZSIZE)); /* TODO FIXME: indexing X/Z */
+#endif /* FEAT_FULLCHUNK */
 
 	/* TODO: Entities, TileEntities */
 
@@ -644,6 +708,287 @@ struct buffer world_append_chunk(struct disk_region *reg, struct chunk *c)
 	nbt_free(data);
 	return buf;
 }
+
+static void ensure_regfile(struct region *region)
+{
+	if (region_path && !region->file)
+	{
+		/* not loaded from disk, so assume new file */
+		/* open/create, and flag all existing chunks in region as dirty */
+
+		char file_x_buf[16], file_z_buf[16];
+		char *file_x = base36_encode(region->key.x, file_x_buf, sizeof file_x_buf);
+		char *file_z = base36_encode(region->key.z, file_z_buf, sizeof file_z_buf);
+		char *file_path = g_strdup_printf("%s/r.%s.%s.mcr", region_path, file_x, file_z);
+
+		region->file = world_regfile_open(file_path);
+
+		for (jint cz = 0; cz < REGION_SIZE; cz++)
+		{
+			for (jint cx = 0; cx < REGION_SIZE; cx++)
+			{
+				/* NOTE: region->chunks in [cx][cz] order,
+				   while file->dirty_chunks the opposite (in-disk-file) order */
+				if (region->chunks[cx][cz])
+					region->file->dirty_chunks[cz][cx] = 1;
+			}
+		}
+	}
+}
+
+struct region_file *world_regfile_open(const char *path)
+{
+	/* open and/or create a new region file */
+	log_print("world_regfile_open: %s", path);
+
+	struct region_file *file = g_malloc0(sizeof *file);
+
+	file->fd = open(path, O_RDWR);
+
+	if (file->fd == -1)
+	{
+		if (errno != ENOENT)
+			dief("unable to read region file: %s: %s", path, g_strerror(errno));
+
+		/* the file does not seem to exist, so make a new empty one */
+
+		file->fd = open(path, O_RDWR|O_CREAT|O_EXCL, 0666);
+		if (file->fd == -1)
+			dief("unable to create region file: %s: %s", path, g_strerror(errno));
+
+		if (ftruncate(file->fd, 2*SECTOR_SIZE) == -1)
+			dief("unable to prepare empty region file: %s: %s", path, g_strerror(errno));
+
+		file->nsect = 2;
+		file->sect_bitmap = g_byte_array_new();
+		g_byte_array_set_size(file->sect_bitmap, 1);
+		file->sect_bitmap->data[0] = 0x03; /* header sectors always taken */
+	}
+	else
+	{
+		/* file already existed, so scan index + length */
+
+		uint8_t header_loc[REGION_SIZE][REGION_SIZE][4];
+		uint8_t header_tstamp[REGION_SIZE][REGION_SIZE][4];
+
+		if (read(file->fd, header_loc, sizeof header_loc) != sizeof header_loc)
+			dief("unable to read region file header (loc): %s: %s", path, g_strerror(errno));
+		if (read(file->fd, header_tstamp, sizeof header_tstamp) != sizeof header_tstamp)
+			dief("unable to read region file header (tstamp): %s: %s", path, g_strerror(errno));
+
+		off_t len = lseek(file->fd, 0, SEEK_END);
+		if (len == (off_t)-1)
+			dief("unable to find size of region file: %s: %s", path, g_strerror(errno));
+
+		if (len < 2*SECTOR_SIZE)
+			dief("corrupted region file: %s: truncated header", path);
+		if (len % SECTOR_SIZE != 0)
+		{
+			/* not full multiple of sector size, round to avoid problems */
+			len += SECTOR_SIZE - (len%SECTOR_SIZE);
+			if (ftruncate(file->fd, len) == -1)
+				dief("unable to round region file to sector size: %s: %s", path, g_strerror(errno));
+		}
+
+		file->nsect = len / SECTOR_SIZE;
+
+		file->sect_bitmap = g_byte_array_sized_new((file->nsect + 7) / 8);
+		g_byte_array_set_size(file->sect_bitmap, (file->nsect + 7) / 8);
+		file->sect_bitmap->data[0] = 0x03;
+
+		/* parse the header and initialize the data structures */
+
+		for (jint z = 0; z < REGION_SIZE; z++)
+		{
+			for (jint x = 0; x < REGION_SIZE; x++)
+			{
+				file->offsets[z][x] = header_loc[z][x][0] << 16 | header_loc[z][x][1] << 8 | header_loc[z][x][2];
+				file->sects[z][x] = header_loc[z][x][3];
+				file->tstamps[z][x] = jint_read(header_tstamp[z][x]);
+
+				if (!file->offsets[z][x] || !file->sects[z][x])
+					continue; /* non-existing block, does not use sectors */
+				if (file->offsets[z][x] + file->sects[z][x] > file->nsect)
+					dief("corrupted region file: %s: chunk sectors beyond end of file", path);
+
+				for (unsigned s = file->offsets[z][x], sc = 0; sc < file->sects[z][x]; s++, sc++)
+					file->sect_bitmap->data[s/8] |= 1 << (s%8);
+			}
+		}
+	}
+
+	/* create shared memory mapping for file contents */
+
+	file->contents = mmap(0, file->nsect*SECTOR_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, file->fd, 0);
+	if (file->contents == MAP_FAILED)
+		dief("unable to map region file to memory: %s: %s", path, g_strerror(errno));
+
+	return file;
+}
+
+void world_regfile_sync(struct region *region)
+{
+	ensure_regfile(region);
+	struct region_file *file = region->file;
+
+	/* for each dirty chunk, serialize and try to put it into file */
+
+	unsigned old_nsect = file->nsect; /* used to notice size changes */
+
+	for (jint cz = 0; cz < REGION_SIZE; cz++)
+	{
+		for (jint cx = 0; cx < REGION_SIZE; cx++)
+		{
+			if (!file->dirty_chunks[cz][cx] || !region->chunks[cx][cz])
+				continue; /* not dirty */
+
+			struct buffer data = compress_chunk(region->chunks[cx][cz]);
+
+			/* write the data portion */
+
+			unsigned new_sects = (data.len + 5 + SECTOR_SIZE - 1) / SECTOR_SIZE;
+
+			if (new_sects <= file->sects[cz][cx])
+			{
+				/* fits in old slot; insert there */
+				unsigned char *bytes = &file->contents[file->offsets[cz][cx] * SECTOR_SIZE];
+				jint_write(bytes, data.len);
+				bytes[4] = 0x02; /* compression type: zlib */
+				memcpy(bytes + 5, data.data, data.len);
+			}
+			else
+			{
+				/* append to file */
+				uint8_t hdr[5];
+				jint_write(hdr, data.len);
+				hdr[4] = 0x02;
+				if (lseek(file->fd, 0, SEEK_END) == -1 ||
+				    write(file->fd, hdr, 5) != 5 ||
+				    write(file->fd, data.data, data.len) != data.len ||
+				    ftruncate(file->fd, (file->nsect + new_sects)*SECTOR_SIZE) == -1)
+					dief("IO error when appending to region file: %s", g_strerror(errno));
+				/* update sector bitmap array size */
+				g_byte_array_set_size(file->sect_bitmap, (file->nsect + new_sects + 7) / 8);
+			}
+
+			/* alter the necessary header and other fields */
+
+			if (new_sects < file->sects[cz][cx])
+			{
+				for (unsigned s = file->offsets[cz][cx] + new_sects, sc = new_sects;
+				     sc < file->sects[cz][cx];
+				     s++, sc++)
+					file->sect_bitmap->data[s/8] &= ~(1 << (s%8));
+				file->sects[cz][cx] = new_sects;
+				file->contents[(cz*REGION_SIZE+cx)*4+3] = new_sects;
+			}
+			else if (new_sects > file->sects[cz][cx])
+			{
+				for (unsigned s = file->offsets[cz][cx], sc = 0; sc < file->sects[cz][cx]; s++, sc++)
+					file->sect_bitmap->data[s/8] &= ~(1 << (s%8));
+				file->offsets[cz][cx] = file->nsect;
+				file->sects[cz][cx] = new_sects;
+				unsigned char *bytes = &file->contents[(cz*REGION_SIZE+cx)*4];
+				bytes[0] = file->nsect >> 16;
+				bytes[1] = file->nsect >> 8;
+				bytes[2] = file->nsect;
+				bytes[3] = new_sects;
+				file->nsect += new_sects;
+			}
+		}
+	}
+
+	/* redo the file mapping if we have had to add new chunks;
+	   otherwise just tell the system the file has changed */
+
+	if (file->nsect != old_nsect)
+	{
+		void *new_addr = mremap(file->contents, old_nsect*SECTOR_SIZE, file->nsect*SECTOR_SIZE, MREMAP_MAYMOVE);
+		if (new_addr == MAP_FAILED)
+			dief("unable to resize region file memory mapping: %s", g_strerror(errno));
+		file->contents = new_addr;
+	}
+	else
+		msync(file->contents, file->nsect*SECTOR_SIZE, MS_ASYNC);
+}
+
+void world_regfile_load(struct region *region)
+{
+	ensure_regfile(region);
+	struct region_file *file = region->file;
+
+	for (jint cz = 0; cz < REGION_SIZE; cz++)
+	{
+		for (jint cx = 0; cx < REGION_SIZE; cx++)
+		{
+			if (!file->offsets[cz][cx] || !file->sects[cz][cx])
+				continue; /* chunk not in file */
+
+			unsigned char *bytes = &file->contents[file->offsets[cz][cx] * SECTOR_SIZE];
+
+			if (bytes[4] != 0x02)
+				dief("unknown compression type in region file: %d", bytes[4]);
+
+			jint len = jint_read(bytes);
+			if (len > file->sects[cz][cx] * SECTOR_SIZE)
+				die("compressed length of chunk larger than physically possible");
+
+			struct buffer buf = { .data = bytes+5, .len = len };
+			struct nbt_tag *chunk = nbt_uncompress(buf);
+			struct buffer zb = nbt_blob(nbt_struct_field(chunk, "Blocks"));
+#ifdef FEAT_FULLCHUNK
+			struct buffer zb_meta = nbt_blob(nbt_struct_field(chunk, "Data"));
+			struct buffer zb_light_blocks = nbt_blob(nbt_struct_field(chunk, "BlockLight"));
+			struct buffer zb_light_sky = nbt_blob(nbt_struct_field(chunk, "SkyLight"));
+#else /* !FEAT_FULLCHUNK */
+			struct buffer zb_meta = { 0 };
+			struct buffer zb_light_blocks = { 0 };
+			struct buffer zb_light_sky = { 0 };
+#endif
+
+			world_handle_chunk((region->key.x*REGION_SIZE + cx)*CHUNK_XSIZE,
+			                   0,
+			                   (region->key.z*REGION_SIZE + cz)*CHUNK_ZSIZE,
+			                   CHUNK_XSIZE, CHUNK_YSIZE, CHUNK_ZSIZE,
+			                   zb, zb_meta, zb_light_blocks, zb_light_sky, TRUE);
+
+			nbt_free(chunk);
+		}
+	}
+}
+
+// FIXME: Make this work
+#if 0
+
+#ifdef FEAT_FULLCHUNK
+
+#define REG_XBITS 5
+#define REG_ZBITS 5
+
+#define REG_XSIZE (1 << REG_XBITS)
+#define REG_ZSIZE (1 << REG_ZBITS)
+
+#define REG_XZ (REG_XSIZE * REG_ZSIZE)
+
+#define REG_XCOORD(cx) ((cx) >> REG_XBITS)
+#define REG_ZCOORD(cz) ((cz) >> REG_ZBITS)
+
+#define REG_XOFF(cx) ((cx) & (REG_XSIZE - 1))
+#define REG_ZOFF(cz) ((cz) & (REG_ZSIZE - 1))
+
+
+struct disk_region
+{
+	struct coord key;
+	unsigned offsets[REG_ZSIZE][REG_XSIZE];
+	unsigned char sects[REG_ZSIZE][REG_XSIZE];
+	jint tstamps[REG_ZSIZE][REG_XSIZE];
+	unsigned nsect;
+	int fd;
+};
+
+struct buffer world_append_chunk(struct disk_region *reg, struct chunk *c)
+{
 
 	/* append it to our current region file */
 
