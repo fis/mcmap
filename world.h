@@ -16,19 +16,23 @@
 #define CHUNK_XIDX(coord) ((coord) >> CHUNK_XBITS)
 #define CHUNK_ZIDX(coord) ((coord) >> CHUNK_ZBITS)
 
+#define CHUNK_XMASK(coord) ((coord) & ~(CHUNK_XSIZE-1))
+#define CHUNK_ZMASK(coord) ((coord) & ~(CHUNK_ZSIZE-1))
 #define CHUNK_XOFF(coord) ((coord) & (CHUNK_XSIZE-1))
 #define CHUNK_ZOFF(coord) ((coord) & (CHUNK_ZSIZE-1))
 
 #define REGION_BITS 5
 #define REGION_SIZE (1 << REGION_BITS)
-/* relies on implementation-defined arithmetic shift behaviour */
-#define REGION_IDX(coord) ((coord) >> REGION_BITS)
-// FIXME: Optomize
-#define REGION_MASK(coord) (REGION_IDX(coord)*REGION_SIZE)
-#define REGION_OFF(coord) ((coord) & (REGION_SIZE-1))
-
 #define REGION_XSIZE (CHUNK_XSIZE*REGION_SIZE)
 #define REGION_ZSIZE (CHUNK_ZSIZE*REGION_SIZE)
+
+/* relies on implementation-defined arithmetic shift behaviour */
+#define REGION_XIDX(coord) ((coord) >> (REGION_BITS+CHUNK_XBITS))
+#define REGION_ZIDX(coord) ((coord) >> (REGION_BITS+CHUNK_ZBITS))
+#define REGION_XMASK(coord) ((coord) & ~(REGION_XSIZE-1))
+#define REGION_ZMASK(coord) ((coord) & ~(REGION_ZSIZE-1))
+#define REGION_XOFF(coord) ((coord) & (REGION_XSIZE-1))
+#define REGION_ZOFF(coord) ((coord) & (REGION_ZSIZE-1))
 
 struct region_file;
 

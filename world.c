@@ -125,7 +125,7 @@ void world_init(const char *path)
 
 struct region *world_region(struct coord cc, int gen)
 {
-	struct coord rc = { .x = REGION_MASK(cc.x), .z = REGION_MASK(cc.z) };
+	struct coord rc = { .x = REGION_XMASK(cc.x), .z = REGION_ZMASK(cc.z) };
 	struct region *region = g_hash_table_lookup(region_table, &rc);
 
 	if (region)
@@ -151,13 +151,12 @@ struct region *world_region(struct coord cc, int gen)
 
 struct chunk *world_chunk(struct coord cc, int gen)
 {
-	struct coord rc = { .x = REGION_MASK(cc.x), .z = REGION_MASK(cc.z) };
-	struct region *region = world_region(rc, gen);
+	struct region *region = world_region(cc, gen);
 
 	if (!region)
 		return 0;
 
-	jint xo = REGION_OFF(CHUNK_XIDX(cc.x)), zo = REGION_OFF(CHUNK_ZIDX(cc.z));
+	jint xo = CHUNK_XIDX(REGION_XOFF(cc.x)), zo = CHUNK_ZIDX(REGION_ZOFF(cc.z));
 
 	if (gen && !region->chunks[xo][zo])
 		region->chunks[xo][zo] = g_malloc0(sizeof(struct chunk));
@@ -261,17 +260,18 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 	{
 		for (jint z = z0; z < z0+zs; z++)
 		{
-			struct coord cc = { .x = x, .z = z };
+			struct coord cc = { .x = CHUNK_XMASK(x), .z = CHUNK_ZMASK(z) };
 
 			if (!COORD_EQUAL(cc, current_chunk) || !set_chunk)
 			{
+				set_chunk = TRUE;
 				c = world_chunk(cc, 1);
 				current_chunk = cc;
 
 				/* TODO FIXME: marks dirty always, even when loading from disk; also unoptimal */
 				struct region *r = world_region(cc, 0);
 				if (r && r->file)
-					r->file->dirty_chunks[REGION_OFF(CHUNK_ZIDX(cc.z))][REGION_OFF(CHUNK_XIDX(cc.x))] = 1;
+					r->file->dirty_chunks[CHUNK_ZIDX(REGION_ZOFF(cc.z))][CHUNK_XIDX(REGION_XOFF(cc.x))] = 1;
 			}
 
 			if (!changed && memcmp(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb.data, ys) != 0)
@@ -317,7 +317,8 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 	}
 
 	if (changed && update_map)
-		map_update((struct coord){ .x = c_min_x * CHUNK_XSIZE, .z = c_min_z * CHUNK_ZSIZE }, (struct coord){ .x = c_max_x * CHUNK_XSIZE, .z = c_max_z * CHUNK_ZSIZE });
+		map_update((struct coord){ .x = c_min_x, .z = c_min_z },
+		           (struct coord){ .x = c_max_x, .z = c_max_z });
 
 	return changed;
 }

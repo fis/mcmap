@@ -92,13 +92,12 @@ static struct map_region *map_create_region(struct coord rc)
 {
 	struct map_region *region = g_new(struct map_region, 1);
 
-	region->key = (struct coord){ .x = REGION_MASK(rc.x), .z = REGION_MASK(rc.z) };
+	region->key = (struct coord){ .x = REGION_XMASK(rc.x), .z = REGION_ZMASK(rc.z) };
 	region->surf = SDL_CreateRGBSurface(SDL_SWSURFACE, REGION_XSIZE, REGION_ZSIZE, 32,
 	                                    screen_fmt->Rmask, screen_fmt->Gmask, screen_fmt->Bmask, 0);
 	if (!region->surf)
 		dief("SDL map surface init: %s", SDL_GetError());
 
-	if(rc.z<0) log_print("%d (%d,%d)", rc.z, region->key.x, region->key.z);
 	g_hash_table_insert(regions, &region->key, region);
 
 	SDL_LockSurface(region->surf);
@@ -120,11 +119,10 @@ static void map_destroy_region(gpointer rp)
 }
 
 static struct map_region *map_get_region(struct coord cc, int gen)
-{w
-	struct coord rc = { .x = REGION_MASK(cc.x), .z = REGION_MASK(cc.z) };
+{
+	struct coord rc = { .x = REGION_XMASK(cc.x), .z = REGION_ZMASK(cc.z) };
 	struct map_region *region = g_hash_table_lookup(regions, &rc);
-	if(cc.z<0) log_print("%d (%d,%d) gen=%d", cc.z, rc.x, rc.z, gen);
-	return region ? region : (gen ? map_create_region(cc) : 0);
+	return region ? region : (gen ? map_create_region(rc) : 0);
 }
 
 inline void map_repaint(void)
@@ -216,8 +214,8 @@ static struct rgb map_block_color(struct chunk *c, unsigned char *b, jint bx, ji
 
 static void map_paint_chunk(SDL_Surface *region, struct coord cc)
 {
-	jint cxo = REGION_OFF(CHUNK_XIDX(cc.x));
-	jint czo = REGION_OFF(CHUNK_ZIDX(cc.z));
+	jint cxo = CHUNK_XIDX(REGION_XOFF(cc.x));
+	jint czo = CHUNK_ZIDX(REGION_ZOFF(cc.z));
 
 	struct chunk *c = world_chunk(cc, 0);
 
@@ -322,7 +320,7 @@ void map_update_chunk(struct coord cc)
 
 	struct map_region *region = map_get_region(cc, 1);
 	region->dirty_flag = 1;
-	BITSET_SET(region->dirty_chunk, REGION_OFF(CHUNK_ZIDX(cc.z))*REGION_SIZE + REGION_OFF(CHUNK_XIDX(cc.x)));
+	BITSET_SET(region->dirty_chunk, CHUNK_ZIDX(REGION_ZOFF(cc.z))*REGION_SIZE + CHUNK_XIDX(REGION_XOFF(cc.x)));
 }
 
 void map_update_region(struct coord cc)
@@ -363,7 +361,7 @@ static void map_update_all()
 
 	while (g_hash_table_iter_next(&region_iter, NULL, (gpointer *) &region))
 	{
-		map_update_region((struct coord){ .x = region->key.x * REGION_XSIZE, .z = region->key.z * REGION_ZSIZE });
+		map_update_region(region->key);
 	}
 }
 
@@ -668,11 +666,11 @@ void map_draw(SDL_Surface *screen)
 
 	jint reg_x1, reg_x2, reg_z1, reg_z2;
 
-	reg_x1 = REGION_IDX(CHUNK_XIDX(scr_x1));
-	reg_z1 = REGION_IDX(CHUNK_ZIDX(scr_z1));
+	reg_x1 = REGION_XIDX(scr_x1);
+	reg_z1 = REGION_ZIDX(scr_z1);
 
-	reg_x2 = REGION_IDX(CHUNK_XIDX(scr_x2 + CHUNK_XSIZE - 1) + REGION_SIZE);
-	reg_z2 = REGION_IDX(CHUNK_ZIDX(scr_z2 + CHUNK_ZSIZE - 1) + REGION_SIZE);
+	reg_x2 = REGION_XIDX(scr_x2 + REGION_XSIZE - 1);
+	reg_z2 = REGION_ZIDX(scr_z2 + REGION_ZSIZE - 1);
 
 	/* draw those regions */
 

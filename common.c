@@ -13,7 +13,8 @@
 guint coord_hash(gconstpointer key)
 {
 	const struct coord *c = key;
-	return c->x ^ ((c->z << 16) | (c->z >> 16));
+	uint32_t x = c->x, z = c->z;
+	return x ^ ((z << 16) | (z >> 16));
 }
 
 gboolean coord_equal(gconstpointer a, gconstpointer b)
