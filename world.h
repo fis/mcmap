@@ -38,14 +38,14 @@ struct region_file;
 
 struct region
 {
-	struct coord key;
+	coord_t key;
 	struct chunk *chunks[REGION_SIZE][REGION_SIZE];
 	struct region_file *file; /* can be null when non-persistent */
 };
 
 struct chunk
 {
-	struct coord key;
+	coord_t key;
 	unsigned char blocks[CHUNK_XSIZE][CHUNK_ZSIZE][CHUNK_YSIZE];
 	unsigned char height[CHUNK_XSIZE][CHUNK_ZSIZE];
 #ifdef FEAT_FULLCHUNK
@@ -59,7 +59,7 @@ struct entity
 {
 	jint id;
 	unsigned char *name;
-	// FIXME: Use struct coord
+	// FIXME: Use coord_t
 	jint x, z;       /* in blocks */
 	jint ax, ay, az; /* in absolute-int format */
 };
@@ -71,13 +71,13 @@ void world_destroy(void);
 
 gpointer world_thread(gpointer data);
 
-struct region *world_region(struct coord cc, int gen);
-struct chunk *world_chunk(struct coord cc, int gen);
-unsigned char *world_stack(struct coord cc, int gen);
+struct region *world_region(coord_t cc, int gen);
+struct chunk *world_chunk(coord_t cc, int gen);
+unsigned char *world_stack(coord_t cc, int gen);
 
 gboolean world_handle_chunk(jint x0, jint y0, jint z0, jint xs, jint ys, jint zs, struct buffer zb, struct buffer zb_meta, struct buffer zb_light_blocks, struct buffer zb_light_sky, gboolean update_map);
 
-jint world_getheight(struct coord cc);
+jint world_getheight(coord_t cc);
 
 void world_entities(void (*callback)(struct entity *e, void *userdata), void *userdata);
 

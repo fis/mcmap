@@ -20,7 +20,7 @@ enum map_mode
 #define MAP_FLAG_NIGHT 0x04
 #define MAP_FLAG_CHOP 0x08
 
-extern struct rgba block_colors[256];
+extern rgba_t block_colors[256];
 
 extern GHashTable *regions;
 
@@ -33,7 +33,7 @@ extern jshort player_health;
 
 void map_init(SDL_Surface *screen);
 
-void map_update(struct coord c1, struct coord c2);
+void map_update(coord_t c1, coord_t c2);
 
 void map_update_player_pos(double x, double y, double z);
 void map_update_ceiling(void);

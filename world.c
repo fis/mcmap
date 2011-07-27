@@ -112,7 +112,7 @@ void world_init(const char *path)
 		if (!*xbuf || !*zbuf || *xend || *zend)
 			continue; /* x/z coords don't look like base36 numbers */
 
-		struct coord rc = { .x = x * REGION_XSIZE, .z = z * REGION_ZSIZE };
+		coord_t rc = COORD(x * REGION_XSIZE, z * REGION_ZSIZE);
 		struct region *region = world_region(rc, 1);
 		gchar *region_file_path = g_strdup_printf("%s/%s", region_path, region_file);
 		region->file = world_regfile_open(region_file_path);
@@ -123,9 +123,9 @@ void world_init(const char *path)
 	}
 }
 
-struct region *world_region(struct coord cc, int gen)
+struct region *world_region(coord_t cc, int gen)
 {
-	struct coord rc = { .x = REGION_XMASK(cc.x), .z = REGION_ZMASK(cc.z) };
+	coord_t rc = COORD(REGION_XMASK(cc.x), REGION_ZMASK(cc.z));
 	struct region *region = g_hash_table_lookup(region_table, &rc);
 
 	if (region)
@@ -149,7 +149,7 @@ struct region *world_region(struct coord cc, int gen)
 	return region;
 }
 
-struct chunk *world_chunk(struct coord cc, int gen)
+struct chunk *world_chunk(coord_t cc, int gen)
 {
 	struct region *region = world_region(cc, gen);
 
@@ -164,7 +164,7 @@ struct chunk *world_chunk(struct coord cc, int gen)
 	return region->chunks[xo][zo];
 }
 
-unsigned char *world_stack(struct coord cc, int gen)
+unsigned char *world_stack(coord_t cc, int gen)
 {
 	struct chunk *c = world_chunk(cc, gen);
 	if (!c)
@@ -173,7 +173,7 @@ unsigned char *world_stack(struct coord cc, int gen)
 	return c->blocks[CHUNK_XOFF(cc.x)][CHUNK_ZOFF(cc.z)];
 }
 
-jint world_getheight(struct coord cc)
+jint world_getheight(coord_t cc)
 {
 	struct chunk *c = world_chunk(cc, 0);
 	if (!c)
@@ -243,7 +243,7 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
                             gboolean update_map)
 {
 	gboolean set_chunk = FALSE;
-	struct coord current_chunk;
+	coord_t current_chunk = COORD(0, 0);
 	struct chunk *c = 0;
 
 	if (ys < 0)
@@ -260,7 +260,7 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 	{
 		for (jint z = z0; z < z0+zs; z++)
 		{
-			struct coord cc = { .x = CHUNK_XMASK(x), .z = CHUNK_ZMASK(z) };
+			coord_t cc = COORD(CHUNK_XMASK(x), CHUNK_ZMASK(z));
 
 			if (!COORD_EQUAL(cc, current_chunk) || !set_chunk)
 			{
@@ -317,8 +317,7 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 	}
 
 	if (changed && update_map)
-		map_update((struct coord){ .x = c_min_x, .z = c_min_z },
-		           (struct coord){ .x = c_max_x, .z = c_max_z });
+		map_update(COORD(c_min_x, c_min_z), COORD(c_max_x, c_max_z));
 
 	return changed;
 }
@@ -349,7 +348,7 @@ static inline int block_change(struct chunk *c, jint x, jint y, jint z, unsigned
 
 static void handle_multi_set_block(jint cx, jint cz, jint size, unsigned char *coord, unsigned char *type)
 {
-	struct coord cc = { .x = cx, .z = cz };
+	coord_t cc = { .x = cx, .z = cz };
 	struct chunk *c = world_chunk(cc, 0);
 	if (!c)
 		return; /* edit in an unloaded chunk */
@@ -370,7 +369,7 @@ static void handle_multi_set_block(jint cx, jint cz, jint size, unsigned char *c
 
 static void handle_set_block(jint x, jint y, jint z, jint type)
 {	
-	struct coord cc = { .x = x, .z = z };
+	coord_t cc = { .x = x, .z = z };
 	struct chunk *c = world_chunk(cc, 0);
 	if (!c)
 		return; /* edit in an unloaded chunk */
@@ -974,7 +973,7 @@ void world_regfile_load(struct region *region)
 
 struct disk_region
 {
-	struct coord key;
+	coord_t key;
 	unsigned offsets[REG_ZSIZE][REG_XSIZE];
 	unsigned char sects[REG_ZSIZE][REG_XSIZE];
 	jint tstamps[REG_ZSIZE][REG_XSIZE];
@@ -1066,7 +1065,7 @@ int world_save(char *dir)
 
 		/* find the corresponding region */
 
-		struct coord rc = { .x = REG_XCOORD(c->key.x), .z = REG_ZCOORD(c->key.z) };
+		coord_t rc = { .x = REG_XCOORD(c->key.x), .z = REG_ZCOORD(c->key.z) };
 		struct disk_region *reg = g_hash_table_lookup(region_table, &rc);
 
 		if (!reg)

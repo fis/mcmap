@@ -22,10 +22,10 @@ enum special_color_names
 	COLOR_MAX_SPECIAL
 };
 
-struct rgba block_colors[256];
+rgba_t block_colors[256];
 
 // TODO: Move this out, make it configurable
-static struct rgba special_colors[COLOR_MAX_SPECIAL] = {
+static rgba_t special_colors[COLOR_MAX_SPECIAL] = {
 	[COLOR_PLAYER] = {255, 0, 255, 255},
 	[COLOR_UNLOADED] = {16, 16, 16, 255},
 };
@@ -34,7 +34,7 @@ static struct rgba special_colors[COLOR_MAX_SPECIAL] = {
 
 struct map_region
 {
-	struct coord key;
+	coord_t key;
 	SDL_Surface *surf;
 	int dirty_flag;
 	BITSET(dirty_chunk, REGION_SIZE*REGION_SIZE);
@@ -65,11 +65,11 @@ static GMutex * volatile map_mutex = 0;
 
 static int player_yaw = 0;
 
-static inline Uint32 pack_rgb(struct rgb rgb)
+static inline Uint32 pack_rgb(rgba_t rgba)
 {
-	return (rgb.r << map_rshift) |
-	       (rgb.g << map_gshift) |
-	       (rgb.b << map_bshift);
+	return (rgba.r << map_rshift) |
+	       (rgba.g << map_gshift) |
+	       (rgba.b << map_bshift);
 }
 
 static void map_destroy_region(gpointer gp);
@@ -88,11 +88,11 @@ void map_init(SDL_Surface *screen)
 #endif
 }
 
-static struct map_region *map_create_region(struct coord rc)
+static struct map_region *map_create_region(coord_t rc)
 {
 	struct map_region *region = g_new(struct map_region, 1);
 
-	region->key = (struct coord){ .x = REGION_XMASK(rc.x), .z = REGION_ZMASK(rc.z) };
+	region->key = COORD(REGION_XMASK(rc.x), REGION_ZMASK(rc.z));
 	region->surf = SDL_CreateRGBSurface(SDL_SWSURFACE, REGION_XSIZE, REGION_ZSIZE, 32,
 	                                    screen_fmt->Rmask, screen_fmt->Gmask, screen_fmt->Bmask, 0);
 	if (!region->surf)
@@ -118,9 +118,9 @@ static void map_destroy_region(gpointer rp)
 	g_free(rp);
 }
 
-static struct map_region *map_get_region(struct coord cc, int gen)
+static struct map_region *map_get_region(coord_t cc, int gen)
 {
-	struct coord rc = { .x = REGION_XMASK(cc.x), .z = REGION_ZMASK(cc.z) };
+	coord_t rc = COORD(REGION_XMASK(cc.x), REGION_ZMASK(cc.z));
 	struct map_region *region = g_hash_table_lookup(regions, &rc);
 	return region ? region : (gen ? map_create_region(rc) : 0);
 }
@@ -140,16 +140,16 @@ inline void map_repaint(void)
 		x = rgba.b; rgba.b = (expr); \
 	} while (0)
 
-static struct rgba map_water_color(struct chunk *c, struct rgba rgba, jint bx, jint bz, Uint32 y)
+static rgba_t map_water_color(struct chunk *c, rgba_t rgba, jint bx, jint bz, Uint32 y)
 {
 	while (--y && IS_WATER(c->blocks[bx][bz][y]))
 		TRANSFORM_RGB(x*7/8);
 	return rgba;
 }
 
-static struct rgb map_block_color(struct chunk *c, unsigned char *b, jint bx, jint bz, Uint32 y)
+static rgba_t map_block_color(struct chunk *c, unsigned char *b, jint bx, jint bz, Uint32 y)
 {
-	struct rgba rgba = block_colors[b[y]];
+	rgba_t rgba = block_colors[b[y]];
 
 	/* apply shadings and such */
 
@@ -205,14 +205,14 @@ static struct rgb map_block_color(struct chunk *c, unsigned char *b, jint bx, ji
 	}
 
 	// TODO: Stop going below when the colour stops changing
-	struct rgb below = map_block_color(c, b, bx, bz, below_y);
+	rgba_t below = map_block_color(c, b, bx, bz, below_y);
 
 	return RGB((below.r * (255 - rgba.a) + rgba.r * rgba.a)/255,
 	           (below.g * (255 - rgba.a) + rgba.g * rgba.a)/255,
 	           (below.b * (255 - rgba.a) + rgba.b * rgba.a)/255);
 }
 
-static void map_paint_chunk(SDL_Surface *region, struct coord cc)
+static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 {
 	jint cxo = CHUNK_XIDX(REGION_XOFF(cc.x));
 	jint czo = CHUNK_ZIDX(REGION_ZOFF(cc.z));
@@ -249,20 +249,20 @@ static void map_paint_chunk(SDL_Surface *region, struct coord cc)
 
 			/* select basic color */
 
-			struct rgb rgb;
+			rgba_t rgba;
 
 			if (map_mode == MAP_MODE_TOPO)
 			{
 				Uint32 v = *b;
 				if (IS_WATER(c->blocks[bx][bz][y]))
-					rgb = IGNORE_ALPHA(map_water_color(c, block_colors[0x08], bx, bz, y));
+					rgba = map_water_color(c, block_colors[0x08], bx, bz, y);
 				else if (v < 64)
-					rgb = RGB(4*v, 4*v, 0);
+					rgba = RGB(4*v, 4*v, 0);
 				else
-					rgb = RGB(255, 255-4*(v-64), 0);
+					rgba = RGB(255, 255-4*(v-64), 0);
 			}
 			else if (map_mode == MAP_MODE_CROSS)
-				rgb = IGNORE_ALPHA(block_colors[b[map_y]]);
+				rgba = block_colors[b[map_y]];
 			else if (map_mode == MAP_MODE_SURFACE)
 			{
 				if (map_flags & MAP_FLAG_CHOP && y >= ceiling_y)
@@ -271,12 +271,12 @@ static void map_paint_chunk(SDL_Surface *region, struct coord cc)
 					while (IS_AIR(b[y]) && y > 1)
 						y--;
 				}
-				rgb = map_block_color(c, b, bx, bz, y);
+				rgba = map_block_color(c, b, bx, bz, y);
 			}
 			else
 				wtff("invalid map_mode %d", map_mode);
 
-			*p++ = pack_rgb(rgb);
+			*p++ = pack_rgb(rgba);
 			b += blocks_xpitch;
 		}
 
@@ -297,7 +297,7 @@ static void map_paint_region(struct map_region *region)
 		{
 			if (BITSET_TEST(region->dirty_chunk, cidx))
 			{
-				struct coord cc;
+				coord_t cc;
 				cc.x = region->key.x + (cx * CHUNK_XSIZE);
 				cc.z = region->key.z + (cz * CHUNK_ZSIZE);
 				map_paint_chunk(region->surf, cc);
@@ -311,7 +311,7 @@ static void map_paint_region(struct map_region *region)
 	region->dirty_flag = 0;
 }
 
-void map_update_chunk(struct coord cc)
+void map_update_chunk(coord_t cc)
 {
 	struct chunk *c = world_chunk(cc, 0);
 
@@ -323,7 +323,7 @@ void map_update_chunk(struct coord cc)
 	BITSET_SET(region->dirty_chunk, CHUNK_ZIDX(REGION_ZOFF(cc.z))*REGION_SIZE + CHUNK_XIDX(REGION_XOFF(cc.x)));
 }
 
-void map_update_region(struct coord cc)
+void map_update_region(coord_t cc)
 {
 	struct region *r = world_region(cc, 0);
 
@@ -336,7 +336,7 @@ void map_update_region(struct coord cc)
 		region->dirty_chunk[i] = ~0;
 }
 
-void map_update(struct coord c1, struct coord c2)
+void map_update(coord_t c1, coord_t c2)
 {
 	if (!map_mutex)
 		return; /* defensive code if called by world before map_init */
@@ -346,7 +346,7 @@ void map_update(struct coord c1, struct coord c2)
 	// FIXME: Is this right?
 	for (jint cz = c1.z; cz <= c2.z; cz += CHUNK_ZSIZE)
 		for (jint cx = c1.x; cx <= c2.x; cx += CHUNK_XSIZE)
-			map_update_chunk((struct coord){ .x = cx, .z = cz });
+			map_update_chunk(COORD(cx, cz));
 
 	g_mutex_unlock(map_mutex);
 	map_repaint();
@@ -390,7 +390,7 @@ void map_update_player_pos(double x, double y, double z)
 
 void map_update_ceiling()
 {	
-	unsigned char *stack = world_stack((struct coord){ .x = player_x, .z = player_z }, 0);
+	unsigned char *stack = world_stack(COORD(player_x, player_z), 0);
 	jint old_ceiling_y = ceiling_y;
 	if (stack && player_y >= 0 && player_y < CHUNK_YSIZE)
 	{
@@ -682,7 +682,7 @@ void map_draw(SDL_Surface *screen)
 		{
 			/* get the region surface, paint it if dirty */
 
-			struct coord rc = { .x = reg_x * REGION_XSIZE, .z = reg_z * REGION_ZSIZE };
+			coord_t rc = COORD(reg_x * REGION_XSIZE, reg_z * REGION_ZSIZE);
 			struct map_region *region = map_get_region(rc, 0);
 
 			if (!region)
@@ -752,7 +752,7 @@ void map_draw(SDL_Surface *screen)
 		hz = player_z;
 	}
 
-	struct coord hcc = { .x = hx, .z = hz };
+	coord_t hcc = { .x = hx, .z = hz };
 	struct chunk *hc = world_chunk(hcc, 0);
 	hc = world_chunk(hcc, 0);
 	if (!hc) goto no_block_info;

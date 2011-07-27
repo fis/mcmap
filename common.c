@@ -12,14 +12,14 @@
 
 guint coord_hash(gconstpointer key)
 {
-	const struct coord *c = key;
+	const coord_t *c = key;
 	uint32_t x = c->x, z = c->z;
 	return x ^ ((z << 16) | (z >> 16));
 }
 
 gboolean coord_equal(gconstpointer a, gconstpointer b)
 {
-	const struct coord *ca = a, *cb = b;
+	const coord_t *ca = a, *cb = b;
 	return COORD_EQUAL(*ca, *cb);
 }
 

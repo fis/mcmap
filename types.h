@@ -55,18 +55,12 @@ struct coord
 	jint x, z;
 };
 
+typedef struct coord coord_t;
+
+#define COORD(xv, zv) ((coord_t){ .x = (xv), .z = (zv) })
 #define COORD_EQUAL(a,b) ((a).x == (b).x && (a).z == (b).z)
 
 /* colors */
-
-struct rgb
-{
-	uint8_t r;
-	uint8_t g;
-	uint8_t b;
-};
-
-#define RGB(rv, gv, bv) ((struct rgb){ .r = (rv), .g = (gv), .b = (bv) })
 
 struct rgba
 {
@@ -76,8 +70,10 @@ struct rgba
 	uint8_t a;
 };
 
-#define RGBA(rv, gv, bv, av) ((struct rgba){ .r = (rv), .g = (gv), .b = (bv), .a = (av)})
-#define RGBA_OPAQUE(rv, gv, bv) RGBA(rv, gv, bv, 255)
+typedef struct rgba rgba_t;
+
+#define RGBA(rv, gv, bv, av) ((rgba_t){ .r = (rv), .g = (gv), .b = (bv), .a = (av) })
+#define RGB(rv, gv, bv) RGBA(rv, gv, bv, 255)
 #define IGNORE_ALPHA(rgba) RGB((rgba).r, (rgba).g, (rgba).b)
 
 /* general-purpose (bytes, len) buffers */
