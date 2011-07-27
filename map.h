@@ -33,7 +33,7 @@ extern jshort player_health;
 
 void map_init(SDL_Surface *screen);
 
-void map_update(jint x1, jint x2, jint z1, jint z2);
+void map_update(struct coord c1, struct coord c2);
 
 void map_update_player_pos(double x, double y, double z);
 void map_update_ceiling(void);

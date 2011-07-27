@@ -92,12 +92,13 @@ static struct map_region *map_create_region(struct coord rc)
 {
 	struct map_region *region = g_new(struct map_region, 1);
 
-	region->key = rc;
+	region->key = (struct coord){ .x = REGION_MASK(rc.x), .z = REGION_MASK(rc.z) };
 	region->surf = SDL_CreateRGBSurface(SDL_SWSURFACE, REGION_XSIZE, REGION_ZSIZE, 32,
 	                                    screen_fmt->Rmask, screen_fmt->Gmask, screen_fmt->Bmask, 0);
 	if (!region->surf)
 		dief("SDL map surface init: %s", SDL_GetError());
 
+	if(rc.z<0) log_print("%d (%d,%d)", rc.z, region->key.x, region->key.z);
 	g_hash_table_insert(regions, &region->key, region);
 
 	SDL_LockSurface(region->surf);
@@ -118,10 +119,12 @@ static void map_destroy_region(gpointer rp)
 	g_free(rp);
 }
 
-static struct map_region *map_get_region(struct coord rc, int gen)
-{
+static struct map_region *map_get_region(struct coord cc, int gen)
+{w
+	struct coord rc = { .x = REGION_MASK(cc.x), .z = REGION_MASK(cc.z) };
 	struct map_region *region = g_hash_table_lookup(regions, &rc);
-	return region ? region : (gen ? map_create_region(rc) : 0);
+	if(cc.z<0) log_print("%d (%d,%d) gen=%d", cc.z, rc.x, rc.z, gen);
+	return region ? region : (gen ? map_create_region(cc) : 0);
 }
 
 inline void map_repaint(void)
@@ -211,13 +214,12 @@ static struct rgb map_block_color(struct chunk *c, unsigned char *b, jint bx, ji
 	           (below.b * (255 - rgba.a) + rgba.b * rgba.a)/255);
 }
 
-static void map_paint_chunk(SDL_Surface *region, jint cx, jint cz)
+static void map_paint_chunk(SDL_Surface *region, struct coord cc)
 {
-	jint cxo = REGION_OFF(cx);
-	jint czo = REGION_OFF(cz);
+	jint cxo = REGION_OFF(CHUNK_XIDX(cc.x));
+	jint czo = REGION_OFF(CHUNK_ZIDX(cc.z));
 
-	struct coord cc = { .x = cx, .z = cz };
-	struct chunk *c = world_chunk(&cc, 0);
+	struct chunk *c = world_chunk(cc, 0);
 
 	if (!c)
 		return;
@@ -297,9 +299,10 @@ static void map_paint_region(struct map_region *region)
 		{
 			if (BITSET_TEST(region->dirty_chunk, cidx))
 			{
-				map_paint_chunk(region->surf,
-				                region->key.x * REGION_SIZE + cx,
-				                region->key.z * REGION_SIZE + cz);
+				struct coord cc;
+				cc.x = region->key.x + (cx * CHUNK_XSIZE);
+				cc.z = region->key.z + (cz * CHUNK_ZSIZE);
+				map_paint_chunk(region->surf, cc);
 				BITSET_CLEAR(region->dirty_chunk, cidx);
 			}
 
@@ -312,39 +315,39 @@ static void map_paint_region(struct map_region *region)
 
 void map_update_chunk(struct coord cc)
 {
-	struct chunk *c = world_chunk(&cc, 0);
+	struct chunk *c = world_chunk(cc, 0);
 
 	if (!c)
 		return;
 
-	struct coord rc = { .x = REGION_IDX(cc.x), .z = REGION_IDX(cc.z) };
-	struct map_region *region = map_get_region(rc, 1);
+	struct map_region *region = map_get_region(cc, 1);
 	region->dirty_flag = 1;
-	BITSET_SET(region->dirty_chunk, REGION_OFF(cc.z)*REGION_SIZE + REGION_OFF(cc.x));
+	BITSET_SET(region->dirty_chunk, REGION_OFF(CHUNK_ZIDX(cc.z))*REGION_SIZE + REGION_OFF(CHUNK_XIDX(cc.x)));
 }
 
-void map_update_region(struct coord rc)
+void map_update_region(struct coord cc)
 {
-	struct region *r = world_region(&rc, 0);
+	struct region *r = world_region(cc, 0);
 
 	if (!r)
 		return;
 
-	struct map_region *region = map_get_region(rc, 1);
+	struct map_region *region = map_get_region(cc, 1);
 	region->dirty_flag = 1;
 	for (int i = 0; i < NELEMS(region->dirty_chunk); i++)
 		region->dirty_chunk[i] = ~0;
 }
 
-void map_update(jint x1, jint x2, jint z1, jint z2)
+void map_update(struct coord c1, struct coord c2)
 {
 	if (!map_mutex)
 		return; /* defensive code if called by world before map_init */
 
 	g_mutex_lock(map_mutex);
 
-	for (jint cz = z1; cz <= z2; cz++)
-		for (jint cx = x1; cx <= x2; cx++)
+	// FIXME: Is this right?
+	for (jint cz = c1.z; cz <= c2.z; cz += CHUNK_ZSIZE)
+		for (jint cx = c1.x; cx <= c2.x; cx += CHUNK_XSIZE)
 			map_update_chunk((struct coord){ .x = cx, .z = cz });
 
 	g_mutex_unlock(map_mutex);
@@ -360,7 +363,7 @@ static void map_update_all()
 
 	while (g_hash_table_iter_next(&region_iter, NULL, (gpointer *) &region))
 	{
-		map_update_region((struct coord){ .x = region->key.x, .z = region->key.z });
+		map_update_region((struct coord){ .x = region->key.x * REGION_XSIZE, .z = region->key.z * REGION_ZSIZE });
 	}
 }
 
@@ -389,7 +392,7 @@ void map_update_player_pos(double x, double y, double z)
 
 void map_update_ceiling()
 {	
-	unsigned char *stack = world_stack(player_x, player_z, 0);
+	unsigned char *stack = world_stack((struct coord){ .x = player_x, .z = player_z }, 0);
 	jint old_ceiling_y = ceiling_y;
 	if (stack && player_y >= 0 && player_y < CHUNK_YSIZE)
 	{
@@ -681,7 +684,7 @@ void map_draw(SDL_Surface *screen)
 		{
 			/* get the region surface, paint it if dirty */
 
-			struct coord rc = { .x = reg_x, .z = reg_z };
+			struct coord rc = { .x = reg_x * REGION_XSIZE, .z = reg_z * REGION_ZSIZE };
 			struct map_region *region = map_get_region(rc, 0);
 
 			if (!region)
@@ -695,8 +698,8 @@ void map_draw(SDL_Surface *screen)
 
 			/* try to find where to place the region */
 
-			int reg_sx = (reg_x*REGION_XSIZE - scr_x1)*map_scale - scr_x1o;
-			int reg_sy = (reg_z*REGION_ZSIZE - scr_z1)*map_scale - scr_z1o;
+			int reg_sx = (rc.x - scr_x1)*map_scale - scr_x1o;
+			int reg_sy = (rc.z - scr_z1)*map_scale - scr_z1o;
 
 			for (int reg_py = 0; reg_py < REGION_ZSIZE; reg_py++)
 			{
@@ -751,9 +754,9 @@ void map_draw(SDL_Surface *screen)
 		hz = player_z;
 	}
 
-	struct coord hcc = { .x = CHUNK_XIDX(hx), .z = CHUNK_ZIDX(hz) };
-	struct chunk *hc = world_chunk(&hcc, 0);
-	hc = world_chunk(&hcc, 0);
+	struct coord hcc = { .x = hx, .z = hz };
+	struct chunk *hc = world_chunk(hcc, 0);
+	hc = world_chunk(hcc, 0);
 	if (!hc) goto no_block_info;
 
 	jint hcx = CHUNK_XOFF(hx);

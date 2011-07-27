@@ -23,6 +23,8 @@
 #define REGION_SIZE (1 << REGION_BITS)
 /* relies on implementation-defined arithmetic shift behaviour */
 #define REGION_IDX(coord) ((coord) >> REGION_BITS)
+// FIXME: Optomize
+#define REGION_MASK(coord) (REGION_IDX(coord)*REGION_SIZE)
 #define REGION_OFF(coord) ((coord) & (REGION_SIZE-1))
 
 #define REGION_XSIZE (CHUNK_XSIZE*REGION_SIZE)
@@ -53,6 +55,7 @@ struct entity
 {
 	jint id;
 	unsigned char *name;
+	// FIXME: Use struct coord
 	jint x, z;       /* in blocks */
 	jint ax, ay, az; /* in absolute-int format */
 };
@@ -64,13 +67,13 @@ void world_destroy(void);
 
 gpointer world_thread(gpointer data);
 
-struct region *world_region(struct coord *coord, int gen);
-struct chunk *world_chunk(struct coord *coord, int gen);
-unsigned char *world_stack(jint x, jint z, int gen);
+struct region *world_region(struct coord cc, int gen);
+struct chunk *world_chunk(struct coord cc, int gen);
+unsigned char *world_stack(struct coord cc, int gen);
 
 gboolean world_handle_chunk(jint x0, jint y0, jint z0, jint xs, jint ys, jint zs, struct buffer zb, struct buffer zb_meta, struct buffer zb_light_blocks, struct buffer zb_light_sky, gboolean update_map);
 
-jint world_getheight(jint x, jint z);
+jint world_getheight(struct coord cc);
 
 void world_entities(void (*callback)(struct entity *e, void *userdata), void *userdata);
 
