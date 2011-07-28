@@ -125,23 +125,28 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 		break;
 
 	case '2':
-		map_setmode(MAP_MODE_CROSS, MAP_FLAG_FOLLOW_Y, 0, 0);
+		map_setmode(MAP_MODE_CROSS, 0, 0, 0);
 		*repaint = 1;
 		break;
 
 	case '3':
-		map_setmode(MAP_MODE_CROSS, 0, MAP_FLAG_FOLLOW_Y, 0);
+		map_setmode(MAP_MODE_TOPO, 0, 0, 0);
 		*repaint = 1;
 		break;
 
 	case '4':
-		map_setmode(MAP_MODE_TOPO, 0, 0, 0);
+		map_setmode(MAP_MODE_ISOMETRIC, 0, 0, 0);
 		*repaint = 1;
 		break;
 
 	case 'c':
 		map_setmode(MAP_MODE_SURFACE, 0, 0, MAP_FLAG_CHOP);
 		map_update_ceiling();
+		*repaint = 1;
+		break;
+
+	case 'f':
+		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_FOLLOW_Y);
 		*repaint = 1;
 		break;
 

@@ -219,7 +219,7 @@ static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 
 	struct chunk *c = world_chunk(cc, 0);
 
-	if (!c /* just return always: */ || c) /* FIXME: for isometric test */
+	if (!c)
 		return;
 
 	SDL_LockSurface(region);
@@ -287,7 +287,6 @@ static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 	SDL_UnlockSurface(region);
 }
 
-static void map_paint_region(struct map_region *region) __attribute__ ((unused));
 static void map_paint_region(struct map_region *region)
 {
 	jint cidx = 0;
@@ -471,6 +470,7 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 		[MAP_MODE_SURFACE] = "surface",
 		[MAP_MODE_CROSS] = "cross-section",
 		[MAP_MODE_TOPO] = "topographic",
+		[MAP_MODE_ISOMETRIC] = "isometric",
 	};
 
 	enum map_mode old_mode = map_mode;
@@ -613,7 +613,6 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 	SDL_UnlockSurface(screen);
 }
 
-static void map_draw_entity_marker(struct entity *e, void *userdata) __attribute__ ((unused));
 static void map_draw_entity_marker(struct entity *e, void *userdata)
 {
 	SDL_Surface *screen = userdata;
@@ -661,77 +660,80 @@ void map_draw(SDL_Surface *screen)
 
 	/* draw the map */
 
-	SDL_LockSurface(screen);
-
-	for (jint y = 0; y < map_h; y += map_scale)
+	if (map_mode == MAP_MODE_ISOMETRIC)
 	{
-		for (jint x = 0; x < map_w; x += map_scale)
+		SDL_LockSurface(screen);
+
+		for (jint y = 0; y < map_h; y += map_scale)
 		{
-			/* probe chunks to find the color */
-
-			jint wy = CHUNK_YSIZE-1;
-			rgba_t rgb = IGNORE_ALPHA(block_colors[0]);
-
-			while (wy >= 0)
+			for (jint x = 0; x < map_w; x += map_scale)
 			{
-				/* convert screen coordinates to world coordinates */
+				/* probe chunks to find the color */
 
-				jint nx = x / map_scale; /* "normalized" screen-coord */
-				jint ny = y / map_scale - (CHUNK_YSIZE - 1 - wy); /* depth offset */
+				jint wy = CHUNK_YSIZE-1;
+				rgba_t rgb = IGNORE_ALPHA(block_colors[0]);
 
-				jint wx = nx - ny;
-				jint wz = (nx + ny) >> 1; /* assumes arithmetic shift */
-
-				/* consider a potentially visible top surface */
-
-				unsigned char block = get_block(wx>>1, wy, wz);
-
-				if (!IS_AIR(block)) /* top surface visible */
+				while (wy >= 0)
 				{
-					rgb = IGNORE_ALPHA(block_colors[block]);
-					break;
+					/* convert screen coordinates to world coordinates */
+
+					jint nx = x / map_scale; /* "normalized" screen-coord */
+					jint ny = y / map_scale - (CHUNK_YSIZE - 1 - wy); /* depth offset */
+
+					jint wx = nx - ny;
+					jint wz = (nx + ny) >> 1; /* assumes arithmetic shift */
+
+					/* consider a potentially visible top surface */
+
+					unsigned char block = get_block(wx>>1, wy, wz);
+
+					if (!IS_AIR(block)) /* top surface visible */
+					{
+						rgb = IGNORE_ALPHA(block_colors[block]);
+						break;
+					}
+
+					/* consider a potentially visible front side */
+
+					wx++;
+					wz = (nx + ny - 1) >> 1;
+					block = get_block(wx>>1, wy, wz);
+
+					if (!IS_AIR(block))
+					{
+						unsigned mult = wx&1 ? 8 : 12;
+						rgb = IGNORE_ALPHA(block_colors[block]);
+						rgb.r = (rgb.r * mult) >> 4;
+						rgb.g = (rgb.g * mult) >> 4;
+						rgb.b = (rgb.b * mult) >> 4;
+						break;
+					}
+
+					wy--;
 				}
 
-				/* consider a potentially visible front side */
+				/* dump map_scale pixels on screen */
 
-				wx++;
-				wz = (nx + ny - 1) >> 1;
-				block = get_block(wx>>1, wy, wz);
+				Uint32 rgbv = pack_rgb(rgb);
+				Uint32 *s = (Uint32*)((unsigned char *)screen->pixels + y*screen->pitch + 4*x);
 
-				if (!IS_AIR(block))
-				{
-					unsigned mult = wx&1 ? 8 : 12;
-					rgb = IGNORE_ALPHA(block_colors[block]);
-					rgb.r = (rgb.r * mult) >> 4;
-					rgb.g = (rgb.g * mult) >> 4;
-					rgb.b = (rgb.b * mult) >> 4;
-					break;
-				}
-
-				wy--;
+				*s++ = rgbv;
+				for (jint xo = 1; xo < map_scale && x+xo < map_w; xo++)
+					*s++ = rgbv;
 			}
 
-			/* dump map_scale pixels on screen */
+			/* repeat previous row up to map-scale times */
 
-			Uint32 rgbv = pack_rgb(rgb);
-			Uint32 *s = (Uint32*)((unsigned char *)screen->pixels + y*screen->pitch + 4*x);
-
-			*s++ = rgbv;
-			for (jint xo = 1; xo < map_scale && x+xo < map_w; xo++)
-				*s++ = rgbv;
+			for (jint yo = 1; yo < map_scale && y+yo < map_h; yo++)
+				memcpy((unsigned char *)screen->pixels + (y+yo)*screen->pitch,
+				       (unsigned char *)screen->pixels + y*screen->pitch,
+				       4 * map_w);
 		}
 
-		/* repeat previous row up to map-scale times */
-
-		for (jint yo = 1; yo < map_scale && y+yo < map_h; yo++)
-			memcpy((unsigned char *)screen->pixels + (y+yo)*screen->pitch,
-			       (unsigned char *)screen->pixels + y*screen->pitch,
-			       4 * map_w);
+		SDL_UnlockSurface(screen);
+		goto map_drawn;
 	}
 
-	SDL_UnlockSurface(screen);
-
-#if 0
 	g_mutex_lock(map_mutex);
 
 	/* find top-left and bottom-right corners of screen in (sub)chunk coords */
@@ -827,7 +829,9 @@ void map_draw(SDL_Surface *screen)
 
 	map_draw_player_marker(screen);
 	world_entities(map_draw_entity_marker, screen);
-#endif
+
+map_drawn:
+	(void)0; /* can't have a label on declaration */
 
 	/* the status bar */
 
