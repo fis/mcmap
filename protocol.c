@@ -41,7 +41,7 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 			buf_start = 0;
 		}
 
-		int got = recv(sock, buf+buf_end, MAX_PACKET_SIZE - buf_end, 0);
+		int got = recv(sock, (char *)(buf + buf_end), MAX_PACKET_SIZE - buf_end, 0);
 		if (got <= 0)
 		{
 			buf_pos = buf_start = buf_end = 0;
