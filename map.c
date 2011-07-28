@@ -851,9 +851,11 @@ void map_draw(SDL_Surface *screen)
 
 			if (map_mode == MAP_MODE_ISOMETRIC)
 			{
-				int px = player_x - rc.x, pz = player_z - rc.z;
+				int px = (player_x - rc.x)*map_scale;
+				int py = (CHUNK_YSIZE-1 - player_y)*map_scale;
+				int pz = (player_z - rc.z)*map_scale;
 				reg_sx = map_w / 2 - px - pz;
-				reg_sy = map_h / 2 - (REGION_XSIZE-1) + px - pz - (CHUNK_YSIZE-1-player_y);
+				reg_sy = map_h / 2 - (REGION_XSIZE-1)*map_scale + px - pz - py;
 				reg_sw = REGION_ISO_W;
 				reg_sh = REGION_ISO_H;
 			}
