@@ -46,7 +46,7 @@ protocol-data.h: protocol-data.c
 -include $(deps)
 
 clean:
-	rm -f $(OBJDIR)/mcmap$(EXE) $(OBJDIR)/mcmapper$(EXE) $(objs) $(extra_objs) $(deps)
+	rm -f $(OBJDIR)/mcmap$(EXE) $(OBJDIR)/mcmapper$(EXE) $(objs) $(extra_objs) $(OBJDIR)/IMG_savepng.o $(deps)
 	-rmdir $(OBJDIR)
 
 $(OBJDIR)/%.d: %.c $(OBJDIR)
