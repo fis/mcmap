@@ -20,18 +20,6 @@ socket_t make_socket(int domain, int type, int protocol)
 	return WSASocket(domain, type, protocol, 0, 0, 0);
 }
 
-void socket_prepare(socket_t socket) {}
-
-int socket_recv(socket_t socket, void *buf, int len, int flags)
-{
-	return recv(socket, buf, len, flags);
-}
-
-int socket_send(socket_t socket, const void *buf, int len, int flags)
-{
-	return send(socket, buf, len, flags);
-}
-
 void console_init() {}
 void console_cleanup() {}
 
