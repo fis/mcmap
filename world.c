@@ -388,8 +388,7 @@ static void entity_add(jint id, unsigned char *name, jint x, jint y, jint z)
 	e->ay = y;
 	e->az = z;
 
-	e->x = x/32;
-	e->z = z/32;
+	e->pos = COORD(x/32, z/32);
 
 	if (name)
 	{
@@ -449,15 +448,14 @@ static void entity_move(jint id, jint x, jint y, jint z, int relative)
 		e->az = z;
 	}
 
-	jint ex = e->ax/32, ez = e->az/32;
-	if (e->x == ex && e->z == ez)
+	coord_t ep = COORD(e->ax/32, e->az/32);
+	if (COORD_EQUAL(e->pos, ep))
 		return;
 
-	e->x = ex;
-	e->z = ez;
+	e->pos = ep;
 
 	if (id == entity_vehicle)
-		map_update_player_pos(ex, e->ay/32, ez);
+		map_update_player_pos(ep.x, e->ay/32, ep.z);
 	else
 		map_repaint();
 }

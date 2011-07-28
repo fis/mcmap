@@ -616,15 +616,15 @@ static void map_draw_entity_marker(struct entity *e, void *userdata)
 {
 	SDL_Surface *screen = userdata;
 
-	int ex, ey;
-	map_w2s(screen, e->x, e->z, &ex, &ey);
+	int ex, ez;
+	map_w2s(screen, e->pos.x, e->pos.z, &ex, &ez);
 	ex += (map_scale - map_scale_indicator)/2;
-	ey += (map_scale - map_scale_indicator)/2;
+	ez += (map_scale - map_scale_indicator)/2;
 
-	if (ex < 0 || ey < 0 || ex+map_scale_indicator > map_w || ey+map_scale_indicator > map_h)
+	if (ex < 0 || ez < 0 || ex+map_scale_indicator > map_w || ez+map_scale_indicator > map_h)
 		return;
 
-	SDL_Rect r = { .x = ex, .y = ey, .w = map_scale_indicator, .h = map_scale_indicator };
+	SDL_Rect r = { .x = ex, .y = ez, .w = map_scale_indicator, .h = map_scale_indicator };
 	// TODO: handle alpha in surface mode
 	SDL_FillRect(screen, &r, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_PLAYER])));
 }

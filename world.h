@@ -59,8 +59,7 @@ struct entity
 {
 	jint id;
 	unsigned char *name;
-	// FIXME: Use coord_t
-	jint x, z;       /* in blocks */
+	coord_t pos;
 	jint ax, ay, az; /* in absolute-int format */
 };
 
