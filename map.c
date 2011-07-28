@@ -308,11 +308,37 @@ static void map_paint_region_iso(struct map_region *region)
 		return c ? c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y] : 0;
 	}
 
+	/* find the bounding box for dirty chunks */
+
+	jint dirty_x1 = REGION_ISO_W, dirty_x2 = 0;
+	jint dirty_y1 = REGION_ISO_H, dirty_y2 = 0;
+
+	jint cidx = 0;
+	for (jint cz = 0; cz < REGION_SIZE; cz++)
+	{
+		for (jint cx = 0; cx < REGION_SIZE; cx++)
+		{
+			if (BITSET_TEST(region->dirty_chunk, cidx))
+			{
+				jint dx1 = cx*CHUNK_XSIZE + cz*CHUNK_ZSIZE;
+				jint dy1 = (REGION_SIZE-cx)*CHUNK_XSIZE + cz*CHUNK_ZSIZE;
+				jint dx2 = dx1 + CHUNK_XSIZE + CHUNK_ZSIZE;
+				jint dy2 = dy1 + CHUNK_XSIZE + CHUNK_YSIZE - 1;
+				if (dx1 < dirty_x1) dirty_x1 = dx1;
+				if (dx2 > dirty_x2) dirty_x2 = dx2;
+				if (dy1 < dirty_y1) dirty_y1 = dy1;
+				if (dy2 > dirty_y2) dirty_y2 = dy2;
+			}
+
+			cidx++;
+		}
+	}
+
 	/* paint the region surface */
 
-	for (jint y = 0; y < REGION_ISO_H; y++)
+	for (jint y = dirty_y1; y < dirty_y2; y++)
 	{
-		for (jint x = 0; x < REGION_ISO_W; x++)
+		for (jint x = dirty_x1; x < dirty_x2; x++)
 		{
 			/* probe chunks to find the color */
 
