@@ -58,9 +58,8 @@ gpointer proxy_thread(gpointer data)
 	socket_t sock_cli = cfg->sock_cli, sock_srv = cfg->sock_srv;
 	GAsyncQueue *worldq = cfg->worldq;
 
-//	char *desc = cfg->client_to_server ? "client -> server" : "server -> client";
-
-	packet_state_t state = PACKET_STATE_INIT(); // cfg->client_to_server ? PACKET_TO_SERVER : PACKET_TO_CLIENT);
+	packet_state_t state_cli = PACKET_STATE_INIT(PACKET_TO_SERVER);
+	packet_state_t state_srv = PACKET_STATE_INIT(PACKET_TO_CLIENT);
 
 	while (1)
 	{
@@ -77,25 +76,21 @@ gpointer proxy_thread(gpointer data)
 			FD_SET(sock_cli, &rfds);
 			FD_SET(sock_srv, &rfds);
 			int nfds = (sock_cli > sock_srv ? sock_cli : sock_srv) + 1;
+
 			int ret = select(nfds, &rfds, NULL, NULL, NULL);
 			if (ret == -1)
 				dief("select: %s", strerror(errno));
 			else if (ret == 0)
 				wtff("select returned 0! %s", strerror(errno));
+
 			if (FD_ISSET(sock_cli, &rfds))
-			{
-				p = packet_read(sock_cli, &state);
-				p->flags |= PACKET_TO_SERVER;
-				packet_must_free = FALSE;
-			}
+				p = packet_read(sock_cli, &state_cli);
 			else if (FD_ISSET(sock_srv, &rfds))
-			{
-				p = packet_read(sock_srv, &state);
-				p->flags |= PACKET_TO_CLIENT;
-				packet_must_free = FALSE;
-			}
+				p = packet_read(sock_srv, &state_srv);
 			else
 				wtf("Neither sock_cli nor sock_srv set in select's result");
+
+			packet_must_free = FALSE;
 		}
 
 		if (!p)
@@ -106,6 +101,8 @@ gpointer proxy_thread(gpointer data)
 		}
 
 		gboolean from_client = p->flags & PACKET_TO_SERVER;
+		socket_t sto = from_client ? sock_srv : sock_cli;
+		char *desc = from_client ? "client -> server" : "server -> client";
 
 #if DEBUG_PROTOCOL >= 2 /* use for packet dumping for protocol analysis */
 		if (p->id == PACKET_UPDATE_HEALTH /*|| p->id == PACKET_PLAYER_MOVE || p->id == PACKET_PLAYER_MOVE_ROTATE*/)
@@ -134,8 +131,8 @@ gpointer proxy_thread(gpointer data)
 		}
 		else
 		{
-			if (!packet_write(from_client ? sock_srv : sock_cli, p))
-				dief("proxy thread (%s) write failed", from_client ? "client -> server" : "server -> client");
+			if (!packet_write(sto, p))
+				dief("proxy thread (%s) write failed", desc);
 		}
 
 		/* communicate interesting chunks to world thread */
