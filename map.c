@@ -776,22 +776,9 @@ void map_draw(SDL_Surface *screen)
 
 	/* draw the map */
 
-	if (map_mode == MAP_MODE_ISOMETRIC)
-	{
-		struct map_region *r = map_get_region(COORD(player_x, player_z), 0);
-		if (r)
-		{
-			if (r->dirty_flag) map_paint_region(r);
-			SDL_Rect srcr = { .x = 0, .y = 0, .w = REGION_ISO_W, .h = REGION_ISO_H };
-			SDL_Rect dstr = { .x = 0, .y = 0 };
-			SDL_BlitSurface(r->surf, &srcr, screen, &dstr);
-		}
-		goto map_drawn;
-	}
-
 	g_mutex_lock(map_mutex);
 
-	/* find top-left and bottom-right corners of screen in (sub)chunk coords */
+	/* locate the screen corners in (sub-)block coordinates */
 
 	jint scr_x1, scr_z1;
 	jint scr_x1o, scr_z1o;
@@ -813,15 +800,26 @@ void map_draw(SDL_Surface *screen)
 	scr_x2o = scr_x2 % map_scale;
 	scr_z2o = scr_z2 % map_scale;
 
-	/* find out which regions intersect with visible coords */
+	/* find the range of regions that intersect with the screen */
 
 	jint reg_x1, reg_x2, reg_z1, reg_z2;
 
-	reg_x1 = REGION_XIDX(scr_x1);
-	reg_z1 = REGION_ZIDX(scr_z1);
+	if (map_mode == MAP_MODE_ISOMETRIC)
+	{
+		/* TODO FIXME... */
+		reg_x1 = REGION_XIDX(player_x);
+		reg_z1 = REGION_ZIDX(player_z);
+		reg_x2 = reg_x1;
+		reg_z2 = reg_z1;
+	}
+	else
+	{
+		reg_x1 = REGION_XIDX(scr_x1);
+		reg_z1 = REGION_ZIDX(scr_z1);
 
-	reg_x2 = REGION_XIDX(scr_x2 + REGION_XSIZE - 1);
-	reg_z2 = REGION_ZIDX(scr_z2 + REGION_ZSIZE - 1);
+		reg_x2 = REGION_XIDX(scr_x2 + REGION_XSIZE - 1);
+		reg_z2 = REGION_ZIDX(scr_z2 + REGION_ZSIZE - 1);
+	}
 
 	/* draw those regions */
 
@@ -849,17 +847,36 @@ void map_draw(SDL_Surface *screen)
 
 			/* try to find where to place the region */
 
-			int reg_sx = (rc.x - scr_x1)*map_scale - scr_x1o;
-			int reg_sy = (rc.z - scr_z1)*map_scale - scr_z1o;
+			int reg_sx, reg_sy, reg_sw, reg_sh;
 
-			for (int reg_py = 0; reg_py < REGION_ZSIZE; reg_py++)
+			if (map_mode == MAP_MODE_ISOMETRIC)
+			{
+				int px = player_x - rc.x, pz = player_z - rc.z;
+				reg_sx = map_w / 2 - px - pz;
+				reg_sy = map_h / 2 - (REGION_XSIZE-1) + px - pz - (CHUNK_YSIZE-1-player_y);
+				reg_sw = REGION_ISO_W;
+				reg_sh = REGION_ISO_H;
+			}
+			else
+			{
+				reg_sx = (rc.x - scr_x1)*map_scale - scr_x1o;
+				reg_sy = (rc.z - scr_z1)*map_scale - scr_z1o;
+				reg_sw = REGION_XSIZE;
+				reg_sh = REGION_ZSIZE;
+			}
+
+			/* scaled, color-keyed blit */
+
+			Uint32 ckey = pack_rgb(color_key);
+
+			for (int reg_py = 0; reg_py < reg_sh; reg_py++)
 			{
 				int y0 = reg_sy + reg_py*map_scale;
 				for (int y = y0; y < y0+map_scale && y < map_h; y++)
 				{
 					if (y < 0) continue;
 
-					for (int reg_px = 0; reg_px < REGION_XSIZE; reg_px++)
+					for (int reg_px = 0; reg_px < reg_sw; reg_px++)
 					{
 						int x0 = reg_sx + reg_px*map_scale;
 						for (int x = x0; x < x0+map_scale && x < map_w; x++)
@@ -868,7 +885,8 @@ void map_draw(SDL_Surface *screen)
 
 							void *s = (unsigned char *)screen->pixels + y*screen->pitch + 4*x;
 							void *m = (unsigned char *)regs->pixels + reg_py*regs->pitch + 4*reg_px;
-							*(Uint32 *)s = *(Uint32 *)m;
+							Uint32 c = *(Uint32 *)m;
+							if (c != ckey) *(Uint32 *)s = c;
 						}
 					}
 				}
@@ -886,9 +904,6 @@ void map_draw(SDL_Surface *screen)
 
 	map_draw_player_marker(screen);
 	world_entities(map_draw_entity_marker, screen);
-
-map_drawn:
-	(void)0; /* can't have a label on declaration */
 
 	/* the status bar */
 
