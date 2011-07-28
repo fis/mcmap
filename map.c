@@ -287,6 +287,7 @@ static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 	SDL_UnlockSurface(region);
 }
 
+static void map_paint_region(struct map_region *region) __attribute__ ((unused));
 static void map_paint_region(struct map_region *region)
 {
 	jint cidx = 0;
@@ -639,21 +640,23 @@ void map_draw(SDL_Surface *screen)
 
 	/* a chunk-pointer-caching block accessor */
 
-	struct coord cc;
-	struct chunk *c = 0;
-	int c_valid = 0;
+	struct coord rc;
+	struct region *reg = 0;
+	int reg_valid = 0;
 
 	unsigned char get_block(jint x, jint y, jint z)
 	{
-		if (!c_valid || cc.x != CHUNK_XIDX(x) || cc.z != CHUNK_ZIDX(z))
+		if (!reg_valid || rc.x != REGION_XMASK(x) || rc.z != REGION_ZMASK(z))
 		{
-			cc.x = CHUNK_XIDX(x);
-			cc.z = CHUNK_ZIDX(z);
-			c = world_chunk(&cc, 0);
-			c_valid = 1;
+			rc.x = REGION_XMASK(x);
+			rc.z = REGION_ZMASK(z);
+			reg = world_region(rc, 0);
+			reg_valid = 1;
 		}
 
-		return c ? c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y] : 0;
+		jint rx = REGION_XOFF(x), rz = REGION_ZOFF(z);
+		struct chunk *c = reg ? reg->chunks[CHUNK_XIDX(rx)][CHUNK_ZIDX(rz)] : 0;
+		return c ? c->blocks[CHUNK_XOFF(rx)][CHUNK_ZOFF(rz)][y] : 0;
 	}
 
 	/* draw the map */
@@ -667,7 +670,7 @@ void map_draw(SDL_Surface *screen)
 			/* probe chunks to find the color */
 
 			jint wy = CHUNK_YSIZE-1;
-			struct rgb rgb = IGNORE_ALPHA(block_colors[0]);
+			rgba_t rgb = IGNORE_ALPHA(block_colors[0]);
 
 			while (wy >= 0)
 			{
