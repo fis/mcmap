@@ -286,9 +286,6 @@ static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 	SDL_UnlockSurface(region);
 }
 
-/* FIXME just for a moment here */
-#define REGION_ISO_W (REGION_XSIZE + REGION_ZSIZE)
-#define REGION_ISO_H (REGION_XSIZE + REGION_ZSIZE + CHUNK_YSIZE - 1)
 static void map_paint_region_iso(struct map_region *region)
 {
 	SDL_Surface *regs = region->surf;
@@ -319,7 +316,7 @@ static void map_paint_region_iso(struct map_region *region)
 		{
 			/* probe chunks to find the color */
 
-			jint wy = CHUNK_YSIZE-1;
+			jint wy = (map_flags & MAP_FLAG_CHOP ? ceiling_y-1 : CHUNK_YSIZE-1);
 			rgba_t rgb = color_key;
 
 			while (wy >= 0)
@@ -496,7 +493,8 @@ void map_update_player_pos(double x, double y, double z)
 
 	if (map_mode == MAP_MODE_CROSS && (map_flags & MAP_FLAG_FOLLOW_Y))
 		map_update_alt(new_y, 0);
-	else if (map_mode == MAP_MODE_SURFACE && (map_flags & MAP_FLAG_CHOP))
+	else if ((map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_ISOMETRIC)
+	         && (map_flags & MAP_FLAG_CHOP))
 		map_update_ceiling();
 
 	map_repaint();
