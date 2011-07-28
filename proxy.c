@@ -128,7 +128,7 @@ gpointer proxy_thread(gpointer data)
 		/* communicate interesting chunks to world thread */
 
 		if (!world_running || (p->flags & PACKET_FLAG_IGNORE))
-			continue;
+			goto next;
 
 		switch (p->id)
 		{
@@ -166,6 +166,7 @@ gpointer proxy_thread(gpointer data)
 			break;
 		}
 
+next:
 		if (packet_must_free)
 			packet_free(p);
 	}
