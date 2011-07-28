@@ -30,6 +30,9 @@ static rgba_t special_colors[COLOR_MAX_SPECIAL] = {
 	[COLOR_UNLOADED] = {16, 16, 16, 255},
 };
 
+/* used for color-keyed blitting in isometric mode */
+static rgba_t color_key = { .r = 255, .g = 0, .b = 128 };
+
 /* map graphics code */
 
 struct map_region
@@ -39,6 +42,9 @@ struct map_region
 	int dirty_flag;
 	BITSET(dirty_chunk, REGION_SIZE*REGION_SIZE);
 };
+
+#define REGION_ISO_W (REGION_XSIZE + REGION_ZSIZE)
+#define REGION_ISO_H (REGION_XSIZE + REGION_ZSIZE + CHUNK_YSIZE - 1)
 
 double player_dx = 0.0, player_dy = 0.0, player_dz = 0.0;
 jint player_x = 0, player_y = 0, player_z = 0;
@@ -93,17 +99,9 @@ static struct map_region *map_create_region(coord_t rc)
 	struct map_region *region = g_new(struct map_region, 1);
 
 	region->key = COORD(REGION_XMASK(rc.x), REGION_ZMASK(rc.z));
-	region->surf = SDL_CreateRGBSurface(SDL_SWSURFACE, REGION_XSIZE, REGION_ZSIZE, 32,
-	                                    screen_fmt->Rmask, screen_fmt->Gmask, screen_fmt->Bmask, 0);
-	if (!region->surf)
-		dief("SDL map surface init: %s", SDL_GetError());
+	region->surf = 0;
 
 	g_hash_table_insert(regions, &region->key, region);
-
-	SDL_LockSurface(region->surf);
-	SDL_Rect r = { .x = 0, .y = 0, .w = REGION_XSIZE, .h = REGION_ZSIZE };
-	SDL_FillRect(region->surf, &r, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_UNLOADED])));
-	SDL_UnlockSurface(region->surf);
 
 	region->dirty_flag = 0;
 	memset(region->dirty_chunk, 0, sizeof region->dirty_chunk);
@@ -114,7 +112,8 @@ static struct map_region *map_create_region(coord_t rc)
 static void map_destroy_region(gpointer rp)
 {
 	struct map_region *region = rp;
-	SDL_FreeSurface(region->surf);
+	if (region->surf)
+		SDL_FreeSurface(region->surf);
 	g_free(rp);
 }
 
@@ -287,9 +286,122 @@ static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 	SDL_UnlockSurface(region);
 }
 
+/* FIXME just for a moment here */
+#define REGION_ISO_W (REGION_XSIZE + REGION_ZSIZE)
+#define REGION_ISO_H (REGION_XSIZE + REGION_ZSIZE + CHUNK_YSIZE - 1)
+static void map_paint_region_iso(struct map_region *region)
+{
+	SDL_Surface *regs = region->surf;
+	SDL_LockSurface(regs);
+
+	/* block accessor from the corresponding world region */
+
+	struct region *wreg = world_region(region->key, 0);
+	if (!wreg)
+	{
+		SDL_UnlockSurface(regs);
+		return;
+	}
+
+	unsigned char get_block(jint x, jint y, jint z)
+	{
+		if (REGION_XIDX(x) != 0 || REGION_ZIDX(z) != 0)
+			return 0;
+		struct chunk *c = wreg->chunks[CHUNK_XIDX(x)][CHUNK_ZIDX(z)];
+		return c ? c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y] : 0;
+	}
+
+	/* paint the region surface */
+
+	for (jint y = 0; y < REGION_ISO_H; y++)
+	{
+		for (jint x = 0; x < REGION_ISO_W; x++)
+		{
+			/* probe chunks to find the color */
+
+			jint wy = CHUNK_YSIZE-1;
+			rgba_t rgb = color_key;
+
+			while (wy >= 0)
+			{
+				/* convert screen coordinates to world coordinates */
+
+				jint ny = y - (CHUNK_YSIZE - 1 - wy); /* depth offset */
+
+				/* assumes arithmetic shift */
+				jint wx = x - ny + REGION_XSIZE - 1;
+				jint wz = (x + ny - REGION_XSIZE + 1) >> 1;
+
+				/* consider a potentially visible top surface */
+
+				unsigned char block = get_block(wx>>1, wy, wz);
+
+				if (!IS_AIR(block)) /* top surface visible */
+				{
+					rgb = IGNORE_ALPHA(block_colors[block]);
+					break;
+				}
+
+				/* consider a potentially visible front side */
+
+				wx++;
+				wz = (x + ny - REGION_XSIZE) >> 1;
+				block = get_block(wx>>1, wy, wz);
+
+				if (!IS_AIR(block))
+				{
+					unsigned mult = wx&1 ? 8 : 12;
+					rgb = IGNORE_ALPHA(block_colors[block]);
+					rgb.r = (rgb.r * mult) >> 4;
+					rgb.g = (rgb.g * mult) >> 4;
+					rgb.b = (rgb.b * mult) >> 4;
+					break;
+				}
+
+				wy--;
+			}
+
+			/* dump map_scale pixels on screen */
+
+			*(Uint32*)((unsigned char *)regs->pixels + y*regs->pitch + 4*x) = pack_rgb(rgb);
+		}
+	}
+
+	SDL_UnlockSurface(regs);
+}
+
 static void map_paint_region(struct map_region *region)
 {
 	jint cidx = 0;
+
+	/* make sure the region has a surface for painting */
+
+	if (!region->surf)
+	{
+		int w = map_mode == MAP_MODE_ISOMETRIC ? REGION_ISO_W : REGION_XSIZE;
+		int h = map_mode == MAP_MODE_ISOMETRIC ? REGION_ISO_H : REGION_ZSIZE;
+
+		region->surf = SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 32,
+		                                    screen_fmt->Rmask, screen_fmt->Gmask, screen_fmt->Bmask, 0);
+		if (!region->surf)
+			dief("SDL map surface init: %s", SDL_GetError());
+
+		SDL_LockSurface(region->surf);
+		SDL_Rect r = { .x = 0, .y = 0, .w = w, .h = h };
+		SDL_FillRect(region->surf, &r, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_UNLOADED])));
+		SDL_UnlockSurface(region->surf);
+	}
+
+	/* paint all dirty chunks */
+
+	region->dirty_flag = 0;
+
+	if (map_mode == MAP_MODE_ISOMETRIC)
+	{
+		map_paint_region_iso(region);
+		memset(region->dirty_chunk, 0, sizeof region->dirty_chunk);
+		return;
+	}
 
 	for (jint cz = 0; cz < REGION_SIZE; cz++)
 	{
@@ -307,8 +419,6 @@ static void map_paint_region(struct map_region *region)
 			cidx++;
 		}
 	}
-
-	region->dirty_flag = 0;
 }
 
 void map_update_chunk(coord_t cc)
@@ -332,8 +442,7 @@ void map_update_region(coord_t cc)
 
 	struct map_region *region = map_get_region(cc, 1);
 	region->dirty_flag = 1;
-	for (int i = 0; i < NELEMS(region->dirty_chunk); i++)
-		region->dirty_chunk[i] = ~0;
+	memset(region->dirty_chunk, 0xff, sizeof region->dirty_chunk);
 }
 
 void map_update(coord_t c1, coord_t c2)
@@ -343,7 +452,6 @@ void map_update(coord_t c1, coord_t c2)
 
 	g_mutex_lock(map_mutex);
 
-	// FIXME: Is this right?
 	for (jint cz = c1.z; cz <= c2.z; cz += CHUNK_ZSIZE)
 		for (jint cx = c1.x; cx <= c2.x; cx += CHUNK_XSIZE)
 			map_update_chunk(COORD(cx, cz));
@@ -357,12 +465,18 @@ static void map_update_all()
 	GHashTableIter region_iter;
 	struct map_region *region;
 
+	if (!map_mutex)
+		return; /* defensive code if called by world before map_init */
+	g_mutex_lock(map_mutex);
+
 	g_hash_table_iter_init(&region_iter, regions);
 
 	while (g_hash_table_iter_next(&region_iter, NULL, (gpointer *) &region))
 	{
 		map_update_region(region->key);
 	}
+
+	g_mutex_unlock(map_mutex);
 }
 
 void map_update_player_pos(double x, double y, double z)
@@ -493,6 +607,29 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 		     (mode == MAP_MODE_SURFACE && map_flags & MAP_FLAG_CHOP ? " (chop)" : ""),
 		     (mode == MAP_MODE_SURFACE && map_flags & MAP_FLAG_LIGHTS ? " (lights)" : ""),
 		     (mode == MAP_MODE_SURFACE && (map_flags & MAP_FLAG_LIGHTS) && (map_flags & MAP_FLAG_NIGHT) ? " (night)" : ""));
+
+	/* for isometric mode toggling, also drop all painted surfaces */
+
+	if ((old_mode == MAP_MODE_ISOMETRIC) ^ (map_mode == MAP_MODE_ISOMETRIC))
+	{
+		GHashTableIter region_iter;
+		struct map_region *region;
+
+		g_mutex_lock(map_mutex);
+
+		g_hash_table_iter_init(&region_iter, regions);
+
+		while (g_hash_table_iter_next(&region_iter, NULL, (gpointer *) &region))
+		{
+			if (!region->surf) continue;
+			SDL_FreeSurface(region->surf);
+			region->surf = 0;
+		}
+
+		g_mutex_unlock(map_mutex);
+	}
+
+	/* mark everything dirty for next repaint */
 
 	map_update_all();
 }
@@ -637,100 +774,18 @@ void map_draw(SDL_Surface *screen)
 	SDL_Rect rect_screen = { .x = 0, .y = 0, .w = screen->w, .h = screen->h };
 	SDL_FillRect(screen, &rect_screen, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_UNLOADED])));
 
-	/* a chunk-pointer-caching block accessor */
-
-	struct coord rc;
-	struct region *reg = 0;
-	int reg_valid = 0;
-
-	unsigned char get_block(jint x, jint y, jint z)
-	{
-		if (!reg_valid || rc.x != REGION_XMASK(x) || rc.z != REGION_ZMASK(z))
-		{
-			rc.x = REGION_XMASK(x);
-			rc.z = REGION_ZMASK(z);
-			reg = world_region(rc, 0);
-			reg_valid = 1;
-		}
-
-		jint rx = REGION_XOFF(x), rz = REGION_ZOFF(z);
-		struct chunk *c = reg ? reg->chunks[CHUNK_XIDX(rx)][CHUNK_ZIDX(rz)] : 0;
-		return c ? c->blocks[CHUNK_XOFF(rx)][CHUNK_ZOFF(rz)][y] : 0;
-	}
-
 	/* draw the map */
 
 	if (map_mode == MAP_MODE_ISOMETRIC)
 	{
-		SDL_LockSurface(screen);
-
-		for (jint y = 0; y < map_h; y += map_scale)
+		struct map_region *r = map_get_region(COORD(player_x, player_z), 0);
+		if (r)
 		{
-			for (jint x = 0; x < map_w; x += map_scale)
-			{
-				/* probe chunks to find the color */
-
-				jint wy = CHUNK_YSIZE-1;
-				rgba_t rgb = IGNORE_ALPHA(block_colors[0]);
-
-				while (wy >= 0)
-				{
-					/* convert screen coordinates to world coordinates */
-
-					jint nx = x / map_scale; /* "normalized" screen-coord */
-					jint ny = y / map_scale - (CHUNK_YSIZE - 1 - wy); /* depth offset */
-
-					jint wx = nx - ny;
-					jint wz = (nx + ny) >> 1; /* assumes arithmetic shift */
-
-					/* consider a potentially visible top surface */
-
-					unsigned char block = get_block(wx>>1, wy, wz);
-
-					if (!IS_AIR(block)) /* top surface visible */
-					{
-						rgb = IGNORE_ALPHA(block_colors[block]);
-						break;
-					}
-
-					/* consider a potentially visible front side */
-
-					wx++;
-					wz = (nx + ny - 1) >> 1;
-					block = get_block(wx>>1, wy, wz);
-
-					if (!IS_AIR(block))
-					{
-						unsigned mult = wx&1 ? 8 : 12;
-						rgb = IGNORE_ALPHA(block_colors[block]);
-						rgb.r = (rgb.r * mult) >> 4;
-						rgb.g = (rgb.g * mult) >> 4;
-						rgb.b = (rgb.b * mult) >> 4;
-						break;
-					}
-
-					wy--;
-				}
-
-				/* dump map_scale pixels on screen */
-
-				Uint32 rgbv = pack_rgb(rgb);
-				Uint32 *s = (Uint32*)((unsigned char *)screen->pixels + y*screen->pitch + 4*x);
-
-				*s++ = rgbv;
-				for (jint xo = 1; xo < map_scale && x+xo < map_w; xo++)
-					*s++ = rgbv;
-			}
-
-			/* repeat previous row up to map-scale times */
-
-			for (jint yo = 1; yo < map_scale && y+yo < map_h; yo++)
-				memcpy((unsigned char *)screen->pixels + (y+yo)*screen->pitch,
-				       (unsigned char *)screen->pixels + y*screen->pitch,
-				       4 * map_w);
+			if (r->dirty_flag) map_paint_region(r);
+			SDL_Rect srcr = { .x = 0, .y = 0, .w = REGION_ISO_W, .h = REGION_ISO_H };
+			SDL_Rect dstr = { .x = 0, .y = 0 };
+			SDL_BlitSurface(r->surf, &srcr, screen, &dstr);
 		}
-
-		SDL_UnlockSurface(screen);
 		goto map_drawn;
 	}
 
@@ -788,6 +843,8 @@ void map_draw(SDL_Surface *screen)
 				map_paint_region(region);
 
 			SDL_Surface *regs = region->surf;
+			if (!regs)
+				continue; /* hasn't been painted yet... */
 			SDL_LockSurface(regs);
 
 			/* try to find where to place the region */
