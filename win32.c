@@ -20,35 +20,16 @@ socket_t make_socket(int domain, int type, int protocol)
 	return WSASocket(domain, type, protocol, 0, 0, 0);
 }
 
-void socket_prepare(socket_t socket)
-{
-	/* Can't recv and send on one socket simultaneously: be non-blocking */
-	u_long yes = 1;
-	ioctlsocket(socket, FIONBIO, &yes);
-}
+void socket_prepare(socket_t socket) {}
 
 int socket_recv(socket_t socket, void *buf, int len, int flags)
 {
-again:;
-	int got = recv(socket, buf, len, flags);
-	if (got <= 0 && WSAGetLastError() == WSAEWOULDBLOCK)
-	{
-		Sleep(100);
-		goto again;
-	}
-	return got;
+	return recv(socket, buf, len, flags);
 }
 
 int socket_send(socket_t socket, const void *buf, int len, int flags)
 {
-again:;
-	int sent = send(socket, buf, len, flags);
-	if (sent < 0 && WSAGetLastError() == WSAEWOULDBLOCK)
-	{
-		Sleep(100);
-		goto again;
-	}
-	return sent;
+	return send(socket, buf, len, flags);
 }
 
 void console_init() {}

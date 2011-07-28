@@ -5,8 +5,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <sys/select.h>
-
 #include <glib.h>
 #include <SDL.h>
 
