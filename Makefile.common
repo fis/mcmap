@@ -36,7 +36,7 @@ $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/IMG_savepng.o: lib/IMG_savepng/IMG_savepng.c
-	$(CC) $(OPTFLAGS) -c -o $@ $<
+	$(CC) $(OPTCFLAGS) -c -o $@ $<
 
 protocol-data.c: protocol.txt | protocol.pl
 	perl protocol.pl
