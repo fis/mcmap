@@ -217,7 +217,7 @@ int mcmap_main(int argc, char **argv)
 	if (TTF_Init() != 0)
 		dief("Failed to initialize SDL_ttf: %s", TTF_GetError());
 
-	gchar *font_filename = g_strconcat(g_path_get_dirname(argv[0]), "/../DejaVuSansMono-Bold.ttf", NULL);
+	gchar *font_filename = g_strconcat(g_path_get_dirname(argv[0]), "/../lib/DejaVuSansMono-Bold.ttf", NULL);
 	map_font = TTF_OpenFont(font_filename, 13);
 	if (map_font == NULL)
 		dief("Failed to load font file: %s", TTF_GetError());
