@@ -340,12 +340,15 @@ static void map_paint_region_iso(struct map_region *region)
 	{
 		for (jint x = dirty_x1; x < dirty_x2; x++)
 		{
-			/* probe chunks to find the color */
+			/* probe blocks to find the visible ones */
 
 			jint wy = (map_flags & MAP_FLAG_CHOP ? ceiling_y-1 : CHUNK_YSIZE-1);
-			rgba_t rgb = color_key;
 
-			while (wy >= 0)
+			int visible_blocks = 0;
+			rgba_t visible_colors[16]; /* at most this many transparent blocks */
+			int first_face = 0; /* 0 = left, 1 = right, 2 = top */
+
+			while (wy >= 0 && visible_blocks < NELEMS(visible_colors))
 			{
 				/* convert screen coordinates to world coordinates */
 
@@ -361,8 +364,11 @@ static void map_paint_region_iso(struct map_region *region)
 
 				if (!IS_AIR(block)) /* top surface visible */
 				{
-					rgb = IGNORE_ALPHA(block_colors[block]);
-					break;
+					visible_colors[visible_blocks++] = block_colors[block];
+					if (visible_blocks == 1)
+						first_face = 2;
+					if (block_colors[block].a == 255 || visible_blocks >= NELEMS(visible_colors))
+						break;
 				}
 
 				/* consider a potentially visible front side */
@@ -373,15 +379,35 @@ static void map_paint_region_iso(struct map_region *region)
 
 				if (!IS_AIR(block))
 				{
-					unsigned mult = wx&1 ? 8 : 12;
-					rgb = IGNORE_ALPHA(block_colors[block]);
-					rgb.r = (rgb.r * mult) >> 4;
-					rgb.g = (rgb.g * mult) >> 4;
-					rgb.b = (rgb.b * mult) >> 4;
-					break;
+					visible_colors[visible_blocks++] = block_colors[block];
+					if (visible_blocks == 1)
+						first_face = wx&1;
+					if (block_colors[block].a == 255)
+						break;
 				}
 
 				wy--;
+			}
+
+			/* construct the color of the pixel */
+
+			rgba_t rgb = color_key;
+
+			if (visible_blocks > 0)
+			{
+				visible_blocks--;
+				rgb = IGNORE_ALPHA(visible_colors[visible_blocks]);
+				while (visible_blocks > 0)
+				{
+					rgba_t n = visible_colors[--visible_blocks];
+					rgb.r = (rgb.r * (255 - n.a) + n.r * n.a)/255;
+					rgb.g = (rgb.g * (255 - n.a) + n.g * n.a)/255;
+					rgb.b = (rgb.b * (255 - n.a) + n.b * n.a)/255;
+				}
+				unsigned mult = 10 + 3*first_face;
+				rgb.r = (rgb.r * mult) >> 4;
+				rgb.g = (rgb.g * mult) >> 4;
+				rgb.b = (rgb.b * mult) >> 4;
 			}
 
 			/* dump map_scale pixels on screen */
