@@ -308,6 +308,51 @@ static void map_paint_region_iso(struct map_region *region)
 		return c ? c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y] : 0;
 	}
 
+	/* block lighting handler */
+
+	rgba_t apply_light(rgba_t c, jint x, jint y, jint z)
+	{
+#ifdef FEAT_FULLCHUNK
+		/* TODO remove code duplication and/or do lights differently... */
+
+		int lv_block = 0x00, lv_day = 0xff;
+
+		if (REGION_XIDX(x) == 0 && REGION_ZIDX(z) == 0)
+		{
+			struct chunk *ch = wreg->chunks[CHUNK_XIDX(x)][CHUNK_ZIDX(z)];
+			if (ch)
+			{
+				jint bx = CHUNK_XOFF(x), bz = CHUNK_ZOFF(z);
+				if (y >= CHUNK_YSIZE) y = CHUNK_YSIZE-1;
+				lv_block = ch->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + y/2];
+				lv_day = ch->light_sky[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + y/2];
+			}
+		}
+
+		if (y & 1)
+			lv_block >>= 4, lv_day >>= 4;
+		else
+			lv_block &= 0xf, lv_day &= 0xf;
+
+		lv_day -= map_darken;
+		if (lv_day < 0) lv_day = 0;
+		Uint32 block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
+
+		Uint32 lf = 0x10000;
+
+		for (int i = lv_block; i < 15; i++)
+			lf = (lf*block_exp) >> 16;
+		for (int i = lv_day; i < 15; i++)
+			lf = (lf*LIGHT_EXP1) >> 16;
+
+		c.r = (c.r*lf) >> 16;
+		c.g = (c.g*lf) >> 16;
+		c.b = (c.b*lf) >> 16;
+#endif /* FEAT_FULLCHUNK */
+
+		return c;
+	}
+
 	/* find the bounding box for dirty chunks */
 
 	jint dirty_x1 = REGION_ISO_W, dirty_x2 = 0;
@@ -364,7 +409,7 @@ static void map_paint_region_iso(struct map_region *region)
 
 				if (!IS_AIR(block)) /* top surface visible */
 				{
-					visible_colors[visible_blocks++] = block_colors[block];
+					visible_colors[visible_blocks++] = apply_light(block_colors[block], wx>>1, wy+1, wz);
 					if (visible_blocks == 1)
 						first_face = 2;
 					if (block_colors[block].a == 255 || visible_blocks >= NELEMS(visible_colors))
@@ -379,7 +424,7 @@ static void map_paint_region_iso(struct map_region *region)
 
 				if (!IS_AIR(block))
 				{
-					visible_colors[visible_blocks++] = block_colors[block];
+					visible_colors[visible_blocks++] = apply_light(block_colors[block], (wx>>1)-1+(wx&1), wy, wz-(wx&1));
 					if (visible_blocks == 1)
 						first_face = wx&1;
 					if (block_colors[block].a == 255)
