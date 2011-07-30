@@ -113,7 +113,7 @@ void world_init(const char *path)
 			continue; /* x/z coords don't look like base36 numbers */
 
 		coord_t rc = COORD(x * REGION_XSIZE, z * REGION_ZSIZE);
-		struct region *region = world_region(rc, 1);
+		struct region *region = world_region(rc, true);
 		char *region_file_path = g_strdup_printf("%s/%s", region_path, region_file);
 		region->file = world_regfile_open(region_file_path);
 		g_free(region_file_path);
@@ -123,7 +123,7 @@ void world_init(const char *path)
 	}
 }
 
-struct region *world_region(coord_t cc, int gen)
+struct region *world_region(coord_t cc, bool gen)
 {
 	coord_t rc = COORD(REGION_XMASK(cc.x), REGION_ZMASK(cc.z));
 	struct region *region = g_hash_table_lookup(region_table, &rc);
@@ -149,7 +149,7 @@ struct region *world_region(coord_t cc, int gen)
 	return region;
 }
 
-struct chunk *world_chunk(coord_t cc, int gen)
+struct chunk *world_chunk(coord_t cc, bool gen)
 {
 	struct region *region = world_region(cc, gen);
 
@@ -164,7 +164,7 @@ struct chunk *world_chunk(coord_t cc, int gen)
 	return region->chunks[xo][zo];
 }
 
-unsigned char *world_stack(coord_t cc, int gen)
+unsigned char *world_stack(coord_t cc, bool gen)
 {
 	struct chunk *c = world_chunk(cc, gen);
 	if (!c)
@@ -175,7 +175,7 @@ unsigned char *world_stack(coord_t cc, int gen)
 
 jint world_getheight(coord_t cc)
 {
-	struct chunk *c = world_chunk(cc, 0);
+	struct chunk *c = world_chunk(cc, false);
 	if (!c)
 		return -1;
 
@@ -265,11 +265,11 @@ bool world_handle_chunk(jint x0, jint y0, jint z0,
 			if (!COORD_EQUAL(cc, current_chunk) || !set_chunk)
 			{
 				set_chunk = true;
-				c = world_chunk(cc, 1);
+				c = world_chunk(cc, true);
 				current_chunk = cc;
 
 				/* TODO FIXME: marks dirty always, even when loading from disk; also unoptimal */
-				struct region *r = world_region(cc, 0);
+				struct region *r = world_region(cc, false);
 				if (r && r->file)
 					r->file->dirty_chunks[CHUNK_ZIDX(REGION_ZOFF(cc.z))][CHUNK_XIDX(REGION_XOFF(cc.x))] = 1;
 			}
@@ -349,7 +349,7 @@ static inline int block_change(struct chunk *c, jint x, jint y, jint z, unsigned
 static void handle_multi_set_block(jint cx, jint cz, jint size, unsigned char *coord, unsigned char *type)
 {
 	coord_t cc = { .x = cx, .z = cz };
-	struct chunk *c = world_chunk(cc, 0);
+	struct chunk *c = world_chunk(cc, false);
 	if (!c)
 		return; /* edit in an unloaded chunk */
 
@@ -370,7 +370,7 @@ static void handle_multi_set_block(jint cx, jint cz, jint size, unsigned char *c
 static void handle_set_block(jint x, jint y, jint z, jint type)
 {	
 	coord_t cc = { .x = x, .z = z };
-	struct chunk *c = world_chunk(cc, 0);
+	struct chunk *c = world_chunk(cc, false);
 	if (!c)
 		return; /* edit in an unloaded chunk */
 

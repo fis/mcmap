@@ -117,7 +117,7 @@ static void map_destroy_region(gpointer rp)
 	g_free(rp);
 }
 
-static struct map_region *map_get_region(coord_t cc, int gen)
+static struct map_region *map_get_region(coord_t cc, bool gen)
 {
 	coord_t rc = COORD(REGION_XMASK(cc.x), REGION_ZMASK(cc.z));
 	struct map_region *region = g_hash_table_lookup(regions, &rc);
@@ -216,7 +216,7 @@ static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 	jint cxo = CHUNK_XIDX(REGION_XOFF(cc.x));
 	jint czo = CHUNK_ZIDX(REGION_ZOFF(cc.z));
 
-	struct chunk *c = world_chunk(cc, 0);
+	struct chunk *c = world_chunk(cc, false);
 
 	if (!c)
 		return;
@@ -293,7 +293,7 @@ static void map_paint_region_iso(struct map_region *region)
 
 	/* block accessor from the corresponding world region */
 
-	struct region *wreg = world_region(region->key, 0);
+	struct region *wreg = world_region(region->key, false);
 	if (!wreg)
 	{
 		SDL_UnlockSurface(regs);
@@ -517,24 +517,24 @@ static void map_paint_region(struct map_region *region)
 
 void map_update_chunk(coord_t cc)
 {
-	struct chunk *c = world_chunk(cc, 0);
+	struct chunk *c = world_chunk(cc, false);
 
 	if (!c)
 		return;
 
-	struct map_region *region = map_get_region(cc, 1);
+	struct map_region *region = map_get_region(cc, true);
 	region->dirty_flag = 1;
 	BITSET_SET(region->dirty_chunk, CHUNK_ZIDX(REGION_ZOFF(cc.z))*REGION_SIZE + CHUNK_XIDX(REGION_XOFF(cc.x)));
 }
 
 void map_update_region(coord_t cc)
 {
-	struct region *r = world_region(cc, 0);
+	struct region *r = world_region(cc, false);
 
 	if (!r)
 		return;
 
-	struct map_region *region = map_get_region(cc, 1);
+	struct map_region *region = map_get_region(cc, true);
 	region->dirty_flag = 1;
 	memset(region->dirty_chunk, 0xff, sizeof region->dirty_chunk);
 }
@@ -599,7 +599,7 @@ void map_update_player_pos(double x, double y, double z)
 
 void map_update_ceiling()
 {	
-	unsigned char *stack = world_stack(COORD(player_x, player_z), 0);
+	unsigned char *stack = world_stack(COORD(player_x, player_z), false);
 	jint old_ceiling_y = ceiling_y;
 	if (stack && player_y >= 0 && player_y < CHUNK_YSIZE)
 	{
@@ -927,7 +927,7 @@ void map_draw(SDL_Surface *screen)
 			/* get the region surface, paint it if dirty */
 
 			coord_t rc = COORD(reg_x * REGION_XSIZE, reg_z * REGION_ZSIZE);
-			struct map_region *region = map_get_region(rc, 0);
+			struct map_region *region = map_get_region(rc, false);
 
 			if (!region)
 				continue; /* nothing to draw */
@@ -1023,8 +1023,8 @@ void map_draw(SDL_Surface *screen)
 	}
 
 	coord_t hcc = { .x = hx, .z = hz };
-	struct chunk *hc = world_chunk(hcc, 0);
-	hc = world_chunk(hcc, 0);
+	struct chunk *hc = world_chunk(hcc, false);
+	hc = world_chunk(hcc, false);
 	if (!hc) goto no_block_info;
 
 	jint hcx = CHUNK_XOFF(hx);
