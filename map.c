@@ -55,7 +55,7 @@ jint ceiling_y = CHUNK_YSIZE;
 GHashTable *regions = 0;
 TTF_Font *map_font = 0;
 SDL_PixelFormat *screen_fmt = 0;
-gboolean map_focused = TRUE;
+bool map_focused = true;
 jint map_w = 0, map_h = 0;
 static jint map_y = 0;
 static int map_darken = 0;

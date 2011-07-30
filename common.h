@@ -7,6 +7,7 @@
 #define NELEMS(array) (sizeof(array) / sizeof((array)[0]))
 
 guint coord_hash(gconstpointer key);
+/* for glib */
 gboolean coord_equal(gconstpointer a, gconstpointer b);
 
 /* logging and information */
@@ -30,8 +31,8 @@ void log_die(int is_stop, char *fmt, ...) __attribute__ ((noreturn, format (prin
 struct options
 {
 	int localport;
-	gboolean noansi;
-	gboolean nomap;
+	bool noansi;
+	bool nomap;
 	int scale;
 	char *wndsize;
 	char *jumpfile;

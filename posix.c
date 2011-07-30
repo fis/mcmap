@@ -38,7 +38,7 @@ void console_init()
                 console_outfd = opipe_write;
                 atexit(console_cleanup);
 
-                g_thread_create(console_thread, NULL, FALSE, 0);
+                g_thread_create(console_thread, NULL, false, 0);
         }
 
 no_terminal:

@@ -33,7 +33,7 @@ static inline void log_vput(GString *prefix, char *fmt, va_list ap)
 	if (write(console_outfd, prefix->str, prefix->len) <= 0)
 		/* don't do a thing */;
 
-	g_string_free(prefix, TRUE);
+	g_string_free(prefix, true);
 }
 
 void log_print(char *fmt, ...)

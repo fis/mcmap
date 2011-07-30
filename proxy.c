@@ -37,14 +37,14 @@ void start_proxy(socket_t sock_cli, socket_t sock_srv)
 
 	/* TODO FIXME; call as world_init("world") or some-such to enable alpha-quality region persistence */
 	world_init(0);
-	g_thread_create(world_thread, worldq, FALSE, 0);
+	g_thread_create(world_thread, worldq, false, 0);
 
 	/* start the proxying thread */
 	struct proxy_config *cfg = g_new(struct proxy_config, 1);
 	cfg->sock_cli = sock_cli;
 	cfg->sock_srv = sock_srv;
 	cfg->worldq = worldq;
-	g_thread_create(proxy_thread, cfg, FALSE, 0);
+	g_thread_create(proxy_thread, cfg, false, 0);
 }
 
 gpointer proxy_thread(gpointer data)
@@ -60,7 +60,7 @@ gpointer proxy_thread(gpointer data)
 	{
 		/* read in one packet from the injection queue or socket */
 
-		gboolean packet_must_free = TRUE;
+		bool packet_must_free = true;
 
 		packet_t *p = g_async_queue_try_pop(iq);
 
@@ -85,7 +85,7 @@ gpointer proxy_thread(gpointer data)
 			else
 				wtf("Neither sock_cli nor sock_srv set in select's result");
 
-			packet_must_free = FALSE;
+			packet_must_free = false;
 		}
 
 		if (!p)
@@ -95,7 +95,7 @@ gpointer proxy_thread(gpointer data)
 			return 0;
 		}
 
-		gboolean from_client = p->flags & PACKET_TO_SERVER;
+		bool from_client = p->flags & PACKET_TO_SERVER;
 		socket_t sto = from_client ? sock_srv : sock_cli;
 		char *desc = from_client ? "client -> server" : "server -> client";
 

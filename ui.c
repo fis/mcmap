@@ -24,7 +24,7 @@ static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen);
 
 /* start the user interface side */
 
-void start_ui(gboolean map, int scale, gboolean resizable, int wnd_w, int wnd_h)
+void start_ui(bool map, int scale, bool resizable, int wnd_w, int wnd_h)
 {
 	console_init();
 
@@ -235,7 +235,7 @@ void handle_chat(unsigned char *msg, int msglen)
 		msglen--;
 	}
 
-	char *str = g_string_free(s, FALSE);
+	char *str = g_string_free(s, false);
 	if (opt.noansi)
 		log_print("%s", str);
 	else

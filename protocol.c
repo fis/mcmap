@@ -246,7 +246,7 @@ packet_t *packet_dup(packet_t *packet)
 packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 {
 	GByteArray *data = g_byte_array_new();
-	GArray *offsets = g_array_new(FALSE, FALSE, sizeof(unsigned));
+	GArray *offsets = g_array_new(false, false, sizeof(unsigned));
 
 	/* add the type byte */
 
@@ -364,8 +364,8 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 	p->flags = flags;
 	p->id = type;
 	p->size = offset;
-	p->bytes = g_byte_array_free(data, FALSE);
-	p->field_offset = (unsigned *)g_array_free(offsets, FALSE);
+	p->bytes = g_byte_array_free(data, false);
+	p->field_offset = (unsigned *)g_array_free(offsets, false);
 
 	return p;
 }

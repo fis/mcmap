@@ -27,7 +27,7 @@ extern GHashTable *regions;
 
 extern TTF_Font *map_font;
 extern int map_w, map_h;
-extern gboolean map_focused;
+extern bool map_focused;
 extern double player_dx, player_dy, player_dz;
 extern jint player_x, player_y, player_z;
 extern jshort player_health;

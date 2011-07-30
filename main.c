@@ -23,8 +23,8 @@
 
 struct options opt = {
 	.localport = 25565,
-	.noansi = FALSE,
-	.nomap = FALSE,
+	.noansi = false,
+	.nomap = false,
 	.scale = 1,
 	.wndsize = 0,
 	.jumpfile = 0,
@@ -61,7 +61,7 @@ int mcmap_main(int argc, char **argv)
 
 	if (argc != 2)
 	{
-		char *usage = g_option_context_get_help(gopt, TRUE, 0);
+		char *usage = g_option_context_get_help(gopt, true, 0);
 		fputs(usage, stderr);
 		return 1;
 	}
@@ -254,13 +254,13 @@ void load_colors(char **lines)
 		else if (fields == 4)
 			color.a = 255;
 
-		gboolean ok = FALSE;
+		bool ok = false;
 		for (int block = 0; block < sizeof(block_info)/sizeof(struct block_info); block++)
 		{
 			if (block_info[block].name && strcmp(block_info[block].name, block_name) == 0)
 			{
 				/* don't break out; multiple blocks can have the same name */
-				ok = TRUE;
+				ok = true;
 				block_colors[block] = color;
 			}
 		}

@@ -65,7 +65,7 @@ static INT_PTR CALLBACK splash_proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 		SetFocus(GetDlgItem(hWnd, IDOK));
 
-		return FALSE;
+		return false;
 	}
 
 	if (uMsg == WM_COMMAND)
@@ -82,10 +82,10 @@ static INT_PTR CALLBACK splash_proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 			break;
 		}
 
-		return FALSE;
+		return false;
 	}
 
-	return FALSE;
+	return false;
 }
 
 int mcmap_main(int argc, char **argv);

@@ -29,7 +29,7 @@ static void process_region(char *filename, jint x, jint z)
 {
 	char *region;
 	GError *error = NULL;
-	gboolean ok = g_file_get_contents(filename, &region, NULL, &error);
+	bool ok = g_file_get_contents(filename, &region, NULL, &error);
 	if (!ok)
 		die(error->message);
 
@@ -55,7 +55,7 @@ static void process_region(char *filename, jint x, jint z)
 		struct buffer zb_light_sky = nbt_blob(nbt_struct_field(chunk, "SkyLight"));
 		jint cx = x*32 + i%32;
 		jint cz = z*32 + i/32;
-		world_handle_chunk(cx*16, 0, cz*16, CHUNK_XSIZE, CHUNK_YSIZE, CHUNK_ZSIZE, zb, zb_meta, zb_light_blocks, zb_light_sky, TRUE);
+		world_handle_chunk(cx*16, 0, cz*16, CHUNK_XSIZE, CHUNK_YSIZE, CHUNK_ZSIZE, zb, zb_meta, zb_light_blocks, zb_light_sky, true);
 	}
 }
 
@@ -78,7 +78,7 @@ int mcmap_main(int argc, char **argv)
 
 	if (argc != 2)
 	{
-		char *usage = g_option_context_get_help(gopt, TRUE, 0);
+		char *usage = g_option_context_get_help(gopt, true, 0);
 		fputs(usage, stderr);
 		return 1;
 	}

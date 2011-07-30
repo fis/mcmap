@@ -94,7 +94,7 @@ usage:
 	else if (strcmp(cmdv[1], "save") == 0 && (cmdc == 2 || cmdc == 3))
 		jumps_save(cmdc == 3 ? cmdv[2] : opt.jumpfile);
 	else if (strcmp(cmdv[1], "add") == 0 && cmdc == 5)
-		jumps_add(cmdv[2], atoi(cmdv[3]), atoi(cmdv[4]), TRUE);
+		jumps_add(cmdv[2], atoi(cmdv[3]), atoi(cmdv[4]), true);
 	else if (strcmp(cmdv[1], "rm") == 0 && cmdc == 3)
 		jumps_rm(cmdv[2]);
 	else
@@ -145,7 +145,7 @@ void jumps_save(char *filename)
 	opt.jumpfile = filename; /* FIXME: do we want this? */
 }
 
-void jumps_add(char *name, int x, int z, gboolean is_command)
+void jumps_add(char *name, int x, int z, bool is_command)
 {
 	struct Jump *jump = g_malloc(sizeof(struct Jump));
 	jump->x = x;

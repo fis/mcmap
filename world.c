@@ -182,10 +182,10 @@ jint world_getheight(coord_t cc)
 	return c->height[CHUNK_XOFF(cc.x)][CHUNK_ZOFF(cc.z)];
 }
 
-static gboolean handle_compressed_chunk(jint x0, jint y0, jint z0,
+static bool handle_compressed_chunk(jint x0, jint y0, jint z0,
                                         jint xs, jint ys, jint zs,
                                         unsigned zlen, unsigned char *zdata,
-                                        gboolean update_map)
+                                        bool update_map)
 {
 	static unsigned char zbuf[256*1024];
 	int err;
@@ -236,25 +236,25 @@ static gboolean handle_compressed_chunk(jint x0, jint y0, jint z0,
 	return world_handle_chunk(x0, y0, z0, xs, ys, zs, zb, zb_meta, zb_light_blocks, zb_light_sky, update_map);
 }
 
-gboolean world_handle_chunk(jint x0, jint y0, jint z0,
+bool world_handle_chunk(jint x0, jint y0, jint z0,
                             jint xs, jint ys, jint zs,
                             struct buffer zb, struct buffer zb_meta,
                             struct buffer zb_light_blocks, struct buffer zb_light_sky,
-                            gboolean update_map)
+                            bool update_map)
 {
-	gboolean set_chunk = FALSE;
+	bool set_chunk = false;
 	coord_t current_chunk = COORD(0, 0);
 	struct chunk *c = 0;
 
 	if (ys < 0)
 	{
 		log_print("[WARN] Invalid chunk size! Probably WorldEdit; go yell at the author.");
-		return FALSE;
+		return false;
 	}
 
 	jint c_min_x = INT_MAX, c_min_z = INT_MAX;
 	jint c_max_x = INT_MIN, c_max_z = INT_MIN;
-	gboolean changed = FALSE;
+	bool changed = false;
 
 	for (jint x = x0; x < x0+xs; x++)
 	{
@@ -264,7 +264,7 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 
 			if (!COORD_EQUAL(cc, current_chunk) || !set_chunk)
 			{
-				set_chunk = TRUE;
+				set_chunk = true;
 				c = world_chunk(cc, 1);
 				current_chunk = cc;
 
@@ -275,7 +275,7 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 			}
 
 			if (!changed && memcmp(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb.data, ys) != 0)
-				changed = TRUE;
+				changed = true;
 
 			memcpy(&c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y0], zb.data, ys);
 			ADVANCE_BUFFER(zb, ys);
@@ -306,7 +306,7 @@ gboolean world_handle_chunk(jint x0, jint y0, jint z0,
 					newh--;
 
 				c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)] = newh;
-				changed = TRUE;
+				changed = true;
 			}
 
 			if (cc.x < c_min_x) c_min_x = cc.x;
@@ -502,7 +502,7 @@ gpointer world_thread(gpointer data)
 			p = &packet->bytes[packet->field_offset[6]];
 			handle_compressed_chunk(packet_int(packet, 0), packet_int(packet, 1), packet_int(packet, 2),
 			                        packet_int(packet, 3)+1, packet_int(packet, 4)+1, packet_int(packet, 5)+1,
-			                        (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3], &p[4], TRUE);
+			                        (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3], &p[4], true);
 			break;
 
 		case PACKET_MULTI_SET_BLOCK:
@@ -942,7 +942,7 @@ void world_regfile_load(struct region *region)
 			                   0,
 			                   (region->key.z*REGION_SIZE + cz)*CHUNK_ZSIZE,
 			                   CHUNK_XSIZE, CHUNK_YSIZE, CHUNK_ZSIZE,
-			                   zb, zb_meta, zb_light_blocks, zb_light_sky, TRUE);
+			                   zb, zb_meta, zb_light_blocks, zb_light_sky, true);
 
 			nbt_free(chunk);
 		}

@@ -74,7 +74,7 @@ struct region *world_region(coord_t cc, int gen);
 struct chunk *world_chunk(coord_t cc, int gen);
 unsigned char *world_stack(coord_t cc, int gen);
 
-gboolean world_handle_chunk(jint x0, jint y0, jint z0, jint xs, jint ys, jint zs, struct buffer zb, struct buffer zb_meta, struct buffer zb_light_blocks, struct buffer zb_light_sky, gboolean update_map);
+bool world_handle_chunk(jint x0, jint y0, jint z0, jint xs, jint ys, jint zs, struct buffer zb, struct buffer zb_meta, struct buffer zb_light_blocks, struct buffer zb_light_sky, bool update_map);
 
 jint world_getheight(coord_t cc);
 

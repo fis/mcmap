@@ -1,10 +1,10 @@
 #ifndef MCMAP_TYPES_H
 #define MCMAP_TYPES_H 1
 
-/* Java types used by the protocol */
-
 #include <stdint.h>
+#include <stdbool.h>
 
+/* Java types used by the protocol */
 typedef int8_t jbyte;
 typedef int16_t jshort;
 typedef int32_t jint;
