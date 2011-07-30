@@ -113,7 +113,7 @@ int mcmap_main(int argc, char **argv)
 	if (!world_dir)
 		die(error->message);
 	char *filename = NULL;
-	while ((filename = g_dir_read_name(world_dir)))
+	while ((filename = (char *) g_dir_read_name(world_dir)))
 	{
 		char xbuf[64], zbuf[64];
 		if (sscanf(filename, "r.%[^.].%[^.].mcr", xbuf, zbuf) < 1)
