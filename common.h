@@ -29,10 +29,10 @@ void log_die(int is_stop, char *fmt, ...) __attribute__ ((noreturn, format (prin
 
 struct options
 {
-	gint localport;
+	int localport;
 	gboolean noansi;
 	gboolean nomap;
-	gint scale;
+	int scale;
 	char *wndsize;
 	char *jumpfile;
 } opt;

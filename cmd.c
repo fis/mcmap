@@ -31,7 +31,7 @@ void cmd_parse(unsigned char *cmd, int cmdlen)
 	char **cmdv = g_strsplit_set(cmdstr, " ", -1);
 	g_free(cmdstr);
 
-	gint cmdc = 0;
+	int cmdc = 0;
 	while (cmdv[cmdc])
 		cmdc++;
 

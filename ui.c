@@ -24,7 +24,7 @@ static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen);
 
 /* start the user interface side */
 
-void start_ui(gboolean map, gint scale, gboolean resizable, int wnd_w, int wnd_h)
+void start_ui(gboolean map, int scale, gboolean resizable, int wnd_w, int wnd_h)
 {
 	console_init();
 
