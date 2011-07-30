@@ -348,7 +348,7 @@ static inline int block_change(struct chunk *c, jint x, jint y, jint z, unsigned
 
 static void handle_multi_set_block(jint cx, jint cz, jint size, unsigned char *coord, unsigned char *type)
 {
-	coord_t cc = { .x = cx, .z = cz };
+	coord_t cc = COORD(cx, cz);
 	struct chunk *c = world_chunk(cc, false);
 	if (!c)
 		return; /* edit in an unloaded chunk */
@@ -369,7 +369,7 @@ static void handle_multi_set_block(jint cx, jint cz, jint size, unsigned char *c
 
 static void handle_set_block(jint x, jint y, jint z, jint type)
 {	
-	coord_t cc = { .x = x, .z = z };
+	coord_t cc = COORD(x, z);
 	struct chunk *c = world_chunk(cc, false);
 	if (!c)
 		return; /* edit in an unloaded chunk */
@@ -1063,7 +1063,7 @@ int world_save(char *dir)
 
 		/* find the corresponding region */
 
-		coord_t rc = { .x = REG_XCOORD(c->key.x), .z = REG_ZCOORD(c->key.z) };
+		coord_t rc = COORD(REG_XCOORD(c->key.x), REG_ZCOORD(c->key.z));
 		struct disk_region *reg = g_hash_table_lookup(region_table, &rc);
 
 		if (!reg)
