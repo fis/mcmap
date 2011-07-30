@@ -33,8 +33,8 @@ struct options
 	gboolean noansi;
 	gboolean nomap;
 	gint scale;
-	gchar *wndsize;
-	gchar *jumpfile;
+	char *wndsize;
+	char *jumpfile;
 } opt;
 
 /* utilities */

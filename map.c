@@ -1043,7 +1043,7 @@ void map_draw(SDL_Surface *screen)
 
 	if (map_focused)
 	{
-		gchar *left_text;
+		char *left_text;
 		if (IS_WATER(block))
 		{
 			int depth = 1;
@@ -1064,7 +1064,7 @@ void map_draw(SDL_Surface *screen)
 		g_free(left_text);
 	}
 
-	gchar *right_text = g_strdup_printf("x: %-5d z: %-5d y: %-3d", hx, hz, hcy);
+	char *right_text = g_strdup_printf("x: %-5d z: %-5d y: %-3d", hx, hz, hcy);
 	SDL_Surface *right_surface = TTF_RenderText_Shaded(map_font, right_text, white, black);
 	SDL_Rect right_src = { .x = 0, .y = 0, .w = right_surface->w, .h = right_surface->h };
 	int right_offset_width;

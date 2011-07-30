@@ -101,10 +101,10 @@ void world_init(const char *path)
 	if (!dir)
 		dief("unable to scan region directory contents: %s", error->message);
 
-	const gchar *region_file = 0;
+	const char *region_file = 0;
 	while ((region_file = g_dir_read_name(dir)))
 	{
-		gchar xbuf[64], zbuf[64], *xend, *zend;
+		char xbuf[64], zbuf[64], *xend, *zend;
 		if (sscanf(region_file, "r.%63[^.].%63[^.].mcr", xbuf, zbuf) != 2)
 			continue; /* does not look like a proper region file */
 		jint x = strtol(xbuf, &xend, 36);
@@ -114,7 +114,7 @@ void world_init(const char *path)
 
 		coord_t rc = COORD(x * REGION_XSIZE, z * REGION_ZSIZE);
 		struct region *region = world_region(rc, 1);
-		gchar *region_file_path = g_strdup_printf("%s/%s", region_path, region_file);
+		char *region_file_path = g_strdup_printf("%s/%s", region_path, region_file);
 		region->file = world_regfile_open(region_file_path);
 		g_free(region_file_path);
 

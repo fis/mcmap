@@ -19,7 +19,7 @@
 #include "world.h"
 #include "proxy.h"
 
-static struct { char *name; void (*run)(int, gchar **); } commands[] = {
+static struct { char *name; void (*run)(int, char **); } commands[] = {
 #define command(name) { #name, cmd_##name },
 #include "cmddefs.h"
 #undef command
@@ -27,8 +27,8 @@ static struct { char *name; void (*run)(int, gchar **); } commands[] = {
 
 void cmd_parse(unsigned char *cmd, int cmdlen)
 {
-	gchar *cmdstr = g_strndup((gchar *)cmd, cmdlen);
-	gchar **cmdv = g_strsplit_set(cmdstr, " ", -1);
+	char *cmdstr = g_strndup((char *) cmd, cmdlen);
+	char **cmdv = g_strsplit_set(cmdstr, " ", -1);
 	g_free(cmdstr);
 
 	gint cmdc = 0;
@@ -50,7 +50,7 @@ done:
 	g_strfreev(cmdv);
 }
 
-void cmd_coords(int cmdc, gchar **cmdv)
+void cmd_coords(int cmdc, char **cmdv)
 {
 	if (cmdc == 2 && strcmp(cmdv[1], "-say") == 0)
 		say("/me is at (%d,%d) (y=%d)", player_x, player_z, player_y);
@@ -60,7 +60,7 @@ void cmd_coords(int cmdc, gchar **cmdv)
 		tell("usage: //coords [-say]");
 }
 
-void cmd_goto(int cmdc, gchar **cmdv)
+void cmd_goto(int cmdc, char **cmdv)
 {
 	if (cmdc == 2)
 	{
@@ -80,7 +80,7 @@ void cmd_goto(int cmdc, gchar **cmdv)
 	}
 }
 
-void cmd_jumps(int cmdc, gchar **cmdv)
+void cmd_jumps(int cmdc, char **cmdv)
 {
 	if (cmdc < 2)
 	{
@@ -103,7 +103,7 @@ usage:
 
 #define FOREACH_JUMP(name, jump) \
 	GHashTableIter jump_iter; \
-	gchar *name; \
+	char *name; \
 	struct Jump *jump; \
 	g_hash_table_iter_init(&jump_iter, jumps); \
 	while (g_hash_table_iter_next(&jump_iter, (gpointer *) &name, (gpointer *) &jump))
@@ -120,7 +120,7 @@ void jumps_list()
 		tell("//jumps: %s (%d,%d)", name, jump->x, jump->z);
 }
 
-void jumps_save(gchar *filename)
+void jumps_save(char *filename)
 {
 	if (filename == NULL)
 	{
@@ -145,7 +145,7 @@ void jumps_save(gchar *filename)
 	opt.jumpfile = filename; /* FIXME: do we want this? */
 }
 
-void jumps_add(gchar *name, int x, int z, gboolean is_command)
+void jumps_add(char *name, int x, int z, gboolean is_command)
 {
 	struct Jump *jump = g_malloc(sizeof(struct Jump));
 	jump->x = x;
@@ -155,7 +155,7 @@ void jumps_add(gchar *name, int x, int z, gboolean is_command)
 		tell("//jumps: added %s (%d,%d)", name, x, z);
 }
 
-void jumps_rm(gchar *name)
+void jumps_rm(char *name)
 {
 	if (g_hash_table_remove(jumps, name))
 		tell("//jumps: removed %s", name);
@@ -166,9 +166,9 @@ void jumps_rm(gchar *name)
 #undef FOREACH_JUMP
 
 #ifdef FEAT_FULLCHUNK
-void cmd_save(int cmdc, gchar **cmdv)
+void cmd_save(int cmdc, char **cmdv)
 {
-	gchar *dir;
+	char *dir;
 
 	if (cmdc == 1)
 		dir = 0;
@@ -232,7 +232,7 @@ void cmd_save(int cmdc, gchar **cmdv)
 }
 #endif /* FEAT_FULLCHUNK */
 
-void cmd_slap(int cmdc, gchar **cmdv)
+void cmd_slap(int cmdc, char **cmdv)
 {
 	if (cmdc != 2)
 	{

@@ -235,7 +235,7 @@ void handle_chat(unsigned char *msg, int msglen)
 		msglen--;
 	}
 
-	gchar *str = g_string_free(s, FALSE);
+	char *str = g_string_free(s, FALSE);
 	if (opt.noansi)
 		log_print("%s", str);
 	else

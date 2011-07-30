@@ -271,7 +271,7 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 	if (len < 3+namelen)
 		die("truncated NBT tag: short name");
 
-	struct nbt_tag *tag = nbt_new(g_strndup((gchar*)&data[3], namelen), type);
+	struct nbt_tag *tag = nbt_new(g_strndup((char*)&data[3], namelen), type);
 
 	data += 3 + namelen;
 	len -= 3 + namelen;
@@ -346,7 +346,7 @@ static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
 		data += 5; len -= 5; *taglen += 5;
 		for (jint i = 0; i < t; i++)
 		{
-			gchar old[3] = { data[-3], data[-2], data[-1] }; /* TODO this is horrible, HORRIBLE */
+			char old[3] = { data[-3], data[-2], data[-1] }; /* TODO this is horrible, HORRIBLE */
 			data[-3] = tb; /* fake a NBT tag byte for the recursive call */
 			data[-2] = 0; data[-1] = 0; /* fake an empty name too */
 			if ((sub = parse_tag(data-3, len+3, &sublen)) == 0)

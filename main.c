@@ -30,7 +30,7 @@ struct options opt = {
 	.jumpfile = 0,
 };
 
-void load_colors(gchar **lines);
+void load_colors(char **lines);
 
 /* main application */
 
@@ -61,7 +61,7 @@ int mcmap_main(int argc, char **argv)
 
 	if (argc != 2)
 	{
-		gchar *usage = g_option_context_get_help(gopt, TRUE, 0);
+		char *usage = g_option_context_get_help(gopt, TRUE, 0);
 		fputs(usage, stderr);
 		return 1;
 	}
@@ -91,10 +91,10 @@ int mcmap_main(int argc, char **argv)
 
 	if (opt.jumpfile)
 	{
-		gchar *jump_file;
+		char *jump_file;
 		GError *error = 0;
 		struct Jump *jump;
-		gchar *file_ptr;
+		char *file_ptr;
 		if (!g_file_get_contents(opt.jumpfile, &jump_file, NULL, &error))
 			die(error->message);
 		#define FIELD(assigner) \
@@ -108,8 +108,8 @@ int mcmap_main(int argc, char **argv)
 		file_ptr = jump_file;
 		while (*file_ptr != 0)
 		{
-			gchar *field;
-			gchar *name;
+			char *field;
+			char *name;
 			jump = g_new(struct Jump, 1);
 			FIELD(name = strdup(field));
 			FIELD(jump->x = atoi(field));
@@ -124,12 +124,12 @@ int mcmap_main(int argc, char **argv)
 
 	load_colors(default_colors);
 
-	gchar *filename = g_strconcat(g_get_home_dir(), "/.mcmap/colors", NULL);
-	gchar *colors;
+	char *filename = g_strconcat(g_get_home_dir(), "/.mcmap/colors", NULL);
+	char *colors;
 	GError *error = NULL;
 	if (g_file_get_contents(filename, &colors, NULL, &error))
 	{
-		gchar **lines = g_strsplit_set(colors, "\n", 0);
+		char **lines = g_strsplit_set(colors, "\n", 0);
 		load_colors(lines);
 		g_free(colors);
 		g_strfreev(lines);
@@ -217,7 +217,7 @@ int mcmap_main(int argc, char **argv)
 	if (TTF_Init() != 0)
 		dief("Failed to initialize SDL_ttf: %s", TTF_GetError());
 
-	gchar *font_filename = g_strconcat(g_path_get_dirname(argv[0]), "/../lib/DejaVuSansMono-Bold.ttf", NULL);
+	char *font_filename = g_strconcat(g_path_get_dirname(argv[0]), "/../lib/DejaVuSansMono-Bold.ttf", NULL);
 	map_font = TTF_OpenFont(font_filename, 13);
 	if (map_font == NULL)
 		dief("Failed to load font file: %s", TTF_GetError());
@@ -235,14 +235,14 @@ int mcmap_main(int argc, char **argv)
 	return 0;
 }
 
-void load_colors(gchar **lines)
+void load_colors(char **lines)
 {
 	int line_number = 0;
 
 	while (*lines)
 	{
 		line_number++;
-		gchar *line = *lines++;
+		char *line = *lines++;
 
 		if (line[0] == '#' || line[0] == '\0') continue;
 

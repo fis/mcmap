@@ -216,7 +216,7 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 int packet_write(socket_t sock, packet_t *packet)
 {
 	gsize left = packet->size;
-	gchar *p = (gchar*)packet->bytes;
+	char *p = (char*)packet->bytes;
 
 	while (left)
 	{
@@ -323,9 +323,9 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 			{
 				GError *error = NULL;
 				gsize conv_len;
-				gchar *conv = g_convert((gchar*)tp, -1, "UTF16BE", "UTF8", NULL, &conv_len, &error);
+				char *conv = g_convert((char *) tp, -1, "UTF16BE", "UTF8", NULL, &conv_len, &error);
 				if (!conv)
-					dief("g_convert UTF8->UTF16BE failed (error: %s, string: '%s')", error->message, (char*)tp);
+					dief("g_convert UTF8->UTF16BE failed (error: %s, string: '%s')", error->message, (char *) tp);
 				unsigned char lenb[2];
 				jshort_write(lenb, conv_len/2);
 				g_byte_array_append(data, lenb, 2);
@@ -338,7 +338,7 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 		case FIELD_STRING_UTF8:
 			tp = va_arg(ap, unsigned char *);
 			{
-				int len = strlen((char *)tp);
+				int len = strlen((char *) tp);
 				unsigned char lenb[2];
 				jshort_write(lenb, len);
 				g_byte_array_append(data, lenb, 2);
@@ -446,7 +446,7 @@ unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
 		{
 			GError *error = NULL;
 			gsize conv_len;
-			str = (unsigned char *)g_convert((gchar*)&p[2], l*2, "UTF8", "UTF16BE", NULL, &conv_len, &error);
+			str = (unsigned char *)g_convert((char*)&p[2], l*2, "UTF8", "UTF16BE", NULL, &conv_len, &error);
 			if (!str)
 				dief("g_convert UTF16BE->UTF8 failed (error: %s)", error->message);
 			l = conv_len;
@@ -455,7 +455,7 @@ unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
 
 	case FIELD_STRING_UTF8:
 		l = jshort_read(p);
-		str = (unsigned char *)g_strndup((gchar*)&p[2], l);
+		str = (unsigned char *)g_strndup((char*)&p[2], l);
 		break;
 
 	default:

@@ -23,11 +23,11 @@ enum compression
 	COMPRESSION_ZLIB = 2
 };
 
-gchar *world;
+char *world;
 
-static void process_region(gchar *filename, jint x, jint z)
+static void process_region(char *filename, jint x, jint z)
 {
-	gchar *region;
+	char *region;
 	GError *error = NULL;
 	gboolean ok = g_file_get_contents(filename, &region, NULL, &error);
 	if (!ok)
@@ -78,12 +78,12 @@ int mcmap_main(int argc, char **argv)
 
 	if (argc != 2)
 	{
-		gchar *usage = g_option_context_get_help(gopt, TRUE, 0);
+		char *usage = g_option_context_get_help(gopt, TRUE, 0);
 		fputs(usage, stderr);
 		return 1;
 	}
 
-	world = (gchar *) argv[1];
+	world = argv[1];
 
 	log_print("[INFO] Starting mapping process.");
 
@@ -106,22 +106,22 @@ int mcmap_main(int argc, char **argv)
 	player_y = 64;
 	player_z = 0;
 
-	gchar *dirname = g_strconcat(world, "/region", NULL);
+	char *dirname = g_strconcat(world, "/region", NULL);
 	GError *error = NULL;
 	GDir *world_dir = g_dir_open(dirname, 0, &error);
 	g_free(dirname);
 	if (!world_dir)
 		die(error->message);
-	gchar *filename = NULL;
-	while ((filename = (gchar *) g_dir_read_name(world_dir)))
+	char *filename = NULL;
+	while ((filename = g_dir_read_name(world_dir)))
 	{
-		gchar xbuf[64], zbuf[64];
+		char xbuf[64], zbuf[64];
 		if (sscanf(filename, "r.%[^.].%[^.].mcr", xbuf, zbuf) < 1)
 			continue;
 		jint x = (jint) strtol(xbuf, NULL, 36);
 		jint z = (jint) strtol(zbuf, NULL, 36);
 		log_print("[INFO] Processing region (%d,%d)", x, z);
-		gchar *full_path = g_strconcat(world, "/region/", filename, NULL);
+		char *full_path = g_strconcat(world, "/region/", filename, NULL);
 		process_region(full_path, x, z);
 		g_free(full_path);
 	}

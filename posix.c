@@ -92,7 +92,7 @@ static gpointer console_thread(gpointer userdata)
 
 			/* display pending output lines (TODO: more than one) */
 
-			gchar *line = 0;
+			char *line = 0;
 			gsize line_eol = 0;
 
 			g_io_channel_read_line(och, &line, 0, &line_eol, 0);
