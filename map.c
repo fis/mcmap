@@ -432,7 +432,7 @@ static void map_paint_region_iso(struct map_region *region)
 					if (IS_WATER(block))
 						block_color = map_water_color(wreg->chunks[CHUNK_XIDX(wx>>1)][CHUNK_ZIDX(wz)],
 						                              block_color, CHUNK_XOFF(wx>>1), CHUNK_ZOFF(wz), wy);
-					visible_colors[visible_blocks++] = apply_light(block_color, (wx>>1)-1+(wx&1), wy, wz-(wx&1));
+					visible_colors[visible_blocks++] = apply_light(block_color, (wx>>1)-1+(wx&1), wy, wz+(wx&1));
 					if (visible_blocks == 1)
 						first_face = wx&1;
 					if (block_colors[block].a == 255)
