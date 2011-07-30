@@ -544,7 +544,10 @@ void map_update_region(coord_t cc)
 
 	struct map_region *region = map_get_region(cc, true);
 	region->dirty_flag = 1;
-	memset(region->dirty_chunk, 0xff, sizeof region->dirty_chunk);
+	for (jint cz = 0; cz < REGION_SIZE; cz++)
+		for (jint cx = 0; cx < REGION_SIZE; cx++)
+			if (r->chunks[cx][cz])
+				BITSET_SET(region->dirty_chunk, cz*REGION_SIZE+cx);
 }
 
 void map_update(coord_t c1, coord_t c2)
