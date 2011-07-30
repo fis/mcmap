@@ -130,7 +130,7 @@ struct nbt_tag *nbt_struct_field(struct nbt_tag *s, const char *name)
 
 	size_t namelen = strlen(name);
 
-	for (guint i = 0; i < s->data.structv->len; i++)
+	for (unsigned i = 0; i < s->data.structv->len; i++)
 	{
 		struct nbt_tag *field = g_ptr_array_index(s->data.structv, i);
 
@@ -159,7 +159,7 @@ static void format_tag(GByteArray *arr, struct nbt_tag *tag, int only_payload)
 {
 	if (!only_payload)
 	{
-		guint at = arr->len;
+		unsigned at = arr->len;
 		size_t nlen = strlen(tag->name);
 
 		g_byte_array_set_size(arr, at + 3 + nlen);
@@ -170,7 +170,7 @@ static void format_tag(GByteArray *arr, struct nbt_tag *tag, int only_payload)
 		memcpy(&arr->data[at+3], tag->name, nlen);
 	}
 
-	guint at = arr->len;
+	unsigned at = arr->len;
 
 	switch (tag->type)
 	{
@@ -224,9 +224,9 @@ static void format_tag(GByteArray *arr, struct nbt_tag *tag, int only_payload)
 		die("nbt format_tag: NBT_TAG_ARRAY unimplemented");
 
 	case NBT_TAG_STRUCT:
-		for (guint i = 0; i < tag->data.structv->len; i++)
+		for (unsigned i = 0; i < tag->data.structv->len; i++)
 			format_tag(arr, g_ptr_array_index(tag->data.structv, i), 0);
-		g_byte_array_append(arr, (guint8*)"", 1);
+		g_byte_array_append(arr, (uint8_t *) "", 1);
 		break;
 	}
 }
@@ -235,7 +235,7 @@ struct buffer nbt_compress(struct nbt_tag *tag)
 {
 	GByteArray *arr = g_byte_array_new();
 
-	g_byte_array_append(arr, (guint8*)"\x0a\x00", 3);
+	g_byte_array_append(arr, (uint8_t *) "\x0a\x00", 3);
 	format_tag(arr, tag, 0);
 
 	uLongf clen = compressBound(arr->len);
@@ -250,12 +250,12 @@ struct buffer nbt_compress(struct nbt_tag *tag)
 	return (struct buffer){ clen, cbuf };
 }
 
-static struct nbt_tag *parse_tag(guint8 *data, unsigned len, unsigned *taglen)
+static struct nbt_tag *parse_tag(uint8_t *data, unsigned len, unsigned *taglen)
 {
 	if (len < 1)
 		die("truncated NBT tag: short type");
 
-	guint8 type = data[0];
+	uint8_t type = data[0];
 
 	if (type == NBT_TAG_END)
 	{

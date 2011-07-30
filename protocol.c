@@ -251,7 +251,7 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 	/* add the type byte */
 
 	{
-		guint8 typebyte = type;
+		uint8_t typebyte = type;
 		g_byte_array_append(data, &typebyte, 1);
 	}
 
