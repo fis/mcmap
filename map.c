@@ -71,7 +71,7 @@ static GMutex * volatile map_mutex = 0;
 
 static int player_yaw = 0;
 
-static inline Uint32 pack_rgb(rgba_t rgba)
+static inline uint32_t pack_rgb(rgba_t rgba)
 {
 	return (rgba.r << map_rshift) |
 	       (rgba.g << map_gshift) |
@@ -133,20 +133,20 @@ inline void map_repaint(void)
 // FIXME: Should we transform alpha too?
 #define TRANSFORM_RGB(expr) \
 	do { \
-		Uint8 x; \
+		uint8_t x; \
 		x = rgba.r; rgba.r = (expr); \
 		x = rgba.g; rgba.g = (expr); \
 		x = rgba.b; rgba.b = (expr); \
 	} while (0)
 
-static rgba_t map_water_color(struct chunk *c, rgba_t rgba, jint bx, jint bz, Uint32 y)
+static rgba_t map_water_color(struct chunk *c, rgba_t rgba, jint bx, jint bz, jint y)
 {
 	while (--y && IS_WATER(c->blocks[bx][bz][y]))
 		TRANSFORM_RGB(x*7/8);
 	return rgba;
 }
 
-static rgba_t map_block_color(struct chunk *c, unsigned char *b, jint bx, jint bz, Uint32 y)
+static rgba_t map_block_color(struct chunk *c, unsigned char *b, jint bx, jint bz, jint y)
 {
 	rgba_t rgba = block_colors[b[y]];
 
@@ -172,9 +172,9 @@ static rgba_t map_block_color(struct chunk *c, unsigned char *b, jint bx, jint b
 
 		lv_day -= map_darken;
 		if (lv_day < 0) lv_day = 0;
-		Uint32 block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
+		uint32_t block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
 
-		Uint32 lf = 0x10000;
+		uint32_t lf = 0x10000;
 
 		for (int i = lv_block; i < 15; i++)
 			lf = (lf*block_exp) >> 16;
@@ -222,7 +222,7 @@ static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 		return;
 
 	SDL_LockSurface(region);
-	Uint32 pitch = region->pitch;
+	uint32_t pitch = region->pitch;
 
 	unsigned char *pixels = (unsigned char *)region->pixels + czo*CHUNK_ZSIZE*pitch + cxo*CHUNK_XSIZE*4;
 
@@ -239,12 +239,12 @@ static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 
 	for (jint bz = 0; bz < CHUNK_ZSIZE; bz++)
 	{
-		Uint32 *p = (Uint32*)pixels;
+		uint32_t *p = (uint32_t*)pixels;
 		unsigned char *b = blocks;
 
 		for (jint bx = 0; bx < CHUNK_XSIZE; bx++)
 		{
-			Uint32 y = c->height[bx][bz];
+			jint y = c->height[bx][bz];
 
 			/* select basic color */
 
@@ -252,7 +252,7 @@ static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 
 			if (map_mode == MAP_MODE_TOPO)
 			{
-				Uint32 v = *b;
+				uint32_t v = *b;
 				if (IS_WATER(c->blocks[bx][bz][y]))
 					rgba = map_water_color(c, block_colors[0x08], bx, bz, y);
 				else if (v < 64)
@@ -336,9 +336,9 @@ static void map_paint_region_iso(struct map_region *region)
 
 		lv_day -= map_darken;
 		if (lv_day < 0) lv_day = 0;
-		Uint32 block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
+		uint32_t block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
 
-		Uint32 lf = 0x10000;
+		uint32_t lf = 0x10000;
 
 		for (int i = lv_block; i < 15; i++)
 			lf = (lf*block_exp) >> 16;
@@ -457,7 +457,7 @@ static void map_paint_region_iso(struct map_region *region)
 
 			/* dump map_scale pixels on screen */
 
-			*(Uint32*)((unsigned char *)regs->pixels + y*regs->pitch + 4*x) = pack_rgb(rgb);
+			*(uint32_t*)((unsigned char *)regs->pixels + y*regs->pitch + 4*x) = pack_rgb(rgb);
 		}
 	}
 
@@ -810,13 +810,13 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 	SDL_LockSurface(screen);
 
 	unsigned char *pixels = screen->pixels;
-	Uint16 pitch = screen->pitch;
+	uint16_t pitch = screen->pitch;
 
 	void pt(int ix, int iy)
 	{
 		int sx = x0 + txx*ix + txy*iy;
 		int sy = y0 + tyx*ix + tyy*iy;
-		Uint32 *p = (Uint32 *)&pixels[sy*pitch + sx*4];
+		uint32_t *p = (uint32_t *)&pixels[sy*pitch + sx*4];
 		// TODO: Handle alpha in surface mode
 		*p = pack_rgb(IGNORE_ALPHA(special_colors[COLOR_PLAYER]));
 	}
@@ -964,7 +964,7 @@ void map_draw(SDL_Surface *screen)
 
 			/* scaled, color-keyed blit */
 
-			Uint32 ckey = pack_rgb(color_key);
+			uint32_t ckey = pack_rgb(color_key);
 
 			for (int reg_py = 0; reg_py < reg_sh; reg_py++)
 			{
@@ -982,8 +982,8 @@ void map_draw(SDL_Surface *screen)
 
 							void *s = (unsigned char *)screen->pixels + y*screen->pitch + 4*x;
 							void *m = (unsigned char *)regs->pixels + reg_py*regs->pitch + 4*reg_px;
-							Uint32 c = *(Uint32 *)m;
-							if (c != ckey) *(Uint32 *)s = c;
+							uint32_t c = *(uint32_t *)m;
+							if (c != ckey) *(uint32_t *)s = c;
 						}
 					}
 				}

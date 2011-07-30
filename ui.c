@@ -32,7 +32,7 @@ void start_ui(gboolean map, gint scale, gboolean resizable, int wnd_w, int wnd_h
 
 	if (map)
 	{
-		Uint32 videoflags = SDL_SWSURFACE;
+		uint32_t videoflags = SDL_SWSURFACE;
 		if (resizable) videoflags |= SDL_RESIZABLE;
 
 		map_w = wnd_w;
