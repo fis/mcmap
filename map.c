@@ -403,40 +403,29 @@ static void map_paint_region_iso(struct map_region *region)
 				jint wx = x - ny + REGION_XSIZE - 1;
 				jint wz = (x + ny - REGION_XSIZE + 1) >> 1;
 
-				/* consider a potentially visible top surface */
+				/* consider first the top, then the front face */
 
-				unsigned char block = get_block(wx>>1, wy, wz);
-
-				if (!IS_AIR(block)) /* top surface visible */
+				for (int face = 0; face < 2; face++)
 				{
-					rgba_t block_color = block_colors[block];
-					if (IS_WATER(block))
-						block_color = map_water_color(wreg->chunks[CHUNK_XIDX(wx>>1)][CHUNK_ZIDX(wz)],
-						                              block_color, CHUNK_XOFF(wx>>1), CHUNK_ZOFF(wz), wy);
-					visible_colors[visible_blocks++] = apply_light(block_color, wx>>1, wy+1, wz);
-					if (visible_blocks == 1)
-						first_face = 2;
-					if (block_colors[block].a == 255 || visible_blocks >= NELEMS(visible_colors))
-						break;
-				}
+					unsigned char block = get_block(wx>>1, wy, wz);
 
-				/* consider a potentially visible front side */
+					if (!IS_AIR(block)) /* top surface visible */
+					{
+						rgba_t block_color = block_colors[block];
+						if (IS_WATER(block))
+							block_color = map_water_color(wreg->chunks[CHUNK_XIDX(wx>>1)][CHUNK_ZIDX(wz)],
+							                              block_color, CHUNK_XOFF(wx>>1), CHUNK_ZOFF(wz), wy);
+						visible_colors[visible_blocks++] = apply_light(block_color, wx>>1, wy+1, wz);
+						if (visible_blocks == 1)
+							first_face = face ? wx&1 : 2;
+						if (block_colors[block].a == 255 || visible_blocks >= NELEMS(visible_colors))
+							break;
+					}
 
-				wx++;
-				wz = (x + ny - REGION_XSIZE) >> 1;
-				block = get_block(wx>>1, wy, wz);
+					/* move to the next face */
 
-				if (!IS_AIR(block))
-				{
-					rgba_t block_color = block_colors[block];
-					if (IS_WATER(block))
-						block_color = map_water_color(wreg->chunks[CHUNK_XIDX(wx>>1)][CHUNK_ZIDX(wz)],
-						                              block_color, CHUNK_XOFF(wx>>1), CHUNK_ZOFF(wz), wy);
-					visible_colors[visible_blocks++] = apply_light(block_color, (wx>>1)-1+(wx&1), wy, wz+(wx&1));
-					if (visible_blocks == 1)
-						first_face = wx&1;
-					if (block_colors[block].a == 255)
-						break;
+					wx++;
+					wz = (x + ny - REGION_XSIZE) >> 1;
 				}
 
 				wy--;
