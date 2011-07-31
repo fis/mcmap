@@ -12,4 +12,6 @@
 typedef int socket_t;
 #define make_socket socket
 
+typedef void *mmap_handle_t; /* the mapped-to address */
+
 #endif /* MCMAP_POSIX_H */

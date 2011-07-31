@@ -247,12 +247,15 @@ void load_colors(char **lines)
 		if (line[0] == '#' || line[0] == '\0') continue;
 
 		char block_name[256];
-		rgba_t color;
-		int fields = sscanf(line, "%[^:]:%hhu%hhu%hhu%hhu", block_name, &color.r, &color.g, &color.b, &color.a);
+		unsigned color_r, color_g, color_b, color_a;
+		int fields = sscanf(line, "%255[^:]:%u%u%u%u", block_name, &color_r, &color_g, &color_b, &color_a);
+
 		if (fields < 4)
 			dief("Invalid configuration line at ~/.mcmap/colors:%d: %s", line_number, line);
 		else if (fields == 4)
-			color.a = 255;
+			color_a = 255;
+
+		rgba_t color = RGBA(color_r, color_g, color_b, color_a);
 
 		bool ok = false;
 		for (int block = 0; block < sizeof(block_info)/sizeof(struct block_info); block++)

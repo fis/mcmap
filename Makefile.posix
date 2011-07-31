@@ -9,6 +9,7 @@ $(OBJDIR)/mcmapper$(EXE): LDFLAGS += -lpng
 
 CFLAGS += -DPLATFORM_POSIX
 CFLAGS += $(shell pkg-config --cflags $(libs))
+OPTCFLAGS += $(shell pkg-config --cflags $(libs))
 
 # Apple's gcc is braindead by default.
 ifeq ($(shell uname),Darwin)

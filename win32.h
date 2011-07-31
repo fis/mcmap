@@ -9,4 +9,6 @@
 
 typedef SOCKET socket_t;
 
+typedef HANDLE mmap_handle_t; /* mapping object handle */
+
 #endif /* MCMAP_WIN32_H */

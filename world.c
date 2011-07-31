@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -42,6 +41,7 @@ struct region_file
 	int fd;
 	unsigned nsect;
 	unsigned char *contents;
+	mmap_handle_t contents_map;
 	unsigned offsets[REGION_SIZE][REGION_SIZE];
 	uint8_t sects[REGION_SIZE][REGION_SIZE];
 	jint tstamps[REGION_SIZE][REGION_SIZE];
@@ -811,8 +811,11 @@ struct region_file *world_regfile_open(const char *path)
 
 	/* create shared memory mapping for file contents */
 
-	file->contents = mmap(0, file->nsect*SECTOR_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, file->fd, 0);
-	if (file->contents == MAP_FAILED)
+	void *addr;
+	file->contents_map = make_mmap(file->fd, file->nsect*SECTOR_SIZE, &addr);
+	file->contents = addr;
+
+	if (!file->contents)
 		dief("unable to map region file to memory: %s: %s", path, g_strerror(errno));
 
 	return file;
@@ -895,13 +898,15 @@ void world_regfile_sync(struct region *region)
 
 	if (file->nsect != old_nsect)
 	{
-		void *new_addr = mremap(file->contents, old_nsect*SECTOR_SIZE, file->nsect*SECTOR_SIZE, MREMAP_MAYMOVE);
-		if (new_addr == MAP_FAILED)
+		void *new_addr;
+		file->contents_map = resize_mmap(file->contents_map, file->contents, file->fd,
+		                                 old_nsect*SECTOR_SIZE, file->nsect*SECTOR_SIZE, &new_addr);
+		if (!new_addr)
 			dief("unable to resize region file memory mapping: %s", g_strerror(errno));
 		file->contents = new_addr;
 	}
 	else
-		msync(file->contents, file->nsect*SECTOR_SIZE, MS_ASYNC);
+		sync_mmap(file->contents, file->nsect*SECTOR_SIZE);
 }
 
 void world_regfile_load(struct region *region)

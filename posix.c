@@ -1,9 +1,11 @@
+#include <errno.h>
+#include <poll.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/mman.h>
 #include <unistd.h>
-#include <errno.h>
+
 #include <glib.h>
-#include <poll.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -139,4 +141,37 @@ void console_cleanup(void)
 
         console_readline = 0;
         console_outfd = 1;
+}
+
+/* mmap/mremap-based solution for mmapping */
+
+mmap_handle_t make_mmap(int fd, size_t len, void **addr)
+{
+	void *m = mmap(0, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+
+	if (m == MAP_FAILED)
+		*addr = 0;
+	else
+		*addr = m;
+
+	return *addr;
+}
+
+mmap_handle_t resize_mmap(mmap_handle_t old, void *old_addr, int fd, size_t old_len, size_t new_len, void **addr)
+{
+	/* TODO: implement a "re-mmap, not mremap" solution for non-Linux */
+
+	void *new_addr = mremap(old_addr, old_len, new_len, MREMAP_MAYMOVE);
+
+	if (new_addr == MAP_FAILED)
+		*addr = 0;
+	else
+		*addr = new_addr;
+
+	return *addr;
+}
+
+void sync_mmap(void *addr, size_t len)
+{
+	msync(addr, len, MS_ASYNC);
 }

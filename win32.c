@@ -1,3 +1,4 @@
+#include <io.h>
 #include <windows.h>
 #include <glib.h>
 
@@ -22,6 +23,43 @@ socket_t make_socket(int domain, int type, int protocol)
 
 void console_init() {}
 void console_cleanup() {}
+
+/* CreateFileMapping-driven mmap replacements */
+
+mmap_handle_t make_mmap(int fd, size_t len, void **addr)
+{
+	HANDLE f = (HANDLE)_get_osfhandle(fd);
+
+	mmap_handle_t map = CreateFileMapping(f, NULL, PAGE_READWRITE, (unsigned long long)len >> 32, len, NULL);
+	if (!map)
+	{
+		*addr = 0;
+		return 0;
+	}
+
+	*addr = MapViewOfFile(map, FILE_MAP_ALL_ACCESS, 0, 0, len);
+	if (!*addr)
+	{
+		CloseHandle(map);
+		map = 0;
+	}
+
+	return map;
+}
+
+mmap_handle_t resize_mmap(mmap_handle_t old, void *old_addr, int fd, size_t old_len, size_t new_len, void **addr)
+{
+	UnmapViewOfFile(old_addr);
+	CloseHandle(old);
+	return make_mmap(fd, new_len, addr);
+}
+
+void sync_mmap(void *addr, size_t len)
+{
+	FlushViewOfFile(addr, len);
+}
+
+/* win32 "GUI" nonsense */
 
 static void splash_setargs(HWND hWnd)
 {
