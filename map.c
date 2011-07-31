@@ -286,12 +286,63 @@ static void map_paint_chunk(SDL_Surface *region, coord_t cc)
 	SDL_UnlockSurface(region);
 }
 
+/* isometric mode painting */
+
+static inline unsigned char iso_get_block(struct region *wreg, jint x, jint y, jint z)
+{
+	if (REGION_XIDX(x) != 0 || REGION_ZIDX(z) != 0)
+		return 0;
+	struct chunk *c = wreg->chunks[CHUNK_XIDX(x)][CHUNK_ZIDX(z)];
+	return c ? c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y] : 0;
+}
+
+static inline rgba_t iso_apply_light(struct region *wreg, rgba_t c, jint x, jint y, jint z)
+{
+#ifdef FEAT_FULLCHUNK
+	/* TODO remove code duplication and/or do lights differently... */
+
+	int lv_block = 0x00, lv_day = 0xff;
+
+	if (REGION_XIDX(x) == 0 && REGION_ZIDX(z) == 0)
+	{
+		struct chunk *ch = wreg->chunks[CHUNK_XIDX(x)][CHUNK_ZIDX(z)];
+		if (ch)
+		{
+			jint bx = CHUNK_XOFF(x), bz = CHUNK_ZOFF(z);
+			if (y >= CHUNK_YSIZE) y = CHUNK_YSIZE-1;
+			lv_block = ch->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + y/2];
+			lv_day = ch->light_sky[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + y/2];
+		}
+	}
+
+	if (y & 1)
+		lv_block >>= 4, lv_day >>= 4;
+	else
+		lv_block &= 0xf, lv_day &= 0xf;
+
+	lv_day -= map_darken;
+	if (lv_day < 0) lv_day = 0;
+	uint32_t block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
+
+	uint32_t lf = 0x10000;
+
+	for (int i = lv_block; i < 15; i++)
+		lf = (lf*block_exp) >> 16;
+	for (int i = lv_day; i < 15; i++)
+		lf = (lf*LIGHT_EXP1) >> 16;
+
+	c.r = (c.r*lf) >> 16;
+	c.g = (c.g*lf) >> 16;
+	c.b = (c.b*lf) >> 16;
+#endif /* FEAT_FULLCHUNK */
+
+	return c;
+}
+
 static void map_paint_region_iso(struct map_region *region)
 {
 	SDL_Surface *regs = region->surf;
 	SDL_LockSurface(regs);
-
-	/* block accessor from the corresponding world region */
 
 	struct region *wreg = world_region(region->key, false);
 	if (!wreg)
@@ -300,58 +351,8 @@ static void map_paint_region_iso(struct map_region *region)
 		return;
 	}
 
-	unsigned char get_block(jint x, jint y, jint z)
-	{
-		if (REGION_XIDX(x) != 0 || REGION_ZIDX(z) != 0)
-			return 0;
-		struct chunk *c = wreg->chunks[CHUNK_XIDX(x)][CHUNK_ZIDX(z)];
-		return c ? c->blocks[CHUNK_XOFF(x)][CHUNK_ZOFF(z)][y] : 0;
-	}
-
 	/* block lighting handler */
 
-	rgba_t apply_light(rgba_t c, jint x, jint y, jint z)
-	{
-#ifdef FEAT_FULLCHUNK
-		/* TODO remove code duplication and/or do lights differently... */
-
-		int lv_block = 0x00, lv_day = 0xff;
-
-		if (REGION_XIDX(x) == 0 && REGION_ZIDX(z) == 0)
-		{
-			struct chunk *ch = wreg->chunks[CHUNK_XIDX(x)][CHUNK_ZIDX(z)];
-			if (ch)
-			{
-				jint bx = CHUNK_XOFF(x), bz = CHUNK_ZOFF(z);
-				if (y >= CHUNK_YSIZE) y = CHUNK_YSIZE-1;
-				lv_block = ch->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + y/2];
-				lv_day = ch->light_sky[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + y/2];
-			}
-		}
-
-		if (y & 1)
-			lv_block >>= 4, lv_day >>= 4;
-		else
-			lv_block &= 0xf, lv_day &= 0xf;
-
-		lv_day -= map_darken;
-		if (lv_day < 0) lv_day = 0;
-		uint32_t block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
-
-		uint32_t lf = 0x10000;
-
-		for (int i = lv_block; i < 15; i++)
-			lf = (lf*block_exp) >> 16;
-		for (int i = lv_day; i < 15; i++)
-			lf = (lf*LIGHT_EXP1) >> 16;
-
-		c.r = (c.r*lf) >> 16;
-		c.g = (c.g*lf) >> 16;
-		c.b = (c.b*lf) >> 16;
-#endif /* FEAT_FULLCHUNK */
-
-		return c;
-	}
 
 	/* find the bounding box for dirty chunks */
 
@@ -407,15 +408,20 @@ static void map_paint_region_iso(struct map_region *region)
 
 				for (int face = 0; face < 2; face++)
 				{
-					unsigned char block = get_block(wx>>1, wy, wz);
+					unsigned char block = iso_get_block(wreg, wx>>1, wy, wz);
 
 					if (!IS_AIR(block)) /* top surface visible */
 					{
+						/* select a block for lighting calculation */
+						int lx = face ? (wx>>1)-1+(wx&1) : wx>>1;
+						int ly = face ? wy : wy+1;
+						int lz = face ? wz+(wx&1) : wz;
+						/* calculate block color */
 						rgba_t block_color = block_colors[block];
 						if (IS_WATER(block))
 							block_color = map_water_color(wreg->chunks[CHUNK_XIDX(wx>>1)][CHUNK_ZIDX(wz)],
 							                              block_color, CHUNK_XOFF(wx>>1), CHUNK_ZOFF(wz), wy);
-						visible_colors[visible_blocks++] = apply_light(block_color, wx>>1, wy+1, wz);
+						visible_colors[visible_blocks++] = iso_apply_light(wreg, block_color, lx, ly, lz);
 						if (visible_blocks == 1)
 							first_face = face ? wx&1 : 2;
 						if (block_colors[block].a == 255 || visible_blocks >= NELEMS(visible_colors))
