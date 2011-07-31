@@ -177,6 +177,7 @@ void cmd_save(int cmdc, char **cmdv)
 		return;
 	}
 
+	(void)dir;
 #if 0 /* OBSOLETED STUFF; remove when world-dir location better */
 
 	/* construct the target directory */
