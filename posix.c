@@ -159,7 +159,8 @@ mmap_handle_t make_mmap(int fd, size_t len, void **addr)
 
 mmap_handle_t resize_mmap(mmap_handle_t old, void *old_addr, int fd, size_t old_len, size_t new_len, void **addr)
 {
-	/* TODO: implement a "re-mmap, not mremap" solution for non-Linux */
+#ifdef __linux
+	/* Linux at least has mremap... */
 
 	void *new_addr = mremap(old_addr, old_len, new_len, MREMAP_MAYMOVE);
 
@@ -169,6 +170,10 @@ mmap_handle_t resize_mmap(mmap_handle_t old, void *old_addr, int fd, size_t old_
 		*addr = new_addr;
 
 	return *addr;
+#else
+	munmap(old_addr, old_len);
+	return make_mmap(fd, new_len, addr);
+#endif
 }
 
 void sync_mmap(void *addr, size_t len)
