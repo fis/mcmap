@@ -141,7 +141,7 @@ inline void map_repaint(void)
 
 static rgba_t map_water_color(struct chunk *c, rgba_t rgba, jint bx, jint bz, jint y)
 {
-	while (--y && IS_WATER(c->blocks[bx][bz][y]))
+	while (--y >= 0 && IS_WATER(c->blocks[bx][bz][y]))
 		TRANSFORM_RGB(x*7/8);
 	return rgba;
 }
