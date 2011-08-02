@@ -21,6 +21,9 @@ enum map_mode
 #define MAP_FLAG_NIGHT 0x04
 #define MAP_FLAG_CHOP 0x08
 
+extern enum map_mode map_mode;
+extern unsigned map_flags;
+
 extern rgba_t block_colors[256];
 
 extern GHashTable *regions;

@@ -140,26 +140,38 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 		break;
 
 	case 'c':
-		map_setmode(MAP_MODE_SURFACE, 0, 0, MAP_FLAG_CHOP);
-		map_update_ceiling();
-		*repaint = 1;
+		if (map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_ISOMETRIC)
+		{
+			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_CHOP);
+			map_update_ceiling();
+			*repaint = 1;
+		}
 		break;
 
 	case 'f':
-		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_FOLLOW_Y);
-		*repaint = 1;
+		if (map_mode == MAP_MODE_CROSS)
+		{
+			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_FOLLOW_Y);
+			*repaint = 1;
+		}
 		break;
 
 #ifdef FEAT_FULLCHUNK
-	case 'n':
-		/* TODO: handle if map mode != lights */
-		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_NIGHT);
-		*repaint = 1;
+	case 'l':
+		if (map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_ISOMETRIC)
+		{
+			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
+			*repaint = 1;
+		}
 		break;
 
-	case 'l':
-		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
-		*repaint = 1;
+	case 'n':
+		if ((map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_ISOMETRIC)
+		    && (map_flags & MAP_FLAG_LIGHTS))
+		{
+			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_NIGHT);
+			*repaint = 1;
+		}
 		break;
 #endif
 	case 0:

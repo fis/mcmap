@@ -64,8 +64,8 @@ static unsigned map_rshift, map_gshift, map_bshift;
 static int map_scale = 1;
 static int map_scale_indicator = 3;
 
-static enum map_mode map_mode = MAP_MODE_SURFACE;
-static unsigned map_flags = 0;
+enum map_mode map_mode = MAP_MODE_SURFACE;
+unsigned map_flags = 0;
 
 static GMutex * volatile map_mutex = 0;
 
@@ -88,7 +88,8 @@ void map_init(SDL_Surface *screen)
 	map_bshift = screen_fmt->Bshift;
 	regions = g_hash_table_new_full(coord_hash, coord_equal, 0, map_destroy_region);
 	map_mutex = g_mutex_new();
-	map_flags |= MAP_FLAG_CHOP;
+	/* flags on by default: */
+	map_flags |= MAP_FLAG_CHOP|MAP_FLAG_FOLLOW;
 #ifdef FEAT_FULLCHUNK
 	map_flags |= MAP_FLAG_LIGHTS;
 #endif
@@ -412,16 +413,19 @@ static void map_paint_region_iso(struct map_region *region)
 
 					if (!IS_AIR(block)) /* top surface visible */
 					{
-						/* select a block for lighting calculation */
-						int lx = face ? (wx>>1)-1+(wx&1) : wx>>1;
-						int ly = face ? wy : wy+1;
-						int lz = face ? wz+(wx&1) : wz;
 						/* calculate block color */
 						rgba_t block_color = block_colors[block];
 						if (IS_WATER(block))
 							block_color = map_water_color(wreg->chunks[CHUNK_XIDX(wx>>1)][CHUNK_ZIDX(wz)],
 							                              block_color, CHUNK_XOFF(wx>>1), CHUNK_ZOFF(wz), wy);
-						visible_colors[visible_blocks++] = iso_apply_light(wreg, block_color, lx, ly, lz);
+						if (map_flags & MAP_FLAG_LIGHTS)
+						{
+							int lx = face ? (wx>>1)-1+(wx&1) : wx>>1;
+							int ly = face ? wy : wy+1;
+							int lz = face ? wz+(wx&1) : wz;
+							block_color = iso_apply_light(wreg, block_color, lx, ly, lz);
+						}
+						visible_colors[visible_blocks++] = block_color;
 						if (visible_blocks == 1)
 							first_face = face ? wx&1 : 2;
 						if (block_colors[block].a == 255 || visible_blocks >= NELEMS(visible_colors))
@@ -702,12 +706,35 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 		map_y = player_y;
 
 	if (map_mode != old_mode || map_flags != old_flags)
-		tell("MODE: %s%s%s%s%s",
-		     modenames[map_mode],
-		     (mode == MAP_MODE_CROSS && map_flags & MAP_FLAG_FOLLOW_Y ? " (follow)" : ""),
-		     (mode == MAP_MODE_SURFACE && map_flags & MAP_FLAG_CHOP ? " (chop)" : ""),
-		     (mode == MAP_MODE_SURFACE && map_flags & MAP_FLAG_LIGHTS ? " (lights)" : ""),
-		     (mode == MAP_MODE_SURFACE && (map_flags & MAP_FLAG_LIGHTS) && (map_flags & MAP_FLAG_NIGHT) ? " (night)" : ""));
+	{
+		GString *modestr = g_string_new("MODE: ");
+		g_string_append(modestr, modenames[map_mode]);
+
+		switch (map_mode)
+		{
+		case MAP_MODE_SURFACE:
+		case MAP_MODE_ISOMETRIC:
+			if (map_flags & MAP_FLAG_CHOP)
+				g_string_append(modestr, " (chop)");
+			if ((map_flags & MAP_FLAG_LIGHTS) && (map_flags & MAP_FLAG_NIGHT))
+				g_string_append(modestr, " (lights/night)");
+			else if (map_flags & MAP_FLAG_LIGHTS)
+				g_string_append(modestr, " (lights)");
+			break;
+
+		case MAP_MODE_CROSS:
+			if (map_flags & MAP_FLAG_FOLLOW_Y)
+				g_string_append(modestr, " (follow)");
+			break;
+
+		default:
+			/* no applicable modes */
+			break;
+		}
+
+		tell("%s", modestr->str);
+		g_string_free(modestr, TRUE);
+	}
 
 	/* for isometric mode toggling, also drop all painted surfaces */
 
