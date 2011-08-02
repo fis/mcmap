@@ -1054,9 +1054,7 @@ void map_draw(SDL_Surface *screen)
 		{
 			int depth = 1;
 			jint h = hcy;
-			// FIXME: Off-by-one when water goes into void? Also in corresponding map_update code.
-			// I think not, since bottom bedrock is at y=1.
-			while (--h && IS_WATER(hc->blocks[hcx][hcz][h]))
+			while (--h >= 0 && IS_WATER(hc->blocks[hcx][hcz][h]))
 				depth++;
 			left_text = g_strdup_printf("water (%d deep)", depth);
 		}
