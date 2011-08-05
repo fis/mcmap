@@ -883,6 +883,9 @@ static void map_draw_entity_marker(void *idp, void *ep, void *userdata)
 	struct entity *e = ep;
 	SDL_Surface *screen = userdata;
 
+	if (!e->name)
+		return;
+
 	int ex, ez;
 	map_w2s(screen, e->pos.x, e->pos.z, &ex, &ez);
 	ex += (map_scale - map_scale_indicator)/2;
