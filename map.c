@@ -89,7 +89,7 @@ void map_init(SDL_Surface *screen)
 	regions = g_hash_table_new_full(coord_hash, coord_equal, 0, map_destroy_region);
 	map_mutex = g_mutex_new();
 	/* flags on by default: */
-	map_flags |= MAP_FLAG_CHOP|MAP_FLAG_FOLLOW;
+	map_flags |= MAP_FLAG_CHOP | MAP_FLAG_FOLLOW_Y;
 #ifdef FEAT_FULLCHUNK
 	map_flags |= MAP_FLAG_LIGHTS;
 #endif

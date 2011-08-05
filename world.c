@@ -36,7 +36,7 @@ volatile int world_running = 1;
 static char *world_path = 0;
 static char *region_path = 0;
 
-struct region_fileyeah
+struct region_file
 {
 	int fd;
 	unsigned nsect;
