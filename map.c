@@ -878,8 +878,9 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 	SDL_UnlockSurface(screen);
 }
 
-static void map_draw_entity_marker(struct entity *e, void *userdata)
+static void map_draw_entity_marker(void *idp, void *ep, void *userdata)
 {
+	struct entity *e = ep;
 	SDL_Surface *screen = userdata;
 
 	int ex, ez;
@@ -1033,7 +1034,10 @@ void map_draw(SDL_Surface *screen)
 	/* player indicators and such */
 
 	map_draw_player_marker(screen);
-	world_entities(map_draw_entity_marker, screen);
+	
+	g_mutex_lock(entity_mutex);
+	g_hash_table_foreach(world_entities, map_draw_entity_marker, screen);
+	g_mutex_unlock(entity_mutex);
 
 	/* the status bar */
 

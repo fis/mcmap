@@ -78,7 +78,8 @@ bool world_handle_chunk(jint x0, jint y0, jint z0, jint xs, jint ys, jint zs, st
 
 jint world_getheight(coord_t cc);
 
-void world_entities(void (*callback)(struct entity *e, void *userdata), void *userdata);
+extern GHashTable *world_entities;
+extern GMutex *entity_mutex;
 
 struct region_file *world_regfile_open(const char *path);
 void world_regfile_sync(struct region *region);

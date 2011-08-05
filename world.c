@@ -20,9 +20,9 @@
 #include "world.h"
 
 static GHashTable *region_table = 0;
-static GHashTable *entity_table = 0;
-static GHashTable *anentity_table = 0;
-static GMutex *entity_mutex = 0;
+
+GHashTable *world_entities = 0;
+GMutex *entity_mutex = 0;
 
 static jint entity_player = -1;
 static jint entity_vehicle = -1;
@@ -36,7 +36,7 @@ volatile int world_running = 1;
 static char *world_path = 0;
 static char *region_path = 0;
 
-struct region_file
+struct region_fileyeah
 {
 	int fd;
 	unsigned nsect;
@@ -68,9 +68,8 @@ static void entity_free(gpointer ep)
 void world_init(const char *path)
 {
 	region_table = g_hash_table_new_full(coord_hash, coord_equal, 0, region_free);
-	entity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
+	world_entities = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
 	entity_mutex = g_mutex_new();
-	anentity_table = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
 
 	/* locate/create the world directory as required */
 
@@ -390,16 +389,15 @@ static void entity_add(jint id, unsigned char *name, jint x, jint y, jint z)
 
 	e->pos = COORD(x/32, z/32);
 
+	g_mutex_lock(entity_mutex);
+	g_hash_table_replace(world_entities, &e->id, e);
+	g_mutex_unlock(entity_mutex);
+
 	if (name)
 	{
 		log_print("[INFO] Player appeared: %s", name);
-		g_mutex_lock(entity_mutex);
-		g_hash_table_replace(entity_table, &e->id, e);
-		g_mutex_unlock(entity_mutex);
 		map_repaint();
 	}
-	else
-		g_hash_table_replace(anentity_table, &e->id, e);
 }
 
 static void entity_del(jint id)
@@ -410,27 +408,25 @@ static void entity_del(jint id)
 		log_print("[INFO] Unmounted vehicle %d by destroying", id);
 	}
 
-	struct entity *e = g_hash_table_lookup(entity_table, &id);
-	if (e)
+	struct entity *e = g_hash_table_lookup(world_entities, &id);
+
+	g_mutex_lock(entity_mutex);
+	g_hash_table_remove(world_entities, &id);
+
+	if (e->name)
 	{
 		log_print("[INFO] Player disappeared: %s", e->name);
-		g_mutex_lock(entity_mutex);
-		g_hash_table_remove(entity_table, &id);
-		g_mutex_unlock(entity_mutex);
 		map_repaint();
-		return;
 	}
 
-	g_hash_table_remove(anentity_table, &id);
+	g_mutex_unlock(entity_mutex);
 }
 
 static void entity_move(jint id, jint x, jint y, jint z, int relative)
 {
 	struct entity *e;
 
-	e = g_hash_table_lookup(anentity_table, &id);
-	if (!e)
-		e = g_hash_table_lookup(entity_table, &id);
+	e = g_hash_table_lookup(world_entities, &id);
 
 	if (!e)
 		return;
@@ -458,30 +454,6 @@ static void entity_move(jint id, jint x, jint y, jint z, int relative)
 		map_update_player_pos(ep.x, e->ay/32, ep.z);
 	else
 		map_repaint();
-}
-
-struct entity_walk_callback_data
-{
-	void (*callback)(struct entity *e, void *userdata);
-	void *userdata;
-};
-
-static void entity_walk_callback(gpointer key, gpointer value, gpointer userdata)
-{
-	struct entity_walk_callback_data *d = userdata;
-	d->callback(value, d->userdata);
-}
-
-void world_entities(void (*callback)(struct entity *e, void *userdata), void *userdata)
-{
-	/* defensive code if called by the UI before world_init */
-	if (!entity_mutex)
-		return;
-
-	struct entity_walk_callback_data d = { .callback = callback, .userdata = userdata };
-	g_mutex_lock(entity_mutex);
-	g_hash_table_foreach(entity_table, entity_walk_callback, &d);
-	g_mutex_unlock(entity_mutex);
 }
 
 gpointer world_thread(gpointer data)
