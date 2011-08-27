@@ -410,6 +410,9 @@ static void entity_del(jint id)
 
 	struct entity *e = g_hash_table_lookup(world_entities, &id);
 
+	/* Notch sometimes lies I guess */
+	if (!e) return;
+
 	/* FIXME: This is ugly */
 	char *name = e->name ? g_strdup((char *) e->name) : 0;
 
@@ -1108,3 +1111,4 @@ int world_save(char *dir)
 #endif /* FEAT_FULLCHUNK */
 
 #endif
+	
