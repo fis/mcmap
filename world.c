@@ -422,6 +422,7 @@ static void entity_del(jint id)
 	if (name)
 	{
 		log_print("[INFO] Player disappeared: %s", name);
+		g_free(name);
 		map_repaint();
 	}
 
