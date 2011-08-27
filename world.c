@@ -410,12 +410,15 @@ static void entity_del(jint id)
 
 	struct entity *e = g_hash_table_lookup(world_entities, &id);
 
+	/* FIXME: This is ugly */
+	char *name = e->name ? strdup(e->name) : 0;
+
 	g_mutex_lock(entity_mutex);
 	g_hash_table_remove(world_entities, &id);
 
-	if (e->name)
+	if (name)
 	{
-		log_print("[INFO] Player disappeared: %s", e->name);
+		log_print("[INFO] Player disappeared: %s", name);
 		map_repaint();
 	}
 
