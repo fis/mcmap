@@ -182,9 +182,9 @@ jint world_getheight(coord_t cc)
 }
 
 static bool handle_compressed_chunk(jint x0, jint y0, jint z0,
-                                        jint xs, jint ys, jint zs,
-                                        unsigned zlen, unsigned char *zdata,
-                                        bool update_map)
+                                    jint xs, jint ys, jint zs,
+                                    unsigned zlen, unsigned char *zdata,
+                                    bool update_map)
 {
 	static unsigned char zbuf[256*1024];
 	int err;
