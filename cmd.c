@@ -60,6 +60,81 @@ void cmd_coords(int cmdc, char **cmdv)
 		tell("usage: //coords [-say]");
 }
 
+SCM eval_thread(void *data);
+SCM eval_handler(void *data, SCM key, SCM args);
+SCM eval_handler_inner(void *data);
+
+void cmd_eval(int cmdc, char **cmdv)
+{
+	char *code = g_strjoinv(" ", cmdv);
+	scm_spawn_thread(eval_thread, code, eval_handler, code);
+}
+
+char *string_for_object(SCM obj)
+{
+	SCM output_port = scm_open_output_string();
+	scm_write(obj, output_port);
+	SCM output_string = scm_get_output_string(output_port);
+	scm_close_output_port(output_port);
+	return scm_to_locale_string(output_string);
+}
+
+SCM eval_thread(void *data)
+{
+	char *code = data;
+	SCM result = scm_c_eval_string(code);
+	if (scm_is_eq(result, SCM_UNSPECIFIED))
+	{
+		tell("//eval: OK.");
+		return SCM_UNSPECIFIED;
+	}
+	tell("//eval: %s", string_for_object(result));
+	g_free(code);
+	return SCM_UNSPECIFIED;
+}
+
+struct eval_handler_data
+{
+	SCM key;
+	SCM args;
+};
+
+SCM eval_handler(void *data, SCM key, SCM args)
+{
+	/* TODO: Note to the user that they're seeing an error generated
+	   while printing an error, not the real error that happened */
+	struct eval_handler_data ehdata = { key, args };
+	g_free(data);
+	return scm_c_catch(SCM_BOOL_T, eval_handler_inner, &ehdata, eval_handler, NULL, NULL, NULL);
+}
+
+SCM eval_handler_inner(void *data)
+{
+	struct eval_handler_data *ehdata = data;
+	SCM key = ehdata->key;
+	SCM args = ehdata->args;
+
+	if (scm_is_true(scm_num_eq_p(scm_length(args), scm_from_int(4))))
+	{
+		SCM format = scm_cadr(args);
+		SCM format_args = scm_caddr(args);
+		SCM extra = scm_cadddr(args);
+		SCM message = scm_simple_format(SCM_BOOL_F, format, format_args);
+		tell("//eval: %s%s%s (%s, in %s)",
+			scm_to_locale_string(message),
+			scm_is_eq(extra, SCM_BOOL_F) ? "" : " ",
+			scm_is_eq(extra, SCM_BOOL_F) ? "" : string_for_object(extra),
+			scm_to_locale_string(scm_symbol_to_string(key)),
+			scm_to_locale_string(scm_car(args)));
+	}
+	else
+	{
+		tell("//eval: caught: %s", string_for_object(scm_cons(key, args)));
+	}
+
+	return SCM_UNSPECIFIED;
+}
+
 void cmd_goto(int cmdc, char **cmdv)
 {
 	if (cmdc == 2)

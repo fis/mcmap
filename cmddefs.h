@@ -1,4 +1,5 @@
 command(coords)
+command(eval)
 command(goto)
 command(jumps)
 #ifdef FEAT_FULLCHUNK
