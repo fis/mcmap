@@ -79,7 +79,7 @@ SCM eval_thread(void *data)
 		tell("//eval: OK.");
 		return SCM_UNSPECIFIED;
 	}
-	tell("//eval: %s", scm_to_locale_string(scm_object_to_string(result), SCM_UNDEFINED));
+	tell("//eval: %s", scm_to_locale_string(scm_object_to_string(result, SCM_UNDEFINED)));
 	g_free(code);
 	return SCM_UNSPECIFIED;
 }
@@ -114,14 +114,14 @@ SCM eval_handler_inner(void *data)
 		tell("//eval: %s%s%s (%s, in %s)",
 			scm_to_locale_string(message),
 			scm_is_eq(extra, SCM_BOOL_F) ? "" : " ",
-			scm_is_eq(extra, SCM_BOOL_F) ? "" : string_for_object(extra),
+			scm_is_eq(extra, SCM_BOOL_F) ? "" : scm_to_locale_string(scm_object_to_string(extra, SCM_UNDEFINED)),
 			scm_to_locale_string(scm_symbol_to_string(key)),
 			scm_to_locale_string(scm_car(args)));
 	}
 	else
 	{
 		tell("//eval: caught: %s",
-			scm_to_locale_string(scm_object_to_string(scm_cons(key, args)), SCM_UNDEFINED));
+			scm_to_locale_string(scm_object_to_string(scm_cons(key, args), SCM_UNDEFINED)));
 	}
 
 	return SCM_UNSPECIFIED;
