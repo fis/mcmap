@@ -1,7 +1,7 @@
 # mcmap/Makefile.posix  -*- mode: makefile -*-
 
 sources = posix.c
-libs := gthread-2.0 sdl
+libs := gthread-2.0 sdl guile-2.0
 
 include Makefile.common
 
