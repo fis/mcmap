@@ -3,6 +3,7 @@
 #include <SDL.h>
 
 #include <glib.h>
+#include <libguile.h>
 
 #include "protocol.h"
 #include "common.h"

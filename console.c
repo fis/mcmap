@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <glib.h>
+#include <libguile.h>
 
 #include "protocol.h"
 #include "common.h"
@@ -71,9 +72,10 @@ void log_die(int is_stop, char *fmt, ...)
 	if (is_stop)
 	{
 		world_running = 0;
-		g_thread_exit(0);
-		/* never reached */
+		pthread_exit(NULL);
 	}
-
-	exit(1);
+	else
+	{
+		exit(1);
+	}
 }

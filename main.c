@@ -229,7 +229,6 @@ void *real_main(void *data)
 
 	log_print("[INFO] Starting up...");
 
-	/* required because sometimes SDL initialisation fails after g_thread_init */
 	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0)
 		dief("Failed to initialize SDL: %s", SDL_GetError());
 
@@ -243,6 +242,8 @@ void *real_main(void *data)
 	g_free(font_filename);
 
 	SDL_EnableUNICODE(1);
+
+	/* for mutexes */
 	g_thread_init(0);
 
 	start_proxy(sock_cli, sock_srv);

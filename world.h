@@ -68,7 +68,7 @@ extern volatile int world_running;
 void world_init(const char *path);
 void world_destroy(void);
 
-gpointer world_thread(gpointer data);
+SCM world_thread(void *data);
 
 struct region *world_region(coord_t cc, bool gen);
 struct chunk *world_chunk(coord_t cc, bool gen);

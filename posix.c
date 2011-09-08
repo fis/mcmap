@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <glib.h>
+#include <libguile.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -17,7 +18,7 @@
 static int console_readline = 0;
 static int opipe_read, opipe_write;
 
-static gpointer console_thread(gpointer userdata);
+static SCM console_thread(void *data);
 
 void socket_init() {}
 
@@ -40,7 +41,7 @@ void console_init()
                 console_outfd = opipe_write;
                 atexit(console_cleanup);
 
-                g_thread_create(console_thread, NULL, false, 0);
+                scm_spawn_thread(console_thread, NULL, NULL, NULL);
         }
 
 no_terminal:
@@ -62,7 +63,7 @@ static void console_line_ready(char *line)
 	rl_callback_handler_install("> ", console_line_ready);
 }
 
-static gpointer console_thread(gpointer userdata)
+static SCM console_thread(void *data)
 {
 	struct pollfd pfds[2] = {
 		{ .fd = opipe_read, .events = POLLIN },
@@ -127,6 +128,8 @@ static gpointer console_thread(gpointer userdata)
 	}
 
 	exit(0);
+
+	return SCM_UNSPECIFIED;
 }
 
 void console_cleanup(void)

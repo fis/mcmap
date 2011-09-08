@@ -6,6 +6,7 @@
 #include <errno.h>
 
 #include <glib.h>
+#include <libguile.h>
 #include <SDL.h>
 
 #include "cmd.h"
@@ -27,7 +28,7 @@ struct proxy_config
 
 static GAsyncQueue *iq = 0;
 
-gpointer proxy_thread(gpointer data);
+SCM proxy_thread(void *data);
 
 void start_proxy(socket_t sock_cli, socket_t sock_srv)
 {
@@ -37,17 +38,17 @@ void start_proxy(socket_t sock_cli, socket_t sock_srv)
 
 	/* TODO FIXME; call as world_init("world") or some-such to enable alpha-quality region persistence */
 	world_init(0);
-	g_thread_create(world_thread, worldq, false, 0);
+	scm_spawn_thread(world_thread, worldq, NULL, NULL);
 
 	/* start the proxying thread */
 	struct proxy_config *cfg = g_new(struct proxy_config, 1);
 	cfg->sock_cli = sock_cli;
 	cfg->sock_srv = sock_srv;
 	cfg->worldq = worldq;
-	g_thread_create(proxy_thread, cfg, false, 0);
+	scm_spawn_thread(proxy_thread, cfg, NULL, NULL);
 }
 
-gpointer proxy_thread(gpointer data)
+SCM proxy_thread(void *data)
 {
 	struct proxy_config *cfg = data;
 	socket_t sock_cli = cfg->sock_cli, sock_srv = cfg->sock_srv;
@@ -71,12 +72,16 @@ gpointer proxy_thread(gpointer data)
 			FD_SET(sock_cli, &rfds);
 			FD_SET(sock_srv, &rfds);
 			int nfds = (sock_cli > sock_srv ? sock_cli : sock_srv) + 1;
+			int ret = 0;
 
-			int ret = select(nfds, &rfds, NULL, NULL, NULL);
+			do
+				ret = select(nfds, &rfds, NULL, NULL, NULL);
+			while (ret == -1 && errno == EINTR);
+
 			if (ret == -1)
 				dief("select: %s", strerror(errno));
 			else if (ret == 0)
-				wtff("select returned 0! %s", strerror(errno));
+				wtff("select returned 0!");
 
 			if (FD_ISSET(sock_cli, &rfds))
 				p = packet_read(sock_cli, &state_cli);
@@ -175,7 +180,8 @@ next:
 		if (packet_must_free)
 			packet_free(p);
 	}
-	return NULL;
+
+	return SCM_UNSPECIFIED;
 }
 
 void inject_to_client(packet_t *p)

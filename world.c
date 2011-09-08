@@ -7,9 +7,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <SDL.h>
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <libguile.h>
+#include <SDL.h>
 #include <zlib.h>
 
 #include "cmd.h"
@@ -463,7 +464,7 @@ static void entity_move(jint id, jint x, jint y, jint z, int relative)
 		map_repaint();
 }
 
-gpointer world_thread(gpointer data)
+SCM world_thread(void *data)
 {
 	GAsyncQueue *q = data;
 
@@ -604,7 +605,7 @@ gpointer world_thread(gpointer data)
 		packet_free(packet);
 	}
 
-	return NULL;
+	return SCM_UNSPECIFIED;
 }
 
 /* world file IO routines */

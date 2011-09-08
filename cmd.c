@@ -9,7 +9,7 @@
 
 #include <glib.h>
 #include <glib/gstdio.h>
-
+#include <libguile.h>
 #include <SDL.h>
 
 #include "cmd.h"
