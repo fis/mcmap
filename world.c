@@ -1112,4 +1112,3 @@ int world_save(char *dir)
 #endif /* FEAT_FULLCHUNK */
 
 #endif
-	
