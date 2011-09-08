@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include <glib.h>
+#include <libguile.h>
 #include <SDL.h>
 #include <SDL_ttf.h>
 
@@ -30,13 +31,31 @@ struct options opt = {
 	.jumpfile = 0,
 };
 
+struct args
+{
+	int argc;
+	char **argv;
+};
+
+void *real_main(void *data);
 void load_colors(char **lines);
 
 /* main application */
 
 int mcmap_main(int argc, char **argv)
 {
+	struct args args = { argc, argv };
 	setlocale(LC_ALL, "");
+	/* we modify argv anyway, so no point using scm_boot_guile */
+	scm_with_guile(real_main, &args);
+	return 0;
+}
+
+void *real_main(void *data)
+{
+	struct args *args = (struct args *) data;
+	int argc = args->argc;
+	char **argv = args->argv;
 
 	/* command line option grokking */
 
@@ -63,7 +82,7 @@ int mcmap_main(int argc, char **argv)
 	{
 		char *usage = g_option_context_get_help(gopt, true, 0);
 		fputs(usage, stderr);
-		return 1;
+		exit(1);
 	}
 
 	if (opt.localport < 1 || opt.localport > 65535)
@@ -232,7 +251,7 @@ int mcmap_main(int argc, char **argv)
 
 	start_ui(!opt.nomap, opt.scale, !opt.wndsize, wnd_w, wnd_h);
 
-	return 0;
+	return NULL;
 }
 
 void load_colors(char **lines)
