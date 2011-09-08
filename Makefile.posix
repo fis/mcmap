@@ -7,13 +7,16 @@ include Makefile.common
 
 $(OBJDIR)/mcmapper$(EXE): LDFLAGS += -lpng
 
+PKGCFLAGS := $(shell pkg-config --cflags $(libs))
+PKGLDFLAGS := $(shell pkg-config --libs $(libs))
+
 CFLAGS += -DPLATFORM_POSIX
-CFLAGS += $(shell pkg-config --cflags $(libs))
-OPTCFLAGS += $(shell pkg-config --cflags $(libs))
+CFLAGS += $(PKGCFLAGS)
+OPTCFLAGS += $(PKGCFLAGS)
 
 # Apple's gcc is braindead by default.
 ifeq ($(shell uname),Darwin)
         CFLAGS += -fnested-functions
 endif
 
-LDFLAGS = $(shell pkg-config --libs $(libs)) -lz -lreadline -lSDL_ttf
+LDFLAGS := $(PKGLDFLAGS) -lz -lreadline -lSDL_ttf
