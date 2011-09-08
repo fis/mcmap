@@ -20,16 +20,25 @@ CFLAGS += -Wall -Werror -std=gnu99
 
 .PHONY: all clean
 
+define do
+	@echo $1; \
+	$2 || { \
+		status=$$?; \
+                echo >&2 '[failed command:$1]'; \
+                exit $$status; \
+	}
+endef
+
 all: $(OBJDIR)/mcmap$(EXE)
 
 $(OBJDIR)/mcmap$(EXE): $(objs) $(OBJDIR)/main.o
-	$(CC) -o $@ $^ $(LDFLAGS)
+	$(call do, LINK $@, $(CC) -o $@ $^ $(LDFLAGS))
 
 $(OBJDIR):
 	mkdir $@
 
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(call do, CC $<, $(CC) $(CFLAGS) -c -o $@ $<)
 
 protocol-data.c: protocol.txt | protocol.pl
 	perl protocol.pl
