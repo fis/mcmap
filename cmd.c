@@ -70,15 +70,6 @@ void cmd_eval(int cmdc, char **cmdv)
 	scm_spawn_thread(eval_thread, code, eval_handler, code);
 }
 
-char *string_for_object(SCM obj)
-{
-	SCM output_port = scm_open_output_string();
-	scm_write(obj, output_port);
-	SCM output_string = scm_get_output_string(output_port);
-	scm_close_output_port(output_port);
-	return scm_to_locale_string(output_string);
-}
-
 SCM eval_thread(void *data)
 {
 	char *code = data;
@@ -88,7 +79,7 @@ SCM eval_thread(void *data)
 		tell("//eval: OK.");
 		return SCM_UNSPECIFIED;
 	}
-	tell("//eval: %s", string_for_object(result));
+	tell("//eval: %s", scm_to_locale_string(scm_object_to_string(result), SCM_UNDEFINED));
 	g_free(code);
 	return SCM_UNSPECIFIED;
 }
@@ -129,7 +120,8 @@ SCM eval_handler_inner(void *data)
 	}
 	else
 	{
-		tell("//eval: caught: %s", string_for_object(scm_cons(key, args)));
+		tell("//eval: caught: %s",
+			scm_to_locale_string(scm_object_to_string(scm_cons(key, args)), SCM_UNDEFINED));
 	}
 
 	return SCM_UNSPECIFIED;
