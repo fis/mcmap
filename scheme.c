@@ -32,7 +32,7 @@ static SCM smob_packet_equalp(SCM packet_smob_a, SCM packet_smob_b)
 SCM make_packet_smob(packet_t *p)
 {
 	SCM smob;
-	SCM_NEWSMOB(smob, packet_tag, p);
+	SCM_NEWSMOB(smob, packet_tag, packet_dup(p));
 	return smob;
 }
 
