@@ -258,7 +258,7 @@ void load_colors(char **lines)
 		rgba_t color = RGBA(color_r, color_g, color_b, color_a);
 
 		bool ok = false;
-		for (int block = 0; block < sizeof(block_info)/sizeof(struct block_info); block++)
+		for (int block = 0; block < NELEMS(block_info); block++)
 		{
 			if (block_info[block].name && strcmp(block_info[block].name, block_name) == 0)
 			{
