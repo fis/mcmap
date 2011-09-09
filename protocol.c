@@ -243,19 +243,124 @@ packet_t *packet_dup(packet_t *packet)
 	return newp;
 }
 
-packet_t *packet_new(unsigned flags, enum packet_id type, ...)
+packet_constructor_t packet_create(unsigned flags, enum packet_id type)
 {
-	GByteArray *data = g_byte_array_new();
-	GArray *offsets = g_array_new(false, false, sizeof(unsigned));
+	packet_constructor_t pc;
+	pc.type = type;
+	pc.flags = flags;
+	pc.data = g_byte_array_new();
+	pc.offsets = g_array_new(false, false, sizeof(unsigned));
+	pc.offset = 1;
 
 	/* add the type byte */
 
 	{
 		uint8_t typebyte = type;
-		g_byte_array_append(data, &typebyte, 1);
+		g_byte_array_append(pc.data, &typebyte, 1);
 	}
 
-	unsigned offset = 1;
+	return pc;
+}
+
+static void packet_add_field(packet_constructor_t *pc)
+{
+	g_array_append_val(pc->offsets, pc->offset);
+}
+
+void packet_add_jbyte(packet_constructor_t *pc, jbyte v)
+{
+	packet_add_field(pc);
+	g_byte_array_append(pc->data, (uint8_t *) &v, 1);
+	pc->offset++;
+}
+
+void packet_add_jshort(packet_constructor_t *pc, jshort v)
+{
+	packet_add_field(pc);
+	g_byte_array_set_size(pc->data, pc->offset + 2);
+	jshort_write(pc->data->data + pc->offset, v);
+	pc->offset += 2;
+}
+
+void packet_add_jint(packet_constructor_t *pc, jint v)
+{
+	packet_add_field(pc);
+	g_byte_array_set_size(pc->data, pc->offset + 4);
+	jint_write(pc->data->data + pc->offset, v);
+	pc->offset += 4;
+}
+
+void packet_add_jlong(packet_constructor_t *pc, jlong v)
+{
+	packet_add_field(pc);
+	g_byte_array_set_size(pc->data, pc->offset + 8);
+	jlong_write(pc->data->data + pc->offset, v);
+	pc->offset += 8;
+}
+
+void packet_add_jfloat(packet_constructor_t *pc, jfloat v)
+{
+	packet_add_field(pc);
+	g_byte_array_set_size(pc->data, pc->offset + 4);
+	jfloat_write(pc->data->data + pc->offset, v);
+	pc->offset += 4;
+}
+
+void packet_add_jdouble(packet_constructor_t *pc, jdouble v)
+{
+	packet_add_field(pc);
+	g_byte_array_set_size(pc->data, pc->offset + 8);
+	jdouble_write(pc->data->data + pc->offset, v);
+	pc->offset += 8;
+}
+
+void packet_add_string(packet_constructor_t *pc, unsigned char *v)
+{
+	packet_add_field(pc);
+	GError *error = NULL;
+	gsize conv_len;
+	char *conv = g_convert((char *) v, -1, "UTF16BE", "UTF8", NULL, &conv_len, &error);
+	if (!conv)
+		dief("g_convert UTF8->UTF16BE failed (error: %s, string: '%s')", error->message, (char *) v);
+	unsigned char lenb[2];
+	jshort_write(lenb, conv_len/2);
+	g_byte_array_append(pc->data, lenb, 2);
+	g_byte_array_append(pc->data, (unsigned char*)conv, conv_len);
+	pc->offset += 2 + conv_len;
+	g_free(conv);
+}
+
+void packet_add_string_utf8(packet_constructor_t *pc, unsigned char *v)
+{
+	packet_add_field(pc);
+	int len = strlen((char *) v);
+	unsigned char lenb[2];
+	jshort_write(lenb, len);
+	g_byte_array_append(pc->data, lenb, 2);
+	g_byte_array_append(pc->data, v, len);
+	pc->offset += 2 + len;
+}
+
+packet_t *packet_construct(packet_constructor_t *pc)
+{
+	g_array_append_val(pc->offsets, pc->offset);
+
+	/* construct the actual packet */
+
+	packet_t *p = g_malloc(sizeof *p);
+
+	p->flags = pc->flags;
+	p->id = pc->type;
+	p->size = pc->offset;
+	p->bytes = g_byte_array_free(pc->data, false);
+	p->field_offset = (unsigned *)g_array_free(pc->offsets, false);
+
+	return p;
+}
+
+packet_t *packet_new(unsigned flags, enum packet_id type, ...)
+{
+	packet_constructor_t pc = packet_create(flags, type);
 
 	/* build the fields */
 
@@ -265,86 +370,41 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 	unsigned nfields = packet_format[type].nfields;
 	for (unsigned field = 0; field < nfields; field++)
 	{
-		int t;
-		long long tl;
-		double td;
-		unsigned char *tp;
-
-		g_array_append_val(offsets, offset);
-
 		switch (packet_format[type].ftype[field])
 		{
 		case FIELD_BYTE:
-			t = va_arg(ap, int);
-			{
-				jbyte v = t;
-				g_byte_array_append(data, (unsigned char *)&v, 1);
-				offset++;
-			}
+			packet_add_jbyte(&pc, va_arg(ap, int));
 			break;
 
 		case FIELD_SHORT:
-			t = va_arg(ap, int);
-			g_byte_array_set_size(data, offset + 2);
-			jshort_write(data->data + offset, t);
-			offset += 2;
+			packet_add_jshort(&pc, va_arg(ap, int));
 			break;
 
 		case FIELD_INT:
-			t = va_arg(ap, int);
-			g_byte_array_set_size(data, offset + 4);
-			jint_write(data->data + offset, t);
-			offset += 4;
+			/* FIXME: jint could be bigger than int */
+			packet_add_jint(&pc, va_arg(ap, int));
 			break;
 
-		case FIELD_LONG:
-			tl = va_arg(ap, long long);
-			g_byte_array_set_size(data, offset + 8);
-			jlong_write(data->data + offset, tl);
-			offset += 8;
+		case FIELD_LONG:		
+			/* FIXME: ditto here, I think */
+			packet_add_jlong(&pc, va_arg(ap, long long));
 			break;
 
 		case FIELD_FLOAT:
-			td = va_arg(ap, double);
-			g_byte_array_set_size(data, offset + 4);
-			jfloat_write(data->data + offset, td);
-			offset += 4;
+			/* FIXME: maybe here and in the double case, too? */
+			packet_add_jfloat(&pc, va_arg(ap, double));
 			break;
 
 		case FIELD_DOUBLE:
-			td = va_arg(ap, double);
-			g_byte_array_set_size(data, offset + 8);
-			jdouble_write(data->data + offset, td);
-			offset += 8;
+			packet_add_jdouble(&pc, va_arg(ap, double));
 			break;
 
 		case FIELD_STRING:
-			tp = va_arg(ap, unsigned char *);
-			{
-				GError *error = NULL;
-				gsize conv_len;
-				char *conv = g_convert((char *) tp, -1, "UTF16BE", "UTF8", NULL, &conv_len, &error);
-				if (!conv)
-					dief("g_convert UTF8->UTF16BE failed (error: %s, string: '%s')", error->message, (char *) tp);
-				unsigned char lenb[2];
-				jshort_write(lenb, conv_len/2);
-				g_byte_array_append(data, lenb, 2);
-				g_byte_array_append(data, (unsigned char*)conv, conv_len);
-				offset += 2 + conv_len;
-				g_free(conv);
-			}
+			packet_add_string(&pc, va_arg(ap, unsigned char *));
 			break;
 
 		case FIELD_STRING_UTF8:
-			tp = va_arg(ap, unsigned char *);
-			{
-				int len = strlen((char *) tp);
-				unsigned char lenb[2];
-				jshort_write(lenb, len);
-				g_byte_array_append(data, lenb, 2);
-				g_byte_array_append(data, tp, len);
-				offset += 2 + len;
-			}
+			packet_add_string_utf8(&pc, va_arg(ap, unsigned char *));
 			break;
 
 		default:
@@ -353,21 +413,9 @@ packet_t *packet_new(unsigned flags, enum packet_id type, ...)
 		}
 	}
 
-	g_array_append_val(offsets, offset);
-
 	va_end(ap);
 
-	/* construct the actual packet */
-
-	packet_t *p = g_malloc(sizeof *p);
-
-	p->flags = flags;
-	p->id = type;
-	p->size = offset;
-	p->bytes = g_byte_array_free(data, false);
-	p->field_offset = (unsigned *)g_array_free(offsets, false);
-
-	return p;
+	return packet_construct(&pc);
 }
 
 void packet_free(gpointer packet)

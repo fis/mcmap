@@ -65,6 +65,28 @@ int packet_write(socket_t sock, packet_t *packet);
 
 packet_t *packet_dup(packet_t *packet);
 
+struct packet_constructor
+{
+	enum packet_id type;
+	unsigned flags;
+	GByteArray *data;
+	GArray *offsets;
+	unsigned offset;
+};
+
+typedef struct packet_constructor packet_constructor_t;
+
+packet_constructor_t packet_create(unsigned flags, enum packet_id type);
+void packet_add_jbyte(packet_constructor_t *pc, jbyte v);
+void packet_add_jshort(packet_constructor_t *pc, jshort v);
+void packet_add_jint(packet_constructor_t *pc, jint v);
+void packet_add_jlong(packet_constructor_t *pc, jlong v);
+void packet_add_jfloat(packet_constructor_t *pc, jfloat v);
+void packet_add_jdouble(packet_constructor_t *pc, jdouble v);
+void packet_add_string(packet_constructor_t *pc, unsigned char *v);
+void packet_add_string_utf8(packet_constructor_t *pc, unsigned char *v);
+packet_t *packet_construct(packet_constructor_t *pc);
+
 packet_t *packet_new(unsigned flags, enum packet_id type, ...);
 
 void packet_free(gpointer packet);
