@@ -19,6 +19,7 @@
 #include "map.h"
 #include "nbt.h"
 #include "world.h"
+#include "proxy.h"
 
 static GHashTable *region_table = 0;
 
@@ -470,7 +471,10 @@ SCM world_thread(void *data)
 
 	while (1)
 	{
-		packet_t *packet = g_async_queue_pop(q);
+		struct directed_packet *dpacket = g_async_queue_pop(q);
+		enum packet_direction to = dpacket->to;
+		packet_t *packet = dpacket->p;
+		g_free(dpacket);
 
 		unsigned char *p;
 		jint t;
@@ -500,7 +504,7 @@ SCM world_thread(void *data)
 			break;
 
 		case PACKET_LOGIN:
-			if (packet->flags & PACKET_TO_CLIENT)
+			if (to == PACKET_TO_CLIENT)
 			{
 				entity_player = packet_int(packet, 0);
 				world_seed = packet_long(packet, 3);
@@ -524,7 +528,7 @@ SCM world_thread(void *data)
 				                      packet_double(packet, 1),
 				                      packet_double(packet, 3));
 
-			if ((packet->flags & PACKET_TO_CLIENT) && !spawn_known)
+			if ((to == PACKET_TO_CLIENT) && !spawn_known)
 			{
 				spawn_known = 1;
 				spawn_x = packet_double(packet, 0);
