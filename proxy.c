@@ -16,6 +16,7 @@
 #include "map.h"
 #include "world.h"
 #include "ui.h"
+#include "proxy.h"
 
 /* proxying thread function to pass packets */
 
@@ -53,8 +54,8 @@ gpointer proxy_thread(gpointer data)
 	socket_t sock_cli = cfg->sock_cli, sock_srv = cfg->sock_srv;
 	GAsyncQueue *worldq = cfg->worldq;
 
-	packet_state_t state_cli = PACKET_STATE_INIT(PACKET_TO_SERVER);
-	packet_state_t state_srv = PACKET_STATE_INIT(PACKET_TO_CLIENT);
+	packet_state_t state_cli = PACKET_STATE_INIT();
+	packet_state_t state_srv = PACKET_STATE_INIT();
 
 	while (1)
 	{
@@ -62,9 +63,10 @@ gpointer proxy_thread(gpointer data)
 
 		bool packet_must_free = true;
 
-		packet_t *p = g_async_queue_try_pop(iq);
+		struct directed_packet *dpacket = g_async_queue_try_pop(iq);
+		struct directed_packet net_dpacket;
 
-		if (!p)
+		if (!dpacket)
 		{
 			fd_set rfds;
 			FD_ZERO(&rfds);
@@ -79,23 +81,31 @@ gpointer proxy_thread(gpointer data)
 				wtff("select returned 0! %s", strerror(errno));
 
 			if (FD_ISSET(sock_cli, &rfds))
-				p = packet_read(sock_cli, &state_cli);
+			{
+				net_dpacket.to = PACKET_TO_SERVER;
+				net_dpacket.p = packet_read(sock_cli, &state_cli);
+			}
 			else if (FD_ISSET(sock_srv, &rfds))
-				p = packet_read(sock_srv, &state_srv);
+			{
+				net_dpacket.to = PACKET_TO_CLIENT;
+				net_dpacket.p = packet_read(sock_srv, &state_srv);
+			}
 			else
 				wtf("Neither sock_cli nor sock_srv set in select's result");
 
+			dpacket = &net_dpacket;
 			packet_must_free = false;
 		}
 
-		if (!p)
+		if (!dpacket)
 		{
 			SDL_Event e = { .type = SDL_QUIT };
 			SDL_PushEvent(&e);
 			return 0;
 		}
 
-		bool from_client = p->flags & PACKET_TO_SERVER;
+		packet_t *p = dpacket->p;
+		bool from_client = dpacket->to == PACKET_TO_SERVER;
 		socket_t sto = from_client ? sock_srv : sock_cli;
 		char *desc = from_client ? "client -> server" : "server -> client";
 
@@ -122,7 +132,11 @@ gpointer proxy_thread(gpointer data)
 		    && (p->bytes[1] || p->bytes[2] > 2)
 		    && memcmp(&p->bytes[3], "\x00/\x00/", 4) == 0)
 		{
-			g_async_queue_push(worldq, packet_dup(p));
+			/* TODO: Eliminate duplication with this and the later injection */
+			struct directed_packet *dpacket_copy = g_new(struct directed_packet, 1);
+			dpacket_copy->to = dpacket->to;
+			dpacket_copy->p = packet_dup(p);
+			g_async_queue_push(worldq, dpacket_copy);
 		}
 		else
 		{
@@ -132,7 +146,7 @@ gpointer proxy_thread(gpointer data)
 
 		/* communicate interesting chunks to world thread */
 
-		if (!world_running || (p->flags & PACKET_FLAG_IGNORE))
+		if (!world_running)
 			goto next;
 
 		switch (p->id)
@@ -157,7 +171,12 @@ gpointer proxy_thread(gpointer data)
 		case PACKET_ENTITY_ATTACH:
 		case PACKET_TIME:
 		case PACKET_UPDATE_HEALTH:
-			g_async_queue_push(worldq, packet_dup(p));
+			{
+				struct directed_packet *dpacket_copy = g_new(struct directed_packet, 1);
+				dpacket_copy->to = dpacket->to;
+				dpacket_copy->p = packet_dup(p);
+				g_async_queue_push(worldq, dpacket_copy);
+			}
 			break;
 
 		case PACKET_CHAT:
@@ -173,21 +192,28 @@ gpointer proxy_thread(gpointer data)
 
 next:
 		if (packet_must_free)
+		{
 			packet_free(p);
+			g_free(dpacket);
+		}
 	}
 	return NULL;
 }
 
 void inject_to_client(packet_t *p)
 {
-	p->flags |= PACKET_TO_CLIENT;
-	g_async_queue_push(iq, p);
+	struct directed_packet *dpacket = g_new(struct directed_packet, 1);
+	dpacket->to = PACKET_TO_CLIENT;
+	dpacket->p = p;
+	g_async_queue_push(iq, dpacket);
 }
 
 void inject_to_server(packet_t *p)
 {
-	p->flags |= PACKET_TO_SERVER;
-	g_async_queue_push(iq, p);
+	struct directed_packet *dpacket = g_new(struct directed_packet, 1);
+	dpacket->to = PACKET_TO_SERVER;
+	dpacket->p = p;
+	g_async_queue_push(iq, dpacket);
 }
 
 void tell(char *fmt, ...)
@@ -200,7 +226,7 @@ void tell(char *fmt, ...)
 	static const char prefix[4] = { 0xc2, 0xa7, 'b', 0 };
 	char *cmsg = g_strjoin("", prefix, msg, NULL);
 
-	inject_to_client(packet_new(0, PACKET_CHAT, cmsg));
+	inject_to_client(packet_new(PACKET_CHAT, cmsg));
 
 	g_free(cmsg);
 	g_free(msg);
@@ -213,6 +239,6 @@ void say(char *fmt, ...)
 	char *msg = g_strdup_vprintf(fmt, ap);
 	va_end(ap);
 
-	inject_to_server(packet_new(0, PACKET_CHAT, msg));
+	inject_to_server(packet_new(PACKET_CHAT, msg));
 	g_free(msg);
 }

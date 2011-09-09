@@ -8,11 +8,6 @@
 
 #include "protocol-data.h"
 
-#define PACKET_TO_CLIENT 0x01
-#define PACKET_TO_SERVER 0x02
-
-#define PACKET_FLAG_IGNORE 0x04
-
 enum field_type
 {
 	FIELD_BYTE,
@@ -35,7 +30,6 @@ enum field_type
 
 struct packet
 {
-	unsigned flags;
 	unsigned id;
 	unsigned size;
 	unsigned char *bytes;
@@ -57,7 +51,7 @@ struct packet_state
 
 typedef struct packet_state packet_state_t;
 
-#define PACKET_STATE_INIT(f) { .buf_start = 0, .buf_pos = 0, .buf_end = 0, .p = { .flags = (f) } }
+#define PACKET_STATE_INIT() { .buf_start = 0, .buf_pos = 0, .buf_end = 0, .p = { } }
 
 packet_t *packet_read(socket_t sock, packet_state_t *state);
 
@@ -68,7 +62,6 @@ packet_t *packet_dup(packet_t *packet);
 struct packet_constructor
 {
 	enum packet_id type;
-	unsigned flags;
 	GByteArray *data;
 	GArray *offsets;
 	unsigned offset;
@@ -76,7 +69,7 @@ struct packet_constructor
 
 typedef struct packet_constructor packet_constructor_t;
 
-packet_constructor_t packet_create(unsigned flags, enum packet_id type);
+packet_constructor_t packet_create(enum packet_id type);
 void packet_add_jbyte(packet_constructor_t *pc, jbyte v);
 void packet_add_jshort(packet_constructor_t *pc, jshort v);
 void packet_add_jint(packet_constructor_t *pc, jint v);
@@ -87,7 +80,7 @@ void packet_add_string(packet_constructor_t *pc, unsigned char *v);
 void packet_add_string_utf8(packet_constructor_t *pc, unsigned char *v);
 packet_t *packet_construct(packet_constructor_t *pc);
 
-packet_t *packet_new(unsigned flags, enum packet_id type, ...);
+packet_t *packet_new(enum packet_id type, ...);
 
 void packet_free(gpointer packet);
 

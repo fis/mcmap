@@ -101,7 +101,7 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 			          buf[i+0],buf[i+1],buf[i+2],buf[i+3],buf[i+4],buf[i+5],buf[i+6],buf[i+7],
 			          buf[i+8],buf[i+9],buf[i+10],buf[i+11],buf[i+12],buf[i+13],buf[i+14],buf[i+15]);
 #endif
-		dief("Unknown packet id: 0x%02x (flags %02x)", t, state->p.flags);
+		dief("Unknown packet id: 0x%02x", t);
 	}
 
 	state->p.field_offset = state->offset;
@@ -234,7 +234,6 @@ packet_t *packet_dup(packet_t *packet)
 {
 	packet_t *newp = g_malloc(sizeof *newp);
 
-	newp->flags = packet->flags;
 	newp->id = packet->id;
 	newp->size = packet->size;
 	newp->bytes = g_memdup(packet->bytes, packet->size);
@@ -243,11 +242,10 @@ packet_t *packet_dup(packet_t *packet)
 	return newp;
 }
 
-packet_constructor_t packet_create(unsigned flags, enum packet_id type)
+packet_constructor_t packet_create(enum packet_id type)
 {
 	packet_constructor_t pc;
 	pc.type = type;
-	pc.flags = flags;
 	pc.data = g_byte_array_new();
 	pc.offsets = g_array_new(false, false, sizeof(unsigned));
 	pc.offset = 1;
@@ -349,7 +347,6 @@ packet_t *packet_construct(packet_constructor_t *pc)
 
 	packet_t *p = g_malloc(sizeof *p);
 
-	p->flags = pc->flags;
 	p->id = pc->type;
 	p->size = pc->offset;
 	p->bytes = g_byte_array_free(pc->data, false);
@@ -358,9 +355,9 @@ packet_t *packet_construct(packet_constructor_t *pc)
 	return p;
 }
 
-packet_t *packet_new(unsigned flags, enum packet_id type, ...)
+packet_t *packet_new(enum packet_id type, ...)
 {
-	packet_constructor_t pc = packet_create(flags, type);
+	packet_constructor_t pc = packet_create(type);
 
 	/* build the fields */
 
