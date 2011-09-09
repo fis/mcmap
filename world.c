@@ -479,7 +479,7 @@ gpointer world_thread(gpointer data)
 		jint t;
 		jlong tl;
 
-		switch (packet->id)
+		switch (packet->type)
 		{
 		case PACKET_CHUNK:
 			p = &packet->bytes[packet->field_offset[6]];

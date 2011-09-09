@@ -30,7 +30,7 @@ enum field_type
 
 struct packet
 {
-	unsigned id;
+	unsigned type;
 	unsigned size;
 	unsigned char *bytes;
 	unsigned *field_offset;
