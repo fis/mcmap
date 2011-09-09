@@ -115,11 +115,11 @@ SCM proxy_thread(void *data)
 		char *desc = from_client ? "client -> server" : "server -> client";
 
 #if DEBUG_PROTOCOL >= 2 /* use for packet dumping for protocol analysis */
-		if (p->id == PACKET_UPDATE_HEALTH /*|| p->id == PACKET_PLAYER_MOVE || p->id == PACKET_PLAYER_MOVE_ROTATE*/)
+		if (p->type == PACKET_UPDATE_HEALTH /*|| p->type == PACKET_PLAYER_MOVE || p->type == PACKET_PLAYER_MOVE_ROTATE*/)
 		{
 			int i, nf = packet_nfields(p);
 
-			fprintf(stderr, "packet: %u [%s]\n", p->id, desc);
+			fprintf(stderr, "packet: %u [%s]\n", p->type, desc);
 			for (i = 0; i < nf; i++)
 			{
 				fprintf(stderr, "  field %d:", i);
@@ -133,7 +133,7 @@ SCM proxy_thread(void *data)
 		/* either write it out or handle if it's a command to us */
 
 		if (from_client
-		    && p->id == PACKET_CHAT
+		    && p->type == PACKET_CHAT
 		    && (p->bytes[1] || p->bytes[2] > 2)
 		    && memcmp(&p->bytes[3], "\x00/\x00/", 4) == 0)
 		{
@@ -154,7 +154,7 @@ SCM proxy_thread(void *data)
 		if (!world_running)
 			goto next;
 
-		switch (p->id)
+		switch (p->type)
 		{
 		case PACKET_CHUNK:
 		case PACKET_MULTI_SET_BLOCK:

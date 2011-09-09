@@ -87,7 +87,7 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 	if (t < 0)
 		return 0;
 
-	state->p.id = t;
+	state->p.type = t;
 
 	struct packet_format_desc *fmt;
 	if (t >= MAX_PACKET_FORMAT || !(fmt = &packet_format[t])->known)
@@ -234,10 +234,10 @@ packet_t *packet_dup(packet_t *packet)
 {
 	packet_t *newp = g_malloc(sizeof *newp);
 
-	newp->id = packet->id;
+	newp->type = packet->type;
 	newp->size = packet->size;
 	newp->bytes = g_memdup(packet->bytes, packet->size);
-	newp->field_offset = g_memdup(packet->field_offset, packet_format[packet->id].nfields * sizeof *newp->field_offset);
+	newp->field_offset = g_memdup(packet->field_offset, packet_format[packet->type].nfields * sizeof *newp->field_offset);
 
 	return newp;
 }
@@ -347,7 +347,7 @@ packet_t *packet_construct(packet_constructor_t *pc)
 
 	packet_t *p = g_malloc(sizeof *p);
 
-	p->id = pc->type;
+	p->type = pc->type;
 	p->size = pc->offset;
 	p->bytes = g_byte_array_free(pc->data, false);
 	p->field_offset = (unsigned *)g_array_free(pc->offsets, false);
@@ -425,14 +425,14 @@ void packet_free(gpointer packet)
 
 int packet_nfields(packet_t *packet)
 {
-	return packet_format[packet->id].nfields;
+	return packet_format[packet->type].nfields;
 }
 
 jint packet_int(packet_t *packet, unsigned field)
 {
 	unsigned char *p = &packet->bytes[packet->field_offset[field]];
 
-	switch (packet_format[packet->id].ftype[field])
+	switch (packet_format[packet->type].ftype[field])
 	{
 	case FIELD_BYTE:
 		return *(jbyte *)p;
@@ -445,13 +445,13 @@ jint packet_int(packet_t *packet, unsigned field)
 
 	default:
 		dief("can't interpret field type %d as int (packet 0x%02x, field %u)",
-		     packet_format[packet->id].ftype[field], packet->id, field);
+		     packet_format[packet->type].ftype[field], packet->type, field);
 	}
 }
 
 jlong packet_long(packet_t *packet, unsigned field)
 {
-	if (packet_format[packet->id].ftype[field] == FIELD_LONG)
+	if (packet_format[packet->type].ftype[field] == FIELD_LONG)
 	{
 		unsigned char *p = &packet->bytes[packet->field_offset[field]];
 		return jlong_read(p);
@@ -464,7 +464,7 @@ double packet_double(packet_t *packet, unsigned field)
 {
 	unsigned char *p = &packet->bytes[packet->field_offset[field]];
 
-	switch (packet_format[packet->id].ftype[field])
+	switch (packet_format[packet->type].ftype[field])
 	{
 	case FIELD_FLOAT:
 		return jfloat_read(p);
@@ -484,7 +484,7 @@ unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
 	unsigned char *str;
 	int l;
 
-	switch (packet_format[packet->id].ftype[field])
+	switch (packet_format[packet->type].ftype[field])
 	{
 	case FIELD_STRING:
 		l = jshort_read(p);
@@ -505,7 +505,7 @@ unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
 
 	default:
 		dief("can't interpret field type %d as string (packet 0x%02x, field %u)",
-		     packet_format[packet->id].ftype[field], packet->id, field);
+		     packet_format[packet->type].ftype[field], packet->type, field);
 	}
 
 	if (len)

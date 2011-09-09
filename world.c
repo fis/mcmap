@@ -480,7 +480,7 @@ SCM world_thread(void *data)
 		jint t;
 		jlong tl;
 
-		switch (packet->id)
+		switch (packet->type)
 		{
 		case PACKET_CHUNK:
 			p = &packet->bytes[packet->field_offset[6]];
