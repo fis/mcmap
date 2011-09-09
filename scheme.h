@@ -1,8 +1,7 @@
 #ifndef MCMAP_SCHEME_H
 #define MCMAP_SCHEME_H
 
-scm_t_bits packet_tag;
-
+SCM make_packet_smob(packet_t *p);
 void init_scheme(void);
 
 #endif /* MCMAP_SCHEME_H */

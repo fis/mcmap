@@ -4,6 +4,8 @@
 #include "protocol.h"
 #include "scheme.h"
 
+static scm_t_bits packet_tag;
+
 static size_t smob_packet_free(SCM packet_smob)
 {
 	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
@@ -25,6 +27,13 @@ static SCM smob_packet_equalp(SCM packet_smob_a, SCM packet_smob_b)
 {
 	/* TODO: Better equality function */
 	return scm_eq_p(packet_smob_a, packet_smob_b);
+}
+
+SCM make_packet_smob(packet_t *p)
+{
+	SCM smob;
+	SCM_NEWSMOB(smob, packet_tag, p);
+	return smob;
 }
 
 void init_scheme()
