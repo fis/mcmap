@@ -19,6 +19,7 @@
 #include "world.h"
 #include "proxy.h"
 #include "ui.h"
+#include "scheme.h"
 
 /* default command-line options */
 
@@ -56,6 +57,8 @@ void *real_main(void *data)
 	struct args *args = (struct args *) data;
 	int argc = args->argc;
 	char **argv = args->argv;
+
+	init_scheme();
 
 	/* command line option grokking */
 
