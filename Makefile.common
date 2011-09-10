@@ -54,6 +54,8 @@ $(OBJDIR)/%.o: %.c | $(OBJDIR)
 $(OBJDIR)/%.x: %.c | $(OBJDIR)
 	$(call do, SNARF $<, guile-snarf -o $@ $(CFLAGS) $<)
 
+$(OBJDIR)/scheme.d: $(OBJDIR)/scheme.x
+
 protocol.x: protocol.txt | protocol.pl
 	perl protocol.pl
 
