@@ -60,6 +60,13 @@ void *real_main(void *data)
 
 	init_scheme();
 
+	char *init_filename = g_strconcat(g_get_home_dir(), "/.mcmap/init.scm", NULL);
+	if (g_file_test(init_filename, G_FILE_TEST_EXISTS))
+	{
+		scm_c_primitive_load(g_strconcat(g_get_home_dir(), "/.mcmap/init.scm", NULL));
+	}
+	g_free(init_filename);
+
 	/* command line option grokking */
 
 	static GOptionEntry gopt_entries[] = {
