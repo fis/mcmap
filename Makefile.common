@@ -28,7 +28,7 @@ define do
 	@echo $1; \
 	$2 || { \
 		status=$$?; \
-                echo >&2 '[failed command:$1]'; \
+                echo >&2 '[failed command:$2]'; \
                 exit $$status; \
 	}
 endef
