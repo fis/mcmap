@@ -236,7 +236,7 @@ packet_t *packet_dup(packet_t *packet)
 	newp->type = packet->type;
 	newp->size = packet->size;
 	newp->bytes = g_memdup(packet->bytes, packet->size);
-	newp->field_offset = g_memdup(packet->field_offset, packet_format[packet->type].nfields * sizeof *newp->field_offset);
+	newp->field_offset = g_memdup(packet->field_offset, (packet_format[packet->type].nfields + 1) * sizeof *newp->field_offset);
 
 	return newp;
 }
