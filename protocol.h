@@ -90,6 +90,9 @@ void packet_add_jfloat(packet_constructor_t *pc, jfloat v);
 void packet_add_jdouble(packet_constructor_t *pc, jdouble v);
 void packet_add_string(packet_constructor_t *pc, unsigned char *v);
 void packet_add_string_utf8(packet_constructor_t *pc, unsigned char *v);
+/* Note that this does *not* free pc itself, as it is expected to be
+   a reference to a local stack variable. */
+void packet_constructor_free(packet_constructor_t *pc);
 packet_t *packet_construct(packet_constructor_t *pc);
 
 packet_t *packet_new(enum packet_id type, ...);

@@ -38,17 +38,76 @@ SCM make_packet_smob(packet_t *p)
 	SCM_RETURN_NEWSMOB(scm_tc16_packet_type, packet_dup(p));
 }
 
-SCM_DEFINE(scheme_make_packet, "make-packet", 1, 0, 0, (SCM type_symbol),
+SCM_DEFINE(scheme_make_packet, "make-packet", 1, 0, 1, (SCM type_symbol, SCM rest),
 	"Make a new packet.")
 #define FUNC_NAME "make-packet"
 {
 	SCM_VALIDATE_SYMBOL(1, type_symbol);
 
-	SCM type = scm_hash_ref(symbol_to_packet_type, type_symbol, SCM_BOOL_F);
-	if (scm_is_eq(type, SCM_BOOL_F))
-		scm_out_of_range(FUNC_NAME, type_symbol);
+	SCM type_scm = scm_hash_ref(symbol_to_packet_type, type_symbol, SCM_BOOL_F);
+	if (scm_is_eq(type_scm, SCM_BOOL_F))
+		SCM_OUT_OF_RANGE(1, type_symbol);
 
-	packet_constructor_t pc = packet_create(scm_to_uint(type));
+	unsigned type = scm_to_uint(type_scm);
+	packet_constructor_t pc = packet_create(type);
+	struct packet_format_desc fmt = packet_format[type];
+	unsigned field;
+	unsigned nargs = 1;
+
+	for (field = 0; field < fmt.nfields && !scm_is_eq(rest, SCM_EOL); field++, rest = scm_cdr(rest))
+	{
+		nargs++;
+		SCM v = scm_car(rest);
+
+		#define INTEGRAL(t) \
+			SCM_ASSERT_TYPE(scm_is_integer(v), v, field + 2, FUNC_NAME, "integer"); \
+			packet_add_##t(&pc, scm_to_int64(v))
+
+		#define FLOATING(t) \
+			SCM_VALIDATE_REAL(field + 2, v); \
+			packet_add_##t(&pc, scm_to_double(v))
+
+		#define STRING(t) \
+			SCM_VALIDATE_STRING(field + 2, v); \
+			packet_add_##t(&pc, (unsigned char *) scm_to_utf8_stringn(v, NULL))
+
+		switch (fmt.ftype[field])
+		{
+		case FIELD_BYTE: INTEGRAL(jbyte); break;
+		case FIELD_SHORT: INTEGRAL(jshort); break;
+		case FIELD_INT: INTEGRAL(jint); break;
+		case FIELD_LONG: INTEGRAL(jlong); break;
+
+		case FIELD_FLOAT: FLOATING(jfloat); break;
+		case FIELD_DOUBLE: FLOATING(jdouble); break;
+
+		case FIELD_STRING: STRING(string); break;
+		case FIELD_STRING_UTF8: STRING(string_utf8); break;
+
+		default:
+			packet_constructor_free(&pc);
+			scm_error(scm_out_of_range_key,
+				FUNC_NAME,
+				"Packets of type ~A cannot yet be constructed",
+				scm_list_1(type_symbol),
+				SCM_BOOL_F);
+		}
+
+		#undef INTEGRAL
+		#undef FLOATING
+		#undef STRING
+	}
+
+	if (field < fmt.nfields || !scm_is_eq(rest, SCM_EOL))
+	{
+		packet_constructor_free(&pc);
+		scm_error(scm_args_number_key,
+			FUNC_NAME,
+			"Wrong number of arguments to " FUNC_NAME " for packet type ~A; expected ~A but received ~A",
+			scm_list_3(type_symbol, scm_from_uint(fmt.nfields + 1), scm_sum(scm_from_uint(nargs), scm_length(rest))),
+			SCM_BOOL_F);
+	}
+
 	SCM_RETURN_NEWSMOB(scm_tc16_packet_type, packet_construct(&pc));
 }
 #undef FUNC_NAME

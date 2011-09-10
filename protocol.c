@@ -343,6 +343,12 @@ void packet_add_string_utf8(packet_constructor_t *pc, unsigned char *v)
 	pc->offset += 2 + len;
 }
 
+void packet_constructor_free(packet_constructor_t *pc)
+{
+	g_byte_array_free(pc->data, true);
+	g_array_free(pc->offsets, true);
+}
+
 packet_t *packet_construct(packet_constructor_t *pc)
 {
 	g_array_append_val(pc->offsets, pc->offset);
