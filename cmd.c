@@ -27,7 +27,7 @@ struct command
 
 GHashTable *commands;
 
-void cmd_init()
+void init_cmd()
 {
 	struct command *command;
 	commands = g_hash_table_new(g_str_hash, g_str_equal);
