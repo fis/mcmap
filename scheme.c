@@ -85,7 +85,7 @@ SCM_DEFINE(scheme_make_packet, "make-packet", 1, 0, 1, (SCM type_symbol, SCM res
 
 		#define STRING(t) \
 			SCM_VALIDATE_STRING(field + 2, v); \
-			packet_add_##t(&pc, (unsigned char *) scm_to_utf8_stringn(v, NULL))
+			packet_add_##t(&pc, (unsigned char *) scm_to_utf8_string(v))
 
 		switch (fmt.ftype[field])
 		{
