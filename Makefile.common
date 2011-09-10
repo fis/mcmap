@@ -47,10 +47,8 @@ $(OBJDIR)/%.o: %.c | $(OBJDIR)
 $(OBJDIR)/%.x: %.c | $(OBJDIR)
 	$(call do, SNARF $<, guile-snarf -o $@ $(CFLAGS) $<)
 
-protocol-data.c: protocol.txt | protocol.pl
+protocol.x: protocol.txt | protocol.pl
 	perl protocol.pl
-
-protocol-data.h: protocol-data.c
 
 -include $(deps)
 

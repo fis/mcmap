@@ -21,7 +21,18 @@ struct packet_format_desc
 	unsigned char known;
 };
 
-#include "protocol-data.c"
+#define PACKET(id, cname, nfields, ...) \
+	static enum field_type packet_format_##cname[nfields] = { __VA_ARGS__ };
+#include "protocol.x"
+#undef PACKET
+
+struct packet_format_desc packet_format[] = {
+#define PACKET(id, cname, nfields, ...) \
+	[PACKET_##cname] = { nfields, packet_format_##cname, 1 },
+#include "protocol.x"
+#undef PACKET
+};
+
 #define MAX_PACKET_FORMAT ((sizeof packet_format)/(sizeof *packet_format))
 
 /* packet reading/writing */
