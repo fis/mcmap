@@ -44,6 +44,9 @@ $(OBJDIR):
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	$(call do, CC $<, $(CC) $(CFLAGS) -c -o $@ $<)
 
+$(OBJDIR)/%.x: %.c | $(OBJDIR)
+	$(call do, SNARF $<, guile-snarf -o $@ $(CFLAGS) $<)
+
 protocol-data.c: protocol.txt | protocol.pl
 	perl protocol.pl
 
@@ -52,8 +55,7 @@ protocol-data.h: protocol-data.c
 -include $(deps)
 
 clean:
-	rm -f $(OBJDIR)/mcmap$(EXE) $(objs) $(extra_objs) $(deps)
-	-rmdir $(OBJDIR)
+	rm -rf $(OBJDIR)
 
 $(OBJDIR)/%.d: %.c $(OBJDIR)
 	@$(CC) -MM -MG -MF $@ -MT $(@:.d=.o) -MT $@ $(CFLAGS) $<

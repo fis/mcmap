@@ -4,16 +4,16 @@
 #include "protocol.h"
 #include "scheme.h"
 
-static scm_t_bits packet_tag;
+SCM_SMOB(scm_tc16_packet_type, "packet", sizeof(packet_t));
 
-static size_t smob_packet_free(SCM packet_smob)
+SCM_SMOB_FREE(scm_tc16_packet_type, smob_packet_free, packet_smob)
 {
 	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
 	packet_free(p);
 	return 0;
 }
 
-static int smob_packet_print(SCM packet_smob, SCM port, scm_print_state *pstate)
+SCM_SMOB_PRINT(scm_tc16_packet_type, smob_packet_print, packet_smob, port, pstate)
 {
 	/* TODO: Better printing function */
 	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
@@ -23,7 +23,7 @@ static int smob_packet_print(SCM packet_smob, SCM port, scm_print_state *pstate)
 	return 1;
 }
 
-static SCM smob_packet_equalp(SCM packet_smob_a, SCM packet_smob_b)
+SCM_SMOB_EQUALP(scm_tc16_packet_type, smob_packet_equalp, packet_smob_a, packet_smob_b)
 {
 	/* TODO: Better equality function */
 	return scm_eq_p(packet_smob_a, packet_smob_b);
@@ -31,23 +31,22 @@ static SCM smob_packet_equalp(SCM packet_smob_a, SCM packet_smob_b)
 
 SCM make_packet_smob(packet_t *p)
 {
-	SCM smob;
-	SCM_NEWSMOB(smob, packet_tag, packet_dup(p));
-	return smob;
+	SCM_RETURN_NEWSMOB(scm_tc16_packet_type, packet_dup(p));
 }
 
-static SCM scheme_packet_type(SCM packet_smob)
+SCM_DEFINE(scheme_packet_type, "packet-type", 1, 0, 0, (SCM packet_smob),
+	"Return the type of the packet.")
+#define FUNC_NAME "packet-type"
 {
-	scm_assert_smob_type(packet_tag, packet_smob);
+	SCM_VALIDATE_SMOB(1, packet_smob, packet_type);
 	scm_remember_upto_here_1(packet_smob);
 	return scm_take_locale_symbol("dunno");
 }
+#undef FUNC_NAME
 
 void init_scheme()
 {
-	packet_tag = scm_make_smob_type("packet", sizeof(packet_t));
-	scm_set_smob_free(packet_tag, smob_packet_free);
-	scm_set_smob_print(packet_tag, smob_packet_print);
-	scm_set_smob_equalp(packet_tag, smob_packet_equalp);
-	scm_c_define_gsubr("packet-type", 1, 0, 0, scheme_packet_type);
+	#ifndef SCM_MAGIC_SNARFER
+	#include "build/scheme.x"
+	#endif
 }
