@@ -1066,7 +1066,6 @@ void map_draw(SDL_Surface *screen)
 
 	coord_t hcc = COORD(hx, hz);
 	struct chunk *hc = world_chunk(hcc, false);
-	hc = world_chunk(hcc, false);
 	if (!hc) goto no_block_info;
 
 	jint hcx = CHUNK_XOFF(hx);
