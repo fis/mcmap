@@ -35,7 +35,7 @@ static SCM sym_server;
 
 SCM proxy_thread(void *data);
 
-void start_proxy(socket_t sock_cli, socket_t sock_srv)
+void init_proxy()
 {
 	sym_client = scm_from_locale_symbol("client");
 	sym_server = scm_from_locale_symbol("server");
@@ -48,7 +48,10 @@ void start_proxy(socket_t sock_cli, socket_t sock_srv)
 	SCM *elt = scm_vector_writable_elements(scheme_handlers, &handle, &len, &inc);
 	for (size_t i = 0; i < len; i++, elt += inc)
 		*elt = scm_make_hook(scm_from_int(2));
+}
 
+void start_proxy(socket_t sock_cli, socket_t sock_srv)
+{
 	iq = g_async_queue_new_full(packet_free);
 
 	GAsyncQueue *worldq = g_async_queue_new_full(packet_free);

@@ -58,6 +58,7 @@ void *real_main(void *data)
 	int argc = args->argc;
 	char **argv = args->argv;
 
+	init_proxy();
 	init_scheme();
 
 	char *init_filename = g_strconcat(g_get_home_dir(), "/.mcmap/init.scm", NULL);

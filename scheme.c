@@ -2,6 +2,7 @@
 #include <libguile.h>
 
 #include "protocol.h"
+#include "proxy.h"
 #include "scheme.h"
 
 /* This is a really ugly copy-and-modify from Guile to avoid -pedantic
@@ -183,6 +184,20 @@ SCM_DEFINE(scheme_packet_fields, "packet-fields", 1, 0, 0, (SCM packet_smob),
 	scm_array_handle_release(&handle);
 
 	return fields;
+}
+#undef FUNC_NAME
+
+SCM_DEFINE(scheme_packet_hook, "packet-hook", 1, 0, 0, (SCM type_symbol),
+	"Return the hook for the given packet type.")
+#define FUNC_NAME "packet-hook"
+{
+	SCM_VALIDATE_SYMBOL(1, type_symbol);
+
+	SCM type_scm = scm_hash_ref(symbol_to_packet_type, type_symbol, SCM_BOOL_F);
+	if (scm_is_eq(type_scm, SCM_BOOL_F))
+		SCM_OUT_OF_RANGE(1, type_symbol);
+
+	return scm_vector_ref(scheme_handlers, type_scm);
 }
 #undef FUNC_NAME
 

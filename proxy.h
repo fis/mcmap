@@ -15,6 +15,7 @@ struct directed_packet
 
 SCM scheme_handlers;
 
+void init_proxy(void);
 void start_proxy(socket_t sock_cli, socket_t sock_srv);
 
 /* packet injection */

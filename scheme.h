@@ -7,6 +7,7 @@ SCM make_packet_smob(packet_t *p);
 SCM scheme_make_packet(SCM type_symbol, SCM rest);
 SCM scheme_packet_type(SCM packet_smob);
 SCM scheme_packet_fields(SCM packet_smob);
+SCM scheme_packet_hook(SCM type_symbol);
 void init_scheme(void);
 
 #endif /* MCMAP_SCHEME_H */
