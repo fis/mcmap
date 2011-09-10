@@ -4,7 +4,7 @@
 #include "config.h"
 #include "types.h"
 
-void cmd_init(void);
+void init_cmd(void);
 
 void cmd_parse(struct buffer cmd);
 

@@ -38,7 +38,7 @@ int mcmap_main(int argc, char **argv)
 {
 	setlocale(LC_ALL, "");
 
-	cmd_init();
+	init_cmd();
 
 	/* command line option grokking */
 
