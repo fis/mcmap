@@ -163,7 +163,7 @@ void jfloat_write(unsigned char *p, jfloat v)
 	{
 		exponent = ilogbf(v);
 		if (exponent < -127) fraction = 1, exponent = -127;
-		fraction = (jint)scalbf(v, -exponent+23-(exponent==-127)) & 0x7fffff;
+		fraction = (jint)scalbf(v, -exponent + 23 - (exponent == -127)) & 0x7fffff;
 		exponent += 127;
 		if (exponent > 254) fraction = 0x7fffff, exponent = 254;
 	}
@@ -196,7 +196,7 @@ void jdouble_write(unsigned char *p, jdouble v)
 	{
 		exponent = ilogb(v);
 		if (exponent < -1023) fraction = 1, exponent = -1023;
-		fraction = (jlong)scalb(v, -exponent+52-(exponent==-1023)) & 0xfffffffffffff;
+		fraction = (jlong)scalb(v, -exponent + 52 - (exponent == -1023)) & 0xfffffffffffff;
 		exponent += 1023;
 		if (exponent > 2046) fraction = 0xfffffffffffff, exponent = 2046;
 	}
