@@ -12,8 +12,8 @@ gboolean coord_equal(gconstpointer a, gconstpointer b);
 
 /* logging and information */
 
-void log_print(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
-void log_die(int is_stop, char *fmt, ...) __attribute__ ((noreturn, format (printf, 2, 3)));
+void log_print(char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void log_die(int is_stop, char *fmt, ...) __attribute__((noreturn, format(printf, 2, 3)));
 
 /* fatal error handling */
 
