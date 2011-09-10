@@ -35,39 +35,85 @@ jshort jshort_read(unsigned char *p)
 
 jint jint_read(unsigned char *p)
 {
-	return (jint)p[0] << 24 | (jint)p[1] << 16 | p[2] << 8 | p[3];
+	return (jint)p[0] << 24 | (jint)p[1] << 16 | (jint)p[2] << 8 | p[3];
 }
 
 jlong jlong_read(unsigned char *p)
 {
-	return (jlong)p[0] << 56 | (jlong)p[1] << 48 | (jlong)p[2] << 40 | (jlong)p[3] << 32 |
-	       (jlong)p[4] << 24 | (jlong)p[5] << 16 | p[6] << 8 | p[7];
+	return
+		(jlong)p[0] << 56 | (jlong)p[1] << 48 | (jlong)p[2] << 40 | (jlong)p[3] << 32 |
+		(jlong)p[4] << 24 | (jlong)p[5] << 16 | (jlong)p[6] << 8  | p[7];
 }
 
-/* TODO: eliminate dependence on byte order, IEEE */
 jfloat jfloat_read(unsigned char *p)
 {
+	jint i = jint_read(p);
 	jfloat f;
-	uint8_t *fp = (uint8_t *)&f;
-	fp[3] = p[0];
-	fp[2] = p[1];
-	fp[1] = p[2];
-	fp[0] = p[3];
+
+#if !FEAT_PORTABLE_FLOATS
+	memcpy(&f, &i, sizeof f);
+#else
+	jint fraction = i & 0x7fffff;
+	jint exponent = (i >> 23) & 0xff;
+
+	if (exponent == 0)
+	{
+		if (fraction == 0)
+			f = 0.0f;
+		else
+			f = scalbf(fraction, -149);
+	}
+	else if (exponent == 255)
+	{
+		if (fraction == 0)
+			f = INFINITY;
+		else
+			f = NAN;
+	}
+	else
+	{
+		f = scalbf(0x800000|fraction, exponent-150);
+	}
+
+	f = copysignf(f, (i >> 31 ? -1.0f : 1.0f));
+#endif
+
 	return f;
 }
 
 jdouble jdouble_read(unsigned char *p)
 {
+	jlong i = jlong_read(p);
 	jdouble f;
-	uint8_t *fp = (uint8_t *)&f;
-	fp[7] = p[0];
-	fp[6] = p[1];
-	fp[5] = p[2];
-	fp[4] = p[3];
-	fp[3] = p[4];
-	fp[2] = p[5];
-	fp[1] = p[6];
-	fp[0] = p[7];
+
+#if !FEAT_PORTABLE_FLOATS
+	memcpy(&f, &i, sizeof f);
+#else
+	jlong fraction = i & 0xfffffffffffff;
+	jint exponent = (i >> 52) & 0x7ff;
+
+	if (exponent == 0)
+	{
+		if (fraction == 0)
+			f = 0.0;
+		else
+			f = scalb(fraction, -1074);
+	}
+	else if (exponent == 2047)
+	{
+		if (fraction == 0)
+			f = INFINITY;
+		else
+			f = NAN;
+	}
+	else
+	{
+		f = scalb(0x10000000000000|fraction, exponent-1075);
+	}
+
+	f = copysign(f, (i >> 63 ? -1.0 : 1.0));
+#endif
+
 	return f;
 }
 
@@ -97,28 +143,68 @@ void jlong_write(unsigned char *p, jlong v)
 	p[7] = v;
 }
 
-/* TODO: as above */
-
 void jfloat_write(unsigned char *p, jfloat v)
 {
-	jfloat f = v;
-	uint8_t *fp = (uint8_t *)&f;
-	p[3] = fp[0];
-	p[2] = fp[1];
-	p[1] = fp[2];
-	p[0] = fp[3];
+	jint i;
+
+#if !FEAT_PORTABLE_FLOATS
+	memcpy(&i, &v, sizeof i);
+#else
+	jint fraction;
+	jint exponent;
+
+	if (isinf(v))
+		fraction = 0, exponent = 255;
+	else if (isnan(v))
+		fraction = 0x400000, exponent = 255;
+	else if (v == 0.0f)
+		fraction = 0, exponent = 0;
+	else
+	{
+		exponent = ilogbf(v);
+		if (exponent < -127) fraction = 1, exponent = -127;
+		fraction = (jint)scalbf(v, -exponent+23-(exponent==-127)) & 0x7fffff;
+		exponent += 127;
+		if (exponent > 254) fraction = 0x7fffff, exponent = 254;
+	}
+
+	i = fraction | (exponent << 23);
+	if (signbit(v))
+		i |= ((jint)1 << 31);
+#endif
+
+	jint_write(p, i);
 }
 
 void jdouble_write(unsigned char *p, jdouble v)
 {
-	jdouble f = v;
-	uint8_t *fp = (uint8_t *)&f;
-	p[7] = fp[0];
-	p[6] = fp[1];
-	p[5] = fp[2];
-	p[4] = fp[3];
-	p[3] = fp[4];
-	p[2] = fp[5];
-	p[1] = fp[6];
-	p[0] = fp[7];
+	jlong i;
+
+#if !FEAT_PORTABLE_FLOATS
+	memcpy(&i, &v, sizeof i);
+#else
+	jlong fraction;
+	jint exponent;
+
+	if (isinf(v))
+		fraction = 0, exponent = 2047;
+	else if (isnan(v))
+		fraction = 0x8000000000000, exponent = 2047;
+	else if (v == 0.0)
+		fraction = 0, exponent = 0;
+	else
+	{
+		exponent = ilogb(v);
+		if (exponent < -1023) fraction = 1, exponent = -1023;
+		fraction = (jlong)scalb(v, -exponent+52-(exponent==-1023)) & 0xfffffffffffff;
+		exponent += 1023;
+		if (exponent > 2046) fraction = 0xfffffffffffff, exponent = 2046;
+	}
+
+	i = fraction | ((jlong)exponent << 52);
+	if (signbit(v))
+		i |= ((jlong)1 << 63);
+#endif
+
+	jlong_write(p, i);
 }
