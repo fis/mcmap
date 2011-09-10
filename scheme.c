@@ -17,6 +17,9 @@
 		SCM_BOOL_F, /* the name */ \
 	}
 
+SCM_GLOBAL_SYMBOL(sym_client, "client");
+SCM_GLOBAL_SYMBOL(sym_server, "server");
+
 static SCM packet_type_to_symbol;
 static SCM symbol_to_packet_type;
 
@@ -184,6 +187,25 @@ SCM_DEFINE(scheme_packet_fields, "packet-fields", 1, 0, 0, (SCM packet_smob),
 	scm_array_handle_release(&handle);
 
 	return fields;
+}
+#undef FUNC_NAME
+
+SCM_DEFINE(scheme_packet_inject, "packet-inject", 2, 0, 0, (SCM inject_to, SCM packet_smob),
+	"Inject a packet to the server or client.")
+#define FUNC_NAME "packet-inject"
+{
+	SCM_VALIDATE_SYMBOL(1, inject_to);
+	SCM_VALIDATE_SMOB(1, packet_smob, packet_type);
+
+	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
+	if (scm_is_eq(inject_to, sym_client))
+		inject_to_client(p);
+	else if (scm_is_eq(inject_to, sym_server))
+		inject_to_server(p);
+	else
+		SCM_OUT_OF_RANGE(1, inject_to);
+
+	return SCM_UNSPECIFIED;
 }
 #undef FUNC_NAME
 

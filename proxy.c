@@ -30,16 +30,10 @@ struct proxy_config
 
 static GAsyncQueue *iq = 0;
 
-static SCM sym_client;
-static SCM sym_server;
-
 SCM proxy_thread(void *data);
 
 void init_proxy()
 {
-	sym_client = scm_from_locale_symbol("client");
-	sym_server = scm_from_locale_symbol("server");
-
 	scheme_handlers = scm_permanent_object(scm_make_vector(scm_from_intmax(NELEMS(packet_format)), SCM_BOOL_F));
 	/* populate it */
 	scm_t_array_handle handle;
