@@ -31,6 +31,15 @@ enum field_type
 	FIELD_OBJECT_DATA,
 };
 
+struct packet_format_desc
+{
+	unsigned nfields;
+	enum field_type *ftype;
+	unsigned char known;
+};
+
+struct packet_format_desc packet_format[256];
+
 struct packet
 {
 	unsigned type;
