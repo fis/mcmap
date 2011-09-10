@@ -18,6 +18,7 @@
 #include "world.h"
 #include "ui.h"
 #include "proxy.h"
+#include "scheme.h"
 
 /* proxying thread function to pass packets */
 
@@ -148,6 +149,12 @@ SCM proxy_thread(void *data)
 			if (!packet_write(sto, p))
 				dief("proxy thread (%s) write failed", desc);
 		}
+
+		/* pass it to Scheme */
+		SCM packet_smob = make_packet_smob(p);
+		scheme_packet_type(packet_smob);
+		scheme_packet_fields(packet_smob);
+		/* TODO: actually pass it on */
 
 		/* communicate interesting chunks to world thread */
 
