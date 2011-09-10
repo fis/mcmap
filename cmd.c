@@ -87,7 +87,7 @@ SCM eval_thread(void *data)
 
 SCM eval_handler(void *data, SCM key, SCM args)
 {
-	if (scm_is_true(scm_num_eq_p(scm_length(args), scm_from_int(4))))
+	if (scm_is_true(scm_geq_p(scm_length(args), scm_from_int(4))))
 	{
 		SCM ok = scm_c_catch(SCM_BOOL_T, eval_handler_formatted, args, eval_handler_formatted_failed, NULL, NULL, NULL);
 		if (scm_is_true(ok))
@@ -109,7 +109,12 @@ SCM eval_handler_formatted(void *data)
 
 	SCM format = scm_cadr(args);
 	SCM format_args = scm_caddr(args);
-	SCM message = scm_simple_format(SCM_BOOL_F, format, format_args);
+	SCM message;
+
+	if (scm_is_eq(format_args, SCM_BOOL_F))
+		message = format;
+	else
+		message = scm_simple_format(SCM_BOOL_F, format, format_args);
 
 	tell("//eval: %s%s%s%s",
 		scm_to_utf8_string(message),
