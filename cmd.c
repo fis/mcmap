@@ -93,7 +93,7 @@ SCM eval_handler(void *data, SCM key, SCM args)
 		if (scm_is_true(ok))
 			return SCM_UNSPECIFIED;
 	}
-	
+
 	tell("//eval: caught: %s",
 		scm_to_locale_string(scm_object_to_string(scm_cons(key, args), SCM_UNDEFINED)));
 
