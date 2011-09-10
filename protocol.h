@@ -4,9 +4,12 @@
 #include "platform.h"
 #include "types.h"
 
-/* protocol mess */
-
-#include "protocol-data.h"
+enum packet_id {
+#define PACKET(id, cname, nfields, ...) \
+	PACKET_##cname = id,
+#include "protocol.x"
+#undef PACKET
+};
 
 enum field_type
 {

@@ -44,10 +44,8 @@ $(OBJDIR):
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	$(call do, CC $<, $(CC) $(CFLAGS) -c -o $@ $<)
 
-protocol-data.c: protocol.txt | protocol.pl
+protocol.x: protocol.txt | protocol.pl
 	perl protocol.pl
-
-protocol-data.h: protocol-data.c
 
 -include $(deps)
 
