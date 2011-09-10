@@ -29,18 +29,18 @@ static SCM smob_packet_equalp(SCM packet_smob_a, SCM packet_smob_b)
 	return scm_eq_p(packet_smob_a, packet_smob_b);
 }
 
-static SCM scheme_packet_type(SCM packet_smob)
-{
-	scm_assert_smob_type(packet_tag, packet_smob);
-	scm_remember_upto_here_1(packet_smob);
-	return scm_take_locale_symbol("dunno");
-}
-
 SCM make_packet_smob(packet_t *p)
 {
 	SCM smob;
 	SCM_NEWSMOB(smob, packet_tag, packet_dup(p));
 	return smob;
+}
+
+static SCM scheme_packet_type(SCM packet_smob)
+{
+	scm_assert_smob_type(packet_tag, packet_smob);
+	scm_remember_upto_here_1(packet_smob);
+	return scm_take_locale_symbol("dunno");
 }
 
 void init_scheme()
