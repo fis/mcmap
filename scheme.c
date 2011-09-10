@@ -50,6 +50,11 @@ void init_scheme()
 {
 	packet_type_table = scm_permanent_object(scm_make_hash_table(SCM_UNDEFINED));
 
+	#define PACKET(id, cname, scmname, nfields, ...) \
+		scm_hash_set_x(packet_type_table, scm_from_uint(id), scm_from_locale_symbol(scmname));
+	#include "protocol.x"
+	#undef PACKET
+
 	#ifndef SCM_MAGIC_SNARFER
 	#include "build/scheme.x"
 	#endif
