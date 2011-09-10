@@ -827,6 +827,7 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 	case 1: txx = 0,  txy = -1, tyx = 1,  tyy = 0;  break;
 	case 2: txx = -1, txy = 0,  tyx = 0,  tyy = -1; break;
 	case 3: txx = 0,  txy = 1,  tyx = -1, tyy = 0;  break;
+	default: wtff("player_yaw = %d", player_yaw);
 	}
 
 	int s = map_scale_indicator;
@@ -1067,7 +1068,6 @@ void map_draw(SDL_Surface *screen)
 
 	coord_t hcc = COORD(hx, hz);
 	struct chunk *hc = world_chunk(hcc, false);
-	hc = world_chunk(hcc, false);
 	if (!hc) goto no_block_info;
 
 	jint hcx = CHUNK_XOFF(hx);
