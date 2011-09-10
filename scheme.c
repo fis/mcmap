@@ -74,6 +74,7 @@ SCM_DEFINE(scheme_make_packet, "make-packet", 1, 0, 1, (SCM type_symbol, SCM res
 	{
 		nargs++;
 		SCM v = scm_car(rest);
+		char *s;
 
 		#define INTEGRAL(t) \
 			SCM_ASSERT_TYPE(scm_is_integer(v), v, field + 2, FUNC_NAME, "integer"); \
@@ -85,7 +86,9 @@ SCM_DEFINE(scheme_make_packet, "make-packet", 1, 0, 1, (SCM type_symbol, SCM res
 
 		#define STRING(t) \
 			SCM_VALIDATE_STRING(field + 2, v); \
-			packet_add_##t(&pc, (unsigned char *) scm_to_utf8_string(v))
+			s = scm_to_utf8_string(v); \
+			packet_add_##t(&pc, (unsigned char *) s); \
+			g_free(s)
 
 		switch (fmt.ftype[field])
 		{

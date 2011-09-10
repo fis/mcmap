@@ -80,8 +80,10 @@ SCM eval_thread(void *data)
 		tell("//eval: OK.");
 		return SCM_UNSPECIFIED;
 	}
-	tell("//eval: %s", scm_to_locale_string(scm_object_to_string(result, SCM_UNDEFINED)));
+	char *result_string = scm_to_locale_string(scm_object_to_string(result, SCM_UNDEFINED));
+	tell("//eval: %s", result_string);
 	g_free(code);
+	g_free(result_string);
 	return SCM_UNSPECIFIED;
 }
 
@@ -94,8 +96,9 @@ SCM eval_handler(void *data, SCM key, SCM args)
 			return SCM_UNSPECIFIED;
 	}
 
-	tell("//eval: caught: %s",
-		scm_to_utf8_string(scm_object_to_string(scm_cons(key, args), SCM_UNDEFINED)));
+	char *error_string = scm_to_utf8_string(scm_object_to_string(scm_cons(key, args), SCM_UNDEFINED));
+	tell("//eval: caught: %s", error_string);
+	g_free(error_string);
 
 	return SCM_UNSPECIFIED;
 }
@@ -116,11 +119,17 @@ SCM eval_handler_formatted(void *data)
 	else
 		message = scm_simple_format(SCM_BOOL_F, format, format_args);
 
+	char *message_string = scm_to_utf8_string(message);
+	char *where_string = has_where ? scm_to_utf8_string(where) : strdup("");
+
 	tell("//eval: %s%s%s%s",
-		scm_to_utf8_string(message),
+		message_string,
 		has_where ? " (in " : "",
-		has_where ? scm_to_utf8_string(where) : "",
+		where_string,
 		has_where ? ")" : "");
+
+	g_free(message_string);
+	g_free(where_string);
 
 	return SCM_BOOL_T;
 }
