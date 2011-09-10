@@ -34,14 +34,8 @@ SCM proxy_thread(void *data);
 
 void init_proxy()
 {
-	scheme_handlers = scm_permanent_object(scm_make_vector(scm_from_intmax(NELEMS(packet_format)), SCM_BOOL_F));
-	/* populate it */
-	scm_t_array_handle handle;
-	size_t len;
-	ssize_t inc;
-	SCM *elt = scm_vector_writable_elements(scheme_handlers, &handle, &len, &inc);
-	for (size_t i = 0; i < len; i++, elt += inc)
-		*elt = scm_make_hook(scm_from_int(2));
+	for (size_t i = 0; i < NELEMS(packet_hooks); i++)
+		packet_hooks[i] = scm_permanent_object(scm_make_hook(scm_from_int(2)));
 }
 
 void start_proxy(socket_t sock_cli, socket_t sock_srv)
@@ -164,7 +158,7 @@ SCM proxy_thread(void *data)
 
 		/* pass it to Scheme */
 		SCM packet_smob = make_packet_smob(p);
-		SCM hook = scm_c_vector_ref(scheme_handlers, p->type);
+		SCM hook = packet_hooks[p->type];
 		/* FIXME: Need to spawn a thread of some kind to avoid complex handlers lagging
 		   everything down (but maybe this should be up to the handlers?) */
 		/* FIXME: Need to handle exceptions */

@@ -222,7 +222,7 @@ SCM_DEFINE(scheme_packet_hook, "packet-hook", 1, 0, 0, (SCM type_symbol),
 	if (scm_is_eq(type_scm, SCM_BOOL_F))
 		SCM_OUT_OF_RANGE(1, type_symbol);
 
-	return scm_vector_ref(scheme_handlers, type_scm);
+	return packet_hooks[scm_to_uint(type_scm)];
 }
 #undef FUNC_NAME
 

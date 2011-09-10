@@ -13,7 +13,7 @@ struct directed_packet
 	packet_t *p;
 };
 
-SCM scheme_handlers;
+SCM packet_hooks[256];
 
 void init_proxy(void);
 void start_proxy(socket_t sock_cli, socket_t sock_srv);
