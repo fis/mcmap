@@ -38,6 +38,8 @@ int mcmap_main(int argc, char **argv)
 {
 	setlocale(LC_ALL, "");
 
+	cmd_init();
+
 	/* command line option grokking */
 
 	static GOptionEntry gopt_entries[] = {

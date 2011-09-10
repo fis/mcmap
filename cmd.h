@@ -4,6 +4,8 @@
 #include "config.h"
 #include "types.h"
 
+void cmd_init(void);
+
 void cmd_parse(struct buffer cmd);
 
 void jumps_list(void);
@@ -13,6 +15,6 @@ void jumps_rm(char *name);
 
 #define COMMAND(name) void cmd_##name (int, char **);
 #include "cmd.x"
-#undef command
+#undef COMMAND
 
 #endif /* MCMAP_CMD_H */
