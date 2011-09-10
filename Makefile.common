@@ -7,8 +7,9 @@ CFLAGS := $(CFLAGS)
 OPTCFLAGS := $(OPTCFLAGS)
 LDFLAGS := $(LDFLAGS)
 
+OPTCFLAGS += -ggdb3
+
 ifdef debug
-	OPTCFLAGS += -g
 	OBJDIR ?= build-debug
 else
 	OPTCFLAGS += -O3
