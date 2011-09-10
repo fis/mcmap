@@ -826,6 +826,7 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 	case 1: txx = 0,  txy = -1, tyx = 1,  tyy = 0;  break;
 	case 2: txx = -1, txy = 0,  tyx = 0,  tyy = -1; break;
 	case 3: txx = 0,  txy = 1,  tyx = -1, tyy = 0;  break;
+	default: wtff("player_yaw = %d", player_yaw);
 	}
 
 	int s = map_scale_indicator;
