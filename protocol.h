@@ -64,7 +64,14 @@ struct packet_state
 
 typedef struct packet_state packet_state_t;
 
-#define PACKET_STATE_INIT(s) { .sock = (s), .buf_start = 0, .buf_pos = 0, .buf_end = 0, .p = { } }
+#define PACKET_STATE_INIT(s) \
+	{ \
+		.sock = (s), \
+		.buf_start = 0, \
+		.buf_pos = 0, \
+		.buf_end = 0, \
+		.p = { 0, 0, 0, 0 }, \
+	}
 
 packet_t *packet_read(packet_state_t *state);
 
