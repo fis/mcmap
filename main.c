@@ -58,6 +58,7 @@ void *real_main(void *data)
 	int argc = args->argc;
 	char **argv = args->argv;
 
+	cmd_init();
 	init_proxy();
 	init_scheme();
 
@@ -67,6 +68,8 @@ void *real_main(void *data)
 		scm_c_primitive_load(init_filename);
 	}
 	g_free(init_filename);
+
+	cmd_init();
 
 	/* command line option grokking */
 

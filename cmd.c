@@ -19,11 +19,26 @@
 #include "world.h"
 #include "proxy.h"
 
-static struct { char *name; void (*run)(int, char **); } commands[] = {
-#define command(name) { #name, cmd_##name },
-#include "cmddefs.h"
-#undef command
+struct command
+{
+	char *name;
+	void (*run)(int, char **);
 };
+
+GHashTable *commands;
+
+void cmd_init()
+{
+	struct command *command;
+	commands = g_hash_table_new(g_str_hash, g_str_equal);
+	#define COMMAND(cname) \
+		command = g_malloc(sizeof *command); \
+		command->name = #cname; \
+		command->run = cmd_##cname; \
+		g_hash_table_insert(commands, command->name, command);
+	#include "cmd.x"
+	#undef COMMAND	
+}
 
 void cmd_parse(struct buffer cmd)
 {
@@ -35,16 +50,15 @@ void cmd_parse(struct buffer cmd)
 	while (cmdv[cmdc])
 		cmdc++;
 
-	for (int i = 0; i < NELEMS(commands); i++) 
+	struct command *command = g_hash_table_lookup(commands, cmdv[0]);
+
+	if (command == NULL)
 	{
-		if (strcmp(cmdv[0], commands[i].name) == 0)
-		{
-			commands[i].run(cmdc, cmdv);
-			goto done;
-		}
+		tell("unknown command: //%s", cmdv[0]);
+		goto done;
 	}
 
-	tell("unknown command: //%s", cmdv[0]);
+	command->run(cmdc, cmdv);
 
 done:
 	g_strfreev(cmdv);
