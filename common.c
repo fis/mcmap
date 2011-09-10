@@ -1,7 +1,8 @@
 #include <unistd.h>
 #include <math.h>
-#include <SDL.h>
+
 #include <glib.h>
+#include <SDL.h>
 
 #include "protocol.h"
 #include "common.h"
