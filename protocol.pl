@@ -67,7 +67,7 @@ foreach my $id (@packets)
 	my ($name, $fields) = ($packets{$id}->{'name'}, $packets{$id}->{'fields'});
 	my $cname = uc $name;
 
-	printf CODE "PACKET(0x%02x, %s, %d%s)\n",
+	printf CODE "PACKET(0x%02x, %s, %d, %s)\n",
 		$id, $cname,
-		scalar @$fields, @$fields ? ', ' . join(', ', @$fields) : '';
+		scalar @$fields, @$fields ? join(', ', @$fields) : '0';
 }
