@@ -14,13 +14,6 @@
  * http://mc.kev009.com/wiki/Protocol
  */
 
-struct packet_format_desc
-{
-	unsigned nfields;
-	enum field_type *ftype;
-	unsigned char known;
-};
-
 #define PACKET(id, cname, scmname, nfields, ...) \
 	static enum field_type packet_format_##cname[nfields] = { __VA_ARGS__ };
 #include "protocol.x"
