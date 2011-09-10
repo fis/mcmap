@@ -5,7 +5,7 @@
 #include "types.h"
 
 enum packet_id {
-#define PACKET(id, cname, nfields, ...) \
+#define PACKET(id, cname, scmname, nfields, ...) \
 	PACKET_##cname = id,
 #include "protocol.x"
 #undef PACKET
