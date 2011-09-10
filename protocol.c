@@ -33,7 +33,7 @@ struct packet_format_desc packet_format[] = {
 #undef PACKET
 };
 
-#define MAX_PACKET_FORMAT ((sizeof packet_format)/(sizeof *packet_format))
+#define MAX_PACKET_FORMAT NELEMS(packet_format)
 
 /* packet reading/writing */
 
