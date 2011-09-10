@@ -475,6 +475,7 @@ gpointer world_thread(gpointer data)
 		packet_t *packet = dpacket->p;
 		g_free(dpacket);
 
+		struct buffer msg;
 		unsigned char *p;
 		jint t;
 		jlong tl;
@@ -540,7 +541,7 @@ gpointer world_thread(gpointer data)
 
 		case PACKET_ENTITY_SPAWN_NAMED:
 			entity_add(packet_int(packet, 0),
-			           packet_string(packet, 1, 0),
+			           packet_string(packet, 1).data,
 			           packet_int(packet, 2),
 			           packet_int(packet, 3),
 			           packet_int(packet, 4));
@@ -598,10 +599,13 @@ gpointer world_thread(gpointer data)
 			break;
 
 		case PACKET_CHAT:
-			p = packet_string(packet, 0, &t);
-			if (t >= 3 && p[0] == '/' && p[1] == '/')
-				cmd_parse(p+2, t-2);
-			g_free(p);
+			msg = packet_string(packet, 0);
+			if (msg.len >= 3 && msg.data[0] == '/' && msg.data[1] == '/')
+			{
+				struct buffer cmd = OFFSET_BUFFER(msg, 2);
+				cmd_parse(cmd);
+			}
+			g_free(msg.data);
 			break;
 		}
 

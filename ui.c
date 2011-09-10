@@ -213,21 +213,20 @@ static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen)
 	}
 }
 
-void handle_chat(unsigned char *msg, int msglen)
+void handle_chat(struct buffer msg)
 {
 	static char *colormap[16] =
 	{
 		"30",   "34",   "32",   "36",   "31",   "35",   "33",   "37",
 		"30;1", "34;1", "32;1", "36;1", "31;1", "35;1", "33;1", "0"
 	};
-	unsigned char *p = msg;
 	GString *s = g_string_new("");
 
-	while (msglen > 0)
+	while (msg.len > 0)
 	{
-		if (msglen >= 3 && p[0] == 0xc2 && p[1] == 0xa7)
+		if (msg.len >= 3 && msg.data[0] == 0xc2 && msg.data[1] == 0xa7)
 		{
-			unsigned char cc = p[2];
+			unsigned char cc = msg.data[2];
 			int c = -1;
 
 			if (cc >= '0' && cc <= '9') c = cc - '0';
@@ -237,14 +236,13 @@ void handle_chat(unsigned char *msg, int msglen)
 			{
 				if (!opt.noansi)
 					g_string_append_printf(s, "\x1b[%sm", colormap[c]);
-				p += 3;
-				msglen -= 3;
+				ADVANCE_BUFFER(msg, 3);
 				continue;
 			}
 		}
 
-		g_string_append_c(s, *p++);
-		msglen--;
+		g_string_append_c(s, *msg.data);
+		ADVANCE_BUFFER(msg, 1);
 	}
 
 	char *str = g_string_free(s, false);

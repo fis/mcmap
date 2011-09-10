@@ -182,10 +182,10 @@ gpointer proxy_thread(gpointer data)
 		case PACKET_CHAT:
 			if (!from_client)
 			{
-				int msglen;
-				unsigned char *msg = packet_string(p, 0, &msglen);
-				handle_chat(msg, msglen);
-				g_free(msg);
+				struct buffer msg = packet_string(p, 0);
+				unsigned char *str = msg.data;
+				handle_chat(msg);
+				g_free(str);
 			}
 			break;
 		}
