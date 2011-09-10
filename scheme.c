@@ -21,6 +21,8 @@ SCM_SMOB_PRINT(scm_tc16_packet_type, smob_packet_print, packet_smob, port, pstat
 	/* TODO: Better printing function */
 	scm_puts("#<packet ", port);
 	scm_display(scheme_packet_type(packet_smob), port);
+	scm_puts(" ", port);
+	scm_write(scheme_packet_fields(packet_smob), port);
 	scm_puts(">", port);
 	return 1;
 }
@@ -67,18 +69,44 @@ SCM_DEFINE(scheme_packet_fields, "packet-fields", 1, 0, 0, (SCM packet_smob),
 {
 	SCM_VALIDATE_SMOB(1, packet_smob, packet_type);
 	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
-    
-	SCM fields = scm_c_make_vector(packet_nfields(p), SCM_BOOL_F);
+	struct packet_format_desc fmt = packet_format[p->type];
+
+	SCM fields = scm_c_make_vector(fmt.nfields, SCM_BOOL_F);
 
 	scm_t_array_handle handle;
-	size_t i;
 	size_t len;
 	ssize_t inc;
 	SCM *elt = scm_vector_writable_elements(fields, &handle, &len, &inc);
 
-	for (i = 0; i < len; i++, elt += inc)
+	for (size_t i = 0; i < len; i++, elt += inc)
 	{
-		*elt = SCM_BOOL_T;
+		switch (fmt.ftype[i])
+		{
+		case FIELD_BYTE:
+		case FIELD_SHORT:
+		case FIELD_INT:
+		case FIELD_LONG:
+			*elt = scm_from_int64(packet_long(p, i));
+			break;
+
+		case FIELD_FLOAT:
+		case FIELD_DOUBLE:
+			*elt = scm_from_double(packet_double(p, i));
+			break;
+
+		case FIELD_STRING:
+		case FIELD_STRING_UTF8:
+			{
+				struct buffer buf = packet_string(p, i);
+				*elt = scm_from_utf8_stringn((char *) buf.data, buf.len);
+				g_free(buf.data);
+			}
+			break;
+
+		default:
+			/* just leave it as #f */
+			break;
+		}
 	}
 
 	scm_array_handle_release(&handle);
