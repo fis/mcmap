@@ -202,9 +202,9 @@ SCM_DEFINE(scheme_packet_inject, "packet-inject", 2, 0, 0, (SCM inject_to, SCM p
 
 	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
 	if (scm_is_eq(inject_to, sym_client))
-		inject_to_client(p);
+		inject_to_client(packet_dup(p));
 	else if (scm_is_eq(inject_to, sym_server))
-		inject_to_server(p);
+		inject_to_server(packet_dup(p));
 	else
 		SCM_OUT_OF_RANGE(1, inject_to);
 
