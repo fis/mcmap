@@ -1,15 +1,15 @@
 #ifndef MCMAP_PROXY_H
 #define MCMAP_PROXY_H 1
 
-enum packet_direction
+enum packet_origin
 {
-	PACKET_TO_CLIENT,
-	PACKET_TO_SERVER,
+	PACKET_FROM_CLIENT,
+	PACKET_FROM_SERVER,
 };
 
 struct directed_packet
 {
-	enum packet_direction to;
+	enum packet_origin from;
 	packet_t *p;
 };
 
