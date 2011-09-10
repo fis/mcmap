@@ -67,7 +67,7 @@ SCM eval_handler_formatted_failed(void *data, SCM key, SCM args);
 
 void cmd_eval(int cmdc, char **cmdv)
 {
-	char *code = g_strjoinv(" ", cmdv);
+	char *code = g_strjoinv(" ", cmdv + 1);
 	scm_spawn_thread(eval_thread, code, eval_handler, code);
 }
 
