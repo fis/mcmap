@@ -95,7 +95,7 @@ SCM eval_handler(void *data, SCM key, SCM args)
 	}
 
 	tell("//eval: caught: %s",
-		scm_to_locale_string(scm_object_to_string(scm_cons(key, args), SCM_UNDEFINED)));
+		scm_to_utf8_string(scm_object_to_string(scm_cons(key, args), SCM_UNDEFINED)));
 
 	return SCM_UNSPECIFIED;
 }
@@ -112,9 +112,9 @@ SCM eval_handler_formatted(void *data)
 	SCM message = scm_simple_format(SCM_BOOL_F, format, format_args);
 
 	tell("//eval: %s%s%s%s",
-		scm_to_locale_string(message),
+		scm_to_utf8_string(message),
 		has_where ? " (in " : "",
-		has_where ? scm_to_locale_string(where) : "",
+		has_where ? scm_to_utf8_string(where) : "",
 		has_where ? ")" : "");
 
 	return SCM_BOOL_T;
