@@ -30,10 +30,17 @@ struct proxy_config
 
 static GAsyncQueue *iq = 0;
 
+static SCM sym_client;
+static SCM sym_server;
+
 SCM proxy_thread(void *data);
 
 void start_proxy(socket_t sock_cli, socket_t sock_srv)
 {
+	sym_client = scm_from_locale_symbol("client");
+	sym_server = scm_from_locale_symbol("server");
+	scheme_handlers = scm_permanent_object(scm_make_vector(scm_from_intmax(NELEMS(packet_format)), SCM_EOL));
+
 	iq = g_async_queue_new_full(packet_free);
 
 	GAsyncQueue *worldq = g_async_queue_new_full(packet_free);
@@ -152,9 +159,17 @@ SCM proxy_thread(void *data)
 
 		/* pass it to Scheme */
 		SCM packet_smob = make_packet_smob(p);
-		scheme_packet_type(packet_smob);
-		scheme_packet_fields(packet_smob);
-		/* TODO: actually pass it on */
+		SCM handlers = scm_c_vector_ref(scheme_handlers, p->type);
+		while (!scm_is_eq(handlers, SCM_EOL))
+		{
+			SCM handler = scm_car(handlers);
+			/* FIXME: Confusion with from in Scheme vs. to in C (and from in this function) */
+			/* FIXME: Need to spawn a thread of some kind to avoid complex handlers lagging
+			   everything down (but maybe this should be up to the handlers?) */
+			/* FIXME: Need to handle exceptions */
+			scm_call_2(handler, from_client ? sym_client : sym_server, packet_smob);
+			handlers = scm_cdr(handlers);
+		}
 
 		/* communicate interesting chunks to world thread */
 

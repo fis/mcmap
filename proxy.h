@@ -13,6 +13,8 @@ struct directed_packet
 	packet_t *p;
 };
 
+SCM scheme_handlers;
+
 void start_proxy(socket_t sock_cli, socket_t sock_srv);
 
 /* packet injection */
