@@ -20,8 +20,8 @@
 #include "proxy.h"
 
 static struct { char *name; void (*run)(int, char **); } commands[] = {
-#define command(name) { #name, cmd_##name },
-#include "cmddefs.h"
+#define COMMAND(name) { #name, cmd_##name },
+#include "cmd.x"
 #undef command
 };
 

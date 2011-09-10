@@ -11,8 +11,8 @@ void jumps_save(char *filename);
 void jumps_add(char *name, int x, int z, bool is_command);
 void jumps_rm(char *name);
 
-#define command(name) void cmd_##name (int, char **);
-#include "cmddefs.h"
+#define COMMAND(name) void cmd_##name (int, char **);
+#include "cmd.x"
 #undef command
 
 #endif /* MCMAP_CMD_H */
