@@ -18,9 +18,8 @@ SCM_SMOB_FREE(scm_tc16_packet_type, smob_packet_free, packet_smob)
 SCM_SMOB_PRINT(scm_tc16_packet_type, smob_packet_print, packet_smob, port, pstate)
 {
 	/* TODO: Better printing function */
-	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
 	scm_puts("#<packet ", port);
-	scm_display(scm_from_uint(p->type), port);
+	scm_display(scheme_packet_type(packet_smob), port);
 	scm_puts(">", port);
 	return 1;
 }
