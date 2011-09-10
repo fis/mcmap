@@ -24,14 +24,20 @@ CFLAGS += -Wall -Werror -std=gnu99
 
 .PHONY: all clean
 
+ifdef V
+define do
+	$2
+endef
+else
 define do
 	@echo $1; \
 	$2 || { \
 		status=$$?; \
-                echo >&2 '[failed command:$2]'; \
-                exit $$status; \
+		echo >&2 '[failed command:$2]'; \
+		exit $$status; \
 	}
 endef
+endif
 
 all: $(OBJDIR)/mcmap$(EXE)
 
@@ -53,4 +59,4 @@ clean:
 	rm -rf $(OBJDIR)
 
 $(OBJDIR)/%.d: %.c | $(OBJDIR)
-	@$(CC) -MM -MG -MF $@ -MT $(@:.d=.o) -MT $@ $(CFLAGS) $<
+	@$(CC) -MM -MT $(@:.d=.o) -MT $@ $(CFLAGS) $< > $@
