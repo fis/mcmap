@@ -97,7 +97,7 @@ gpointer proxy_thread(gpointer data)
 			packet_must_free = false;
 		}
 
-		if (!dpacket)
+		if (!dpacket->p)
 		{
 			SDL_Event e = { .type = SDL_QUIT };
 			SDL_PushEvent(&e);
