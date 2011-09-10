@@ -171,7 +171,6 @@ SCM proxy_thread(void *data)
 		/* pass it to Scheme */
 		SCM packet_smob = make_packet_smob(p);
 		SCM hook = scm_c_vector_ref(scheme_handlers, p->type);
-		/* FIXME: Confusion with from in Scheme vs. to in C (and from in this function) */
 		/* FIXME: Need to spawn a thread of some kind to avoid complex handlers lagging
 		   everything down (but maybe this should be up to the handlers?) */
 		/* FIXME: Need to handle exceptions */
