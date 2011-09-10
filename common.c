@@ -45,6 +45,9 @@ jlong jlong_read(unsigned char *p)
 		(jlong)p[4] << 24 | (jlong)p[5] << 16 | (jlong)p[6] << 8  | p[7];
 }
 
+/* About the fast, non-portable variants of these functions:
+   <fizzie> Though it will break on systems where the float and int endianness differs. */
+
 jfloat jfloat_read(unsigned char *p)
 {
 	jint i = jint_read(p);
