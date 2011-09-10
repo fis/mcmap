@@ -66,8 +66,6 @@ foreach my $id (@packets)
 {
 	my ($name, $fields) = ($packets{$id}->{'name'}, $packets{$id}->{'fields'});
 	my $cname = uc $name;
-	my $scmname = $name;
-	$scmname =~ s/_/-/g;
 
 	printf CODE "PACKET(0x%02x, %s, %d%s)\n",
 		$id, $cname,
