@@ -8,6 +8,11 @@ include Makefile.common
 $(OBJDIR)/mcmapper$(EXE): LDFLAGS += -lpng
 
 PKGCFLAGS := $(shell pkg-config --cflags $(libs))
+
+ifeq ($(PKGCFLAGS),)
+	$(error Can't satisfy dependencies)
+endif
+
 PKGLDFLAGS := $(shell pkg-config --libs $(libs))
 
 CFLAGS += -DPLATFORM_POSIX
