@@ -57,7 +57,7 @@ protocol.x: protocol.txt | protocol.pl
 -include $(deps)
 
 clean:
-	rm -rf $(OBJDIR)
+	rm -rf build build-debug $(OBJDIR)
 
 $(OBJDIR)/%.d: %.c | $(OBJDIR)
 	$(if $(V),,@)$(CC) -MM -MT $(@:.d=.o) -MT $@ $(CFLAGS) $< > $@
