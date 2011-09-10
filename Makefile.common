@@ -19,8 +19,9 @@ objs += $(sources:%.c=$(OBJDIR)/%.o)
 extra_objs += $(extra_sources:%.c=$(OBJDIR)/%.o)
 deps += $(sources:%.c=$(OBJDIR)/%.d) $(extra_sources:%.c=$(OBJDIR)/%.d)
 
+override CFLAGS += -std=c99
 CFLAGS += $(OPTCFLAGS)
-CFLAGS += -Wall -Werror -std=gnu99
+CFLAGS += -Wall -Werror
 
 .PHONY: all clean
 

@@ -15,9 +15,9 @@ endif
 
 PKGLDFLAGS := $(shell pkg-config --libs $(libs))
 
-CFLAGS += -DPLATFORM_POSIX
-CFLAGS += $(PKGCFLAGS)
-OPTCFLAGS += $(PKGCFLAGS)
+override CFLAGS += -DPLATFORM_POSIX
+override CFLAGS += $(PKGCFLAGS)
+override OPTCFLAGS += $(PKGCFLAGS)
 
 # Apple's gcc is braindead by default.
 ifeq ($(shell uname),Darwin)
