@@ -17,13 +17,17 @@ void log_die(int is_stop, char *fmt, ...) __attribute__((noreturn, format(printf
 
 /* fatal error handling */
 
-#define dief(fmt, ...) log_die(0, fmt, ## __VA_ARGS__)
+/* GNU comma pasting is not used in the *f variants to increase
+   standards-compliance. Since the non-*f functions work perfectly in
+   this case, it's not a big deal. */
+
+#define dief(fmt, ...) log_die(0, fmt, __VA_ARGS__)
 #define die(msg) dief("%s", msg)
 
-#define stopf(fmt, ...) log_die(1, fmt, ## __VA_ARGS__)
+#define stopf(fmt, ...) log_die(1, fmt, __VA_ARGS__)
 #define stop(msg) stopf("%s", msg)
 
-#define wtff(fmt, ...) dief("%s:%d: " fmt, __FILE__, __LINE__, ## __VA_ARGS__)
+#define wtff(fmt, ...) dief("%s:%d: " fmt, __FILE__, __LINE__, __VA_ARGS__)
 #define wtf(msg) wtff("%s", msg)
 
 /* options */

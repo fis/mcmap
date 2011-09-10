@@ -14,39 +14,17 @@ typedef int64_t jlong;
 typedef float jfloat;
 typedef double jdouble;
 
-#define jshort_read(p) ((jshort)((p)[0] << 8 | (p)[1]))
-#define jint_read(p) ((jint)((jint)(p)[0] << 24 | (jint)(p)[1] << 16 | (p)[2] << 8 | (p)[3]))
-#define jlong_read(p)	  \
-	((jlong)((jlong)(p)[0] << 56 | (jlong)(p)[1] << 48 | (jlong)(p)[2] << 40 | (jlong)(p)[3] << 32 | \
-	         (jlong)(p)[4] << 24 | (jlong)(p)[5] << 16 | (p)[6] << 8 | (p)[7]))
+jshort jshort_read(unsigned char *p);
+jint jint_read(unsigned char *p);
+jlong jlong_read(unsigned char *p);
+jfloat jfloat_read(unsigned char *p);
+jdouble jdouble_read(unsigned char *p);
 
-#define jshort_write(p,v) do { (p)[0] = (v) >> 8; (p)[1] = (v); } while (0)
-#define jint_write(p,v) do { (p)[0] = (v) >> 24; (p)[1] = (v) >> 16; (p)[2] = (v) >> 8; (p)[3] = (v); } while (0)
-#define jlong_write(p,v) do {	  \
-		(p)[0] = (v) >> 56; (p)[1] = (v) >> 48; (p)[2] = (v) >> 40; (p)[3] = (v) >> 32; \
-		(p)[4] = (v) >> 24; (p)[5] = (v) >> 16; (p)[6] = (v) >> 8; (p)[7] = (v); \
-	} while (0)
-
-/* TODO: consider depending on <glib.h> here and testing for G_BYTE_ORDER; or making these functions */
-#define jfloat_read(p) ({	  \
-			jfloat f_; uint8_t *fp_ = (uint8_t *)&f_; \
-			fp_[3] = (p)[0]; fp_[2] = (p)[1]; fp_[1] = (p)[2]; fp_[0] = (p)[3]; \
-			f_; })
-#define jdouble_read(p) ({	  \
-			jdouble f_; uint8_t *fp_ = (uint8_t *)&f_; \
-			fp_[7] = (p)[0]; fp_[6] = (p)[1]; fp_[5] = (p)[2]; fp_[4] = (p)[3]; \
-			fp_[3] = (p)[4]; fp_[2] = (p)[5]; fp_[1] = (p)[6]; fp_[0] = (p)[7]; \
-			f_; })
-
-#define jfloat_write(p,v) do {	  \
-		jfloat f_ = (v); uint8_t *fp_ = (uint8_t *)&f_; \
-		(p)[3] = fp_[0]; (p)[2] = fp_[1]; (p)[1] = fp_[2]; (p)[0] = fp_[3]; \
-	} while (0)
-#define jdouble_write(p,v) do {	  \
-		jdouble f_ = (v); uint8_t *fp_ = (uint8_t *)&f_; \
-		(p)[7] = fp_[0]; (p)[6] = fp_[1]; (p)[5] = fp_[2]; (p)[4] = fp_[3]; \
-		(p)[3] = fp_[4]; (p)[2] = fp_[5]; (p)[1] = fp_[6]; (p)[0] = fp_[7]; \
-	} while (0)
+void jshort_write(unsigned char *p, jshort v);
+void jint_write(unsigned char *p, jint v);
+void jlong_write(unsigned char *p, jlong v);
+void jfloat_write(unsigned char *p, jfloat v);
+void jdouble_write(unsigned char *p, jdouble v);
 
 /* 2d points for hash table keys */
 

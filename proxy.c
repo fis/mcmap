@@ -63,8 +63,8 @@ SCM proxy_thread(void *data)
 	socket_t sock_cli = cfg->sock_cli, sock_srv = cfg->sock_srv;
 	GAsyncQueue *worldq = cfg->worldq;
 
-	packet_state_t state_cli = PACKET_STATE_INIT();
-	packet_state_t state_srv = PACKET_STATE_INIT();
+	packet_state_t state_cli = PACKET_STATE_INIT(sock_cli);
+	packet_state_t state_srv = PACKET_STATE_INIT(sock_srv);
 
 	while (1)
 	{
@@ -96,12 +96,12 @@ SCM proxy_thread(void *data)
 			if (FD_ISSET(sock_cli, &rfds))
 			{
 				net_dpacket.to = PACKET_TO_SERVER;
-				net_dpacket.p = packet_read(sock_cli, &state_cli);
+				net_dpacket.p = packet_read(&state_cli);
 			}
 			else if (FD_ISSET(sock_srv, &rfds))
 			{
 				net_dpacket.to = PACKET_TO_CLIENT;
-				net_dpacket.p = packet_read(sock_srv, &state_srv);
+				net_dpacket.p = packet_read(&state_srv);
 			}
 			else
 				wtf("Neither sock_cli nor sock_srv set in select's result");

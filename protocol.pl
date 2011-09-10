@@ -69,7 +69,7 @@ foreach my $id (@packets)
 	my $scmname = $name;
 	$scmname =~ s/_/-/g;
 
-	printf CODE "PACKET(0x%02x, %s, \"%s\", %d%s)\n",
+	printf CODE "PACKET(0x%02x, %s, \"%s\", %d, %s)\n",
 		$id, $cname, $scmname,
-		scalar @$fields, @$fields ? ', ' . join(', ', @$fields) : '';
+		scalar @$fields, @$fields ? join(', ', @$fields) : '0';
 }

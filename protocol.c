@@ -15,7 +15,7 @@
  */
 
 #define PACKET(id, cname, scmname, nfields, ...) \
-	static enum field_type packet_format_##cname[nfields] = { __VA_ARGS__ };
+	static enum field_type packet_format_##cname[nfields ? nfields : 1] = { __VA_ARGS__ };
 #include "protocol.x"
 #undef PACKET
 
@@ -30,64 +30,61 @@ struct packet_format_desc packet_format[] = {
 
 /* packet reading/writing */
 
-packet_t *packet_read(socket_t sock, packet_state_t *state)
+static int buf_fill(packet_state_t *state)
 {
-	unsigned char *buf = state->buf;
-	unsigned buf_start = state->buf_start, buf_pos = state->buf_pos, buf_end = state->buf_end;
-
-	int buf_fill(void)
+	if (state->buf_start > 0 && state->buf_end == MAX_PACKET_SIZE)
 	{
-		if (buf_start > 0 && buf_end == MAX_PACKET_SIZE)
-		{
-			memmove(buf, buf+buf_start, buf_end-buf_start);
-			buf_pos -= buf_start;
-			buf_end -= buf_start;
-			buf_start = 0;
-		}
+		memmove(state->buf, state->buf + state->buf_start, state->buf_end - state->buf_start);
+		state->buf_pos -= state->buf_start;
+		state->buf_end -= state->buf_start;
+		state->buf_start = 0;
+	}
 
-		int got = recv(sock, (char *)(buf + buf_end), MAX_PACKET_SIZE - buf_end, 0);
-		if (got <= 0)
-		{
-			buf_pos = buf_start = buf_end = 0;
+	int got = recv(state->sock, (char *)(state->buf + state->buf_end), MAX_PACKET_SIZE - state->buf_end, 0);
+	if (got <= 0)
+	{
+		state->buf_pos = state->buf_start = state->buf_end = 0;
+		return 0;
+	}
+
+	state->buf_end += got;
+	return 1;
+}
+
+static int buf_skip(packet_state_t *state, unsigned n)
+{
+	while (state->buf_pos + n > state->buf_end)
+		if (!buf_fill(state))
 			return 0;
-		}
+	state->buf_pos += n;
+	return 1;
+}
 
-		buf_end += got;
-		return 1;
-	}
+static int buf_getc(packet_state_t *state)
+{
+	if (state->buf_pos == state->buf_end)
+		if (!buf_fill(state))
+			return -1;
+	return state->buf[state->buf_pos++];
+}
 
-	int buf_skip(unsigned n)
-	{
-		while (buf_pos + n > buf_end)
-			if (!buf_fill())
-				return 0;
-		buf_pos += n;
-		return 1;
-	}
-
-	int buf_getc(void)
-	{
-		if (buf_pos == buf_end)
-			if (!buf_fill())
-				return -1;
-		return buf[buf_pos++];
-	}
-
-	jshort buf_get_jshort(void)
-	{
-		if (!buf_skip(2))
+static jshort buf_get_jshort(packet_state_t *state)
+{
+	if (!buf_skip(state, 2))
 			die("out of data while getting jshort");
-		return jshort_read(&buf[buf_pos-2]);
-	}
+	return jshort_read(&state->buf[state->buf_pos-2]);
+}
 
-	jint buf_get_jint(void)
-	{
-		if (!buf_skip(4))
-			die("out of data while getting jint");
-		return jint_read(&buf[buf_pos-4]);
-	}
+static jint buf_get_jint(packet_state_t *state)
+{
+	if (!buf_skip(state, 4))
+		die("out of data while getting jint");
+	return jint_read(&state->buf[state->buf_pos-4]);
+}
 
-	int t = buf_getc();
+packet_t *packet_read(packet_state_t *state)
+{
+	int t = buf_getc(state);
 	if (t < 0)
 		return 0;
 
@@ -112,107 +109,105 @@ packet_t *packet_read(socket_t sock, packet_state_t *state)
 
 	for (unsigned f = 0; f < fmt->nfields; f++)
 	{
-		state->p.field_offset[f] = buf_pos - buf_start;
+		state->p.field_offset[f] = state->buf_pos - state->buf_start;
 
 		switch (fmt->ftype[f])
 		{
 		case FIELD_BYTE:
-			if (!buf_skip(1)) return 0;
+			if (!buf_skip(state, 1)) return 0;
 			break;
 
 		case FIELD_SHORT:
-			if (!buf_skip(2)) return 0;
+			if (!buf_skip(state, 2)) return 0;
 			break;
 
 		case FIELD_INT:
 		case FIELD_FLOAT:
-			if (!buf_skip(4)) return 0;
+			if (!buf_skip(state, 4)) return 0;
 			break;
 
 		case FIELD_LONG:
 		case FIELD_DOUBLE:
-			if (!buf_skip(8)) return 0;
+			if (!buf_skip(state, 8)) return 0;
 			break;
 
 		case FIELD_STRING:
-			t = buf_get_jshort();
-			if (!buf_skip(t*2)) return 0;
+			t = buf_get_jshort(state);
+			if (!buf_skip(state, t*2)) return 0;
 			break;
 
 		case FIELD_STRING_UTF8:
-			t = buf_get_jshort();
-			if (!buf_skip(t)) return 0;
+			t = buf_get_jshort(state);
+			if (!buf_skip(state, t)) return 0;
 			break;
 
 		case FIELD_ITEM:
-			t = buf_get_jshort();
+			t = buf_get_jshort(state);
 			if (t != -1)
-				if (!buf_skip(3)) return 0;
+				if (!buf_skip(state, 3)) return 0;
 			break;
 
 		case FIELD_BYTE_ARRAY:
-			t = buf_get_jint();
-			if (!buf_skip(t)) return 0;
+			t = buf_get_jint(state);
+			if (!buf_skip(state, t)) return 0;
 			break;
 
 		case FIELD_BLOCK_ARRAY:
-			t = buf_get_jshort();
-			if (!buf_skip(4*t)) return 0;
+			t = buf_get_jshort(state);
+			if (!buf_skip(state, 4*t)) return 0;
 			break;
 
 		case FIELD_ITEM_ARRAY:
-			t = buf_get_jshort();
+			t = buf_get_jshort(state);
 			for (int i = 0; i < t; i++)
 			{
-				jshort itype = buf_get_jshort();
+				jshort itype = buf_get_jshort(state);
 				if (itype != -1)
-					if (!buf_skip(3)) return 0;
+					if (!buf_skip(state, 3)) return 0;
 			}
 			break;
 
 		case FIELD_EXPLOSION_ARRAY:
-			t = buf_get_jint();
-			if (!buf_skip(3*t)) return 0;
+			t = buf_get_jint(state);
+			if (!buf_skip(state, 3*t)) return 0;
 			break;
 
 		case FIELD_MAP_ARRAY:
-			t = buf_getc(); // Note: Unsigned
-			if (!buf_skip(t)) return 0;
+			t = buf_getc(state); // Note: Unsigned
+			if (!buf_skip(state, t)) return 0;
 			break;
 
 		case FIELD_ENTITY_DATA:
 			while (1)
 			{
-				t = buf_getc();
+				t = buf_getc(state);
 				if (t == 127)
 					break;
 				switch (t >> 5)
 				{
-				case 0: if (!buf_skip(1)) return 0; break;
-				case 1: if (!buf_skip(2)) return 0; break;
-				case 2: case 3: if (!buf_skip(4)) return 0; break;
-				case 4: t = buf_get_jshort(); if (!buf_skip(t)) return 0; break;
-				case 5: if (!buf_skip(5)) return 0; break;
+				case 0: if (!buf_skip(state, 1)) return 0; break;
+				case 1: if (!buf_skip(state, 2)) return 0; break;
+				case 2: case 3: if (!buf_skip(state, 4)) return 0; break;
+				case 4: t = buf_get_jshort(state); if (!buf_skip(state, t)) return 0; break;
+				case 5: if (!buf_skip(state, 5)) return 0; break;
 				}
 			}
 			break;
 
 		case FIELD_OBJECT_DATA:
-			t = buf_get_jint();
+			t = buf_get_jint(state);
 			if (t > 0)
-				if (!buf_skip(6)) return 0; // Skip 3 short
+				if (!buf_skip(state, 6)) return 0; // Skip 3 short
 			break;
 		}
 	}
 
-	state->p.field_offset[fmt->nfields] = buf_pos - buf_start;
+	state->p.field_offset[fmt->nfields] = state->buf_pos - state->buf_start;
 
-	state->p.size = buf_pos - buf_start;
-	state->p.bytes = &buf[buf_start];
+	state->p.size = state->buf_pos - state->buf_start;
+	state->p.bytes = &state->buf[state->buf_start];
 
-	state->buf_start = buf_pos;
-	state->buf_pos = buf_pos;
-	state->buf_end = buf_end;
+	state->buf_start = state->buf_pos;
 
 	return &state->p;
 }
