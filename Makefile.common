@@ -50,8 +50,7 @@ protocol.x: protocol.txt | protocol.pl
 -include $(deps)
 
 clean:
-	rm -f $(OBJDIR)/mcmap$(EXE) $(objs) $(extra_objs) $(deps)
-	-rmdir $(OBJDIR)
+	rm -rf $(OBJDIR)
 
 $(OBJDIR)/%.d: %.c $(OBJDIR)
 	@$(CC) -MM -MG -MF $@ -MT $(@:.d=.o) -MT $@ $(CFLAGS) $<
