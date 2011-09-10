@@ -31,18 +31,16 @@ static inline void log_vput(GString *prefix, char *fmt, va_list ap)
 	g_string_append_vprintf(prefix, fmt, ap);
 	g_string_append_c(prefix, '\n');
 
-	char *str = prefix->str;
-	ssize_t len = prefix->len;
+	struct buffer buf = { prefix->len, (unsigned char *) prefix->str };
 
-	while (len > 0)
+	while (buf.len > 0)
 	{
-		ssize_t wrote = write(console_outfd, str, len);
+		ssize_t wrote = write(console_outfd, buf.data, buf.len);
 		if (wrote < 0 && errno == EINTR)
 			continue;
 		else if (wrote < 0)
 			break; /* give up outputting anything */
-		str += wrote;
-		len -= wrote;
+		ADVANCE_BUFFER(buf, wrote);
 	}
 
 	g_string_free(prefix, true);
