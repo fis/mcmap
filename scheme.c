@@ -4,6 +4,8 @@
 #include "protocol.h"
 #include "scheme.h"
 
+SCM packet_type_table;
+
 SCM_SMOB(scm_tc16_packet_type, "packet", sizeof(packet_t));
 
 SCM_SMOB_FREE(scm_tc16_packet_type, smob_packet_free, packet_smob)
@@ -39,13 +41,15 @@ SCM_DEFINE(scheme_packet_type, "packet-type", 1, 0, 0, (SCM packet_smob),
 #define FUNC_NAME "packet-type"
 {
 	SCM_VALIDATE_SMOB(1, packet_smob, packet_type);
-	scm_remember_upto_here_1(packet_smob);
-	return scm_take_locale_symbol("dunno");
+	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
+	return scm_hash_ref(packet_type_table, scm_from_uint(p->type), SCM_UNDEFINED);
 }
 #undef FUNC_NAME
 
 void init_scheme()
 {
+	packet_type_table = scm_permanent_object(scm_make_hash_table(SCM_UNDEFINED));
+
 	#ifndef SCM_MAGIC_SNARFER
 	#include "build/scheme.x"
 	#endif
