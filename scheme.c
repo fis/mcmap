@@ -195,7 +195,7 @@ SCM_DEFINE(scheme_packet_inject, "packet-inject", 2, 0, 0, (SCM inject_to, SCM p
 #define FUNC_NAME "packet-inject"
 {
 	SCM_VALIDATE_SYMBOL(1, inject_to);
-	SCM_VALIDATE_SMOB(1, packet_smob, packet_type);
+	SCM_VALIDATE_SMOB(2, packet_smob, packet_type);
 
 	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
 	if (scm_is_eq(inject_to, sym_client))
