@@ -37,7 +37,7 @@ SCM make_packet_smob(packet_t *p)
 }
 
 SCM_DEFINE(scheme_make_packet, "make-packet", 1, 0, 0, (SCM type_symbol),
-	"Return the type of the packet.")
+	"Make a new packet.")
 #define FUNC_NAME "make-packet"
 {
 	SCM_VALIDATE_SYMBOL(1, type_symbol);
