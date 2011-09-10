@@ -91,7 +91,7 @@ SCM proxy_thread(void *data)
 			if (ret == -1)
 				dief("select: %s", strerror(errno));
 			else if (ret == 0)
-				wtff("select returned 0!");
+				wtf("select returned 0!");
 
 			if (FD_ISSET(sock_cli, &rfds))
 			{
