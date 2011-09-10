@@ -55,6 +55,7 @@ typedef struct packet packet_t;
 
 struct packet_state
 {
+	socket_t sock;
 	unsigned char buf[MAX_PACKET_SIZE];
 	unsigned buf_start, buf_pos, buf_end;
 	unsigned offset[MAX_FIELDS];
@@ -63,9 +64,9 @@ struct packet_state
 
 typedef struct packet_state packet_state_t;
 
-#define PACKET_STATE_INIT() { .buf_start = 0, .buf_pos = 0, .buf_end = 0, .p = { } }
+#define PACKET_STATE_INIT(s) { .sock = (s), .buf_start = 0, .buf_pos = 0, .buf_end = 0, .p = { } }
 
-packet_t *packet_read(socket_t sock, packet_state_t *state);
+packet_t *packet_read(packet_state_t *state);
 
 int packet_write(socket_t sock, packet_t *packet);
 

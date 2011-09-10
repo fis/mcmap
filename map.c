@@ -845,14 +845,14 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 	unsigned char *pixels = screen->pixels;
 	uint16_t pitch = screen->pitch;
 
-	void pt(int ix, int iy)
-	{
-		int sx = x0 + txx*ix + txy*iy;
-		int sy = y0 + tyx*ix + tyy*iy;
-		uint32_t *p = (uint32_t *)&pixels[sy*pitch + sx*4];
-		// TODO: Handle alpha in surface mode
-		*p = pack_rgb(IGNORE_ALPHA(special_colors[COLOR_PLAYER]));
-	}
+	#define PT(ix, iy) \
+		do { \
+			int sx = x0 + txx*ix + txy*iy; \
+			int sy = y0 + tyx*ix + tyy*iy; \
+			uint32_t *p = (uint32_t *)&pixels[sy*pitch + sx*4]; \
+			/* TODO: Handle alpha in surface mode */ \
+			*p = pack_rgb(IGNORE_ALPHA(special_colors[COLOR_PLAYER])); \
+		} while (0)
 
 	/* draw the triangle shape */
 
@@ -861,7 +861,7 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 		/* diagonal */
 		for (int iy = 0; iy < s; iy++)
 			for (int ix = 0; ix <= iy; ix++)
-				pt(ix, iy);
+				PT(ix, iy);
 	}
 	else
 	{
@@ -870,10 +870,12 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 		for (int iy = s == 3 ? 1 : s/4; iy < s; iy++)
 		{
 			for (int ix = gap; ix < s-gap; ix++)
-				pt(ix, iy);
+				PT(ix, iy);
 			gap++;
 		}
 	}
+
+	#undef PT
 
 	SDL_UnlockSurface(screen);
 }
