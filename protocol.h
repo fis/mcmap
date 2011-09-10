@@ -101,7 +101,6 @@ int packet_nfields(packet_t *packet);
 jint packet_int(packet_t *packet, unsigned field);
 jlong packet_long(packet_t *packet, unsigned field);
 double packet_double(packet_t *packet, unsigned field);
-
-unsigned char *packet_string(packet_t *packet, unsigned field, int *len);
+struct buffer packet_string(packet_t *packet, unsigned field);
 
 #endif /* MCMAP_PROTOCOL_H */

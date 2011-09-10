@@ -4,7 +4,7 @@
 #include "config.h"
 #include "types.h"
 
-void cmd_parse(unsigned char *cmd, int cmdlen);
+void cmd_parse(struct buffer cmd);
 
 void jumps_list(void);
 void jumps_save(char *filename);

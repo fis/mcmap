@@ -481,30 +481,29 @@ double packet_double(packet_t *packet, unsigned field)
 	}
 }
 
-unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
+struct buffer packet_string(packet_t *packet, unsigned field)
 {
 	unsigned char *p = &packet->bytes[packet->field_offset[field]];
 
-	unsigned char *str;
-	int l;
+	struct buffer buffer;
 
 	switch (packet_format[packet->type].ftype[field])
 	{
 	case FIELD_STRING:
-		l = jshort_read(p);
 		{
+			int l = jshort_read(p);
 			GError *error = NULL;
 			gsize conv_len;
-			str = (unsigned char *)g_convert((char*)&p[2], l*2, "UTF8", "UTF16BE", NULL, &conv_len, &error);
-			if (!str)
+			buffer.data = (unsigned char *)g_convert((char*)&p[2], l*2, "UTF8", "UTF16BE", NULL, &conv_len, &error);
+			if (!buffer.data)
 				dief("g_convert UTF16BE->UTF8 failed (error: %s)", error->message);
-			l = conv_len;
+			buffer.len = conv_len;
 		}
 		break;
 
 	case FIELD_STRING_UTF8:
-		l = jshort_read(p);
-		str = (unsigned char *)g_strndup((char*)&p[2], l);
+		buffer.len = jshort_read(p);
+		buffer.data = (unsigned char *)g_strndup((char*)&p[2], buffer.len);
 		break;
 
 	default:
@@ -512,7 +511,5 @@ unsigned char *packet_string(packet_t *packet, unsigned field, int *len)
 		     packet_format[packet->type].ftype[field], packet->type, field);
 	}
 
-	if (len)
-		*len = l;
-	return str;
+	return buffer;
 }

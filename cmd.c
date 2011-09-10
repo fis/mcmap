@@ -25,9 +25,9 @@ static struct { char *name; void (*run)(int, char **); } commands[] = {
 #undef command
 };
 
-void cmd_parse(unsigned char *cmd, int cmdlen)
+void cmd_parse(struct buffer cmd)
 {
-	char *cmdstr = g_strndup((char *) cmd, cmdlen);
+	char *cmdstr = g_strndup((char *) cmd.data, cmd.len);
 	char **cmdv = g_strsplit_set(cmdstr, " ", -1);
 	g_free(cmdstr);
 
