@@ -59,7 +59,4 @@ clean:
 	rm -rf $(OBJDIR)
 
 $(OBJDIR)/%.d: %.c | $(OBJDIR)
-ifndef V
-	@
-endif
-	$(CC) -MM -MT $(@:.d=.o) -MT $@ $(CFLAGS) $< > $@
+	$(if $(V),,@)$(CC) -MM -MT $(@:.d=.o) -MT $@ $(CFLAGS) $< > $@
