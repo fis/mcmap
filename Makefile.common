@@ -3,6 +3,7 @@
 sources += block.c cmd.c common.c console.c map.c nbt.c protocol.c proxy.c scheme.c ui.c world.c
 extra_sources += main.c
 
+CFLAGS ?= -Wall -Werror
 CFLAGS := $(CFLAGS)
 OPTCFLAGS := $(OPTCFLAGS)
 LDFLAGS := $(LDFLAGS)
@@ -20,9 +21,7 @@ objs += $(sources:%.c=$(OBJDIR)/%.o)
 extra_objs += $(extra_sources:%.c=$(OBJDIR)/%.o)
 deps += $(sources:%.c=$(OBJDIR)/%.d) $(extra_sources:%.c=$(OBJDIR)/%.d)
 
-override CFLAGS += -std=c99 -I$(OBJDIR)
-CFLAGS += $(OPTCFLAGS)
-CFLAGS += -Wall -Werror
+CFLAGS += -std=c99 -I$(OBJDIR)
 
 .PHONY: all clean
 
@@ -50,7 +49,7 @@ $(OBJDIR):
 	mkdir $@
 
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
-	$(call do, CC $<, $(CC) $(CFLAGS) -c -o $@ $<)
+	$(call do, CC $<, $(CC) $(CFLAGS) $(OPTCFLAGS) -c -o $@ $<)
 
 $(OBJDIR)/%.x: %.c | $(OBJDIR)
 	$(call do, SNARF $<, CPP='$(CC) -E' guile-snarf -o $@ $(CFLAGS) $<)
