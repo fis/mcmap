@@ -10,4 +10,10 @@
  */
 #define FEAT_FULLCHUNK 1
 
+/*
+ * FEAT_PORTABLE_FLOATS: Turn on if your native floats and doubles
+ * aren't IEEE-754ish enough.
+ */
+/* #define FEAT_PORTABLE_FLOATS 1 */
+
 #endif /* MCMAP_CONFIG_H */
