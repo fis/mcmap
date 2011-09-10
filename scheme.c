@@ -4,6 +4,18 @@
 #include "protocol.h"
 #include "scheme.h"
 
+/* This is a really ugly copy-and-modify from Guile to avoid -pedantic
+   violations. TODO FIXME: Something nicer than this. */
+
+#undef SCM_STATIC_SUBR_OBJVECT
+#define SCM_STATIC_SUBR_OBJVECT(c_name, foreign) \
+	static SCM_ALIGNED(8) SCM c_name[4] = { \
+		SCM_PACK(scm_tc7_vector | (2 << 8)), \
+		SCM_PACK(0), \
+		foreign, \
+		SCM_BOOL_F, /* the name */ \
+	}
+
 static SCM packet_type_to_symbol;
 static SCM symbol_to_packet_type;
 
@@ -190,6 +202,6 @@ void init_scheme()
 	#undef PACKET
 
 	#ifndef SCM_MAGIC_SNARFER
-	#include "build/scheme.x"
+	#include "scheme.x"
 	#endif
 }

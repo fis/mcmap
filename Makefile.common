@@ -19,7 +19,7 @@ objs += $(sources:%.c=$(OBJDIR)/%.o)
 extra_objs += $(extra_sources:%.c=$(OBJDIR)/%.o)
 deps += $(sources:%.c=$(OBJDIR)/%.d) $(extra_sources:%.c=$(OBJDIR)/%.d)
 
-override CFLAGS += -std=c99
+override CFLAGS += -std=c99 -I$(OBJDIR)
 CFLAGS += $(OPTCFLAGS)
 CFLAGS += -Wall -Werror
 
@@ -52,7 +52,7 @@ $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	$(call do, CC $<, $(CC) $(CFLAGS) -c -o $@ $<)
 
 $(OBJDIR)/%.x: %.c | $(OBJDIR)
-	$(call do, SNARF $<, guile-snarf -o $@ $(CFLAGS) $<)
+	$(call do, SNARF $<, CPP='$(CC) -E' guile-snarf -o $@ $(CFLAGS) $<)
 
 $(OBJDIR)/scheme.d: $(OBJDIR)/scheme.x
 
