@@ -61,6 +61,32 @@ SCM_DEFINE(scheme_packet_type, "packet-type", 1, 0, 0, (SCM packet_smob),
 }
 #undef FUNC_NAME
 
+SCM_DEFINE(scheme_packet_fields, "packet-fields", 1, 0, 0, (SCM packet_smob),
+	"Return the fields of the packet as a vector.")
+#define FUNC_NAME "packet-fields"
+{
+	SCM_VALIDATE_SMOB(1, packet_smob, packet_type);
+	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
+    
+	SCM fields = scm_c_make_vector(packet_nfields(p), SCM_BOOL_F);
+
+	scm_t_array_handle handle;
+	size_t i;
+	size_t len;
+	ssize_t inc;
+	SCM *elt = scm_vector_writable_elements(fields, &handle, &len, &inc);
+
+	for (i = 0; i < len; i++, elt += inc)
+	{
+		*elt = SCM_BOOL_T;
+	}
+
+	scm_array_handle_release(&handle);
+
+	return fields;
+}
+#undef FUNC_NAME
+
 void init_scheme()
 {
 	packet_type_to_symbol = scm_permanent_object(scm_make_hash_table(SCM_UNDEFINED));
