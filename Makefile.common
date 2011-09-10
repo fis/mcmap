@@ -56,4 +56,4 @@ clean:
 	rm -rf $(OBJDIR)
 
 $(OBJDIR)/%.d: %.c | $(OBJDIR)
-	$(CC) -MM -MG -MF $@ -MT $(@:.d=.o) -MT $@ $(CFLAGS) $<
+	@$(CC) -MM -MG -MF $@ -MT $(@:.d=.o) -MT $@ $(CFLAGS) $<
