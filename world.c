@@ -472,7 +472,7 @@ SCM world_thread(void *data)
 	while (1)
 	{
 		struct directed_packet *dpacket = g_async_queue_pop(q);
-		enum packet_direction to = dpacket->to;
+		enum packet_origin from = dpacket->from;
 		packet_t *packet = dpacket->p;
 		g_free(dpacket);
 
@@ -505,7 +505,7 @@ SCM world_thread(void *data)
 			break;
 
 		case PACKET_LOGIN:
-			if (to == PACKET_TO_CLIENT)
+			if (from == PACKET_FROM_SERVER)
 			{
 				entity_player = packet_int(packet, 0);
 				world_seed = packet_long(packet, 3);
@@ -529,7 +529,7 @@ SCM world_thread(void *data)
 				                      packet_double(packet, 1),
 				                      packet_double(packet, 3));
 
-			if ((to == PACKET_TO_CLIENT) && !spawn_known)
+			if (from == PACKET_FROM_SERVER && !spawn_known)
 			{
 				spawn_known = 1;
 				spawn_x = packet_double(packet, 0);

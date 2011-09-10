@@ -106,12 +106,12 @@ SCM proxy_thread(void *data)
 
 			if (FD_ISSET(sock_cli, &rfds))
 			{
-				net_dpacket.to = PACKET_TO_SERVER;
+				net_dpacket.from = PACKET_FROM_CLIENT;
 				net_dpacket.p = packet_read(&state_cli);
 			}
 			else if (FD_ISSET(sock_srv, &rfds))
 			{
-				net_dpacket.to = PACKET_TO_CLIENT;
+				net_dpacket.from = PACKET_FROM_SERVER;
 				net_dpacket.p = packet_read(&state_srv);
 			}
 			else
@@ -121,7 +121,7 @@ SCM proxy_thread(void *data)
 			packet_must_free = false;
 		}
 
-		if (!dpacket)
+		if (!dpacket->p)
 		{
 			SDL_Event e = { .type = SDL_QUIT };
 			SDL_PushEvent(&e);
@@ -129,7 +129,7 @@ SCM proxy_thread(void *data)
 		}
 
 		packet_t *p = dpacket->p;
-		bool from_client = dpacket->to == PACKET_TO_SERVER;
+		bool from_client = dpacket->from == PACKET_FROM_CLIENT;
 		socket_t sto = from_client ? sock_srv : sock_cli;
 		char *desc = from_client ? "client -> server" : "server -> client";
 
@@ -158,7 +158,7 @@ SCM proxy_thread(void *data)
 		{
 			/* TODO: Eliminate duplication with this and the later injection */
 			struct directed_packet *dpacket_copy = g_new(struct directed_packet, 1);
-			dpacket_copy->to = dpacket->to;
+			dpacket_copy->from = dpacket->from;
 			dpacket_copy->p = packet_dup(p);
 			g_async_queue_push(worldq, dpacket_copy);
 		}
@@ -207,7 +207,7 @@ SCM proxy_thread(void *data)
 		case PACKET_UPDATE_HEALTH:
 			{
 				struct directed_packet *dpacket_copy = g_new(struct directed_packet, 1);
-				dpacket_copy->to = dpacket->to;
+				dpacket_copy->from = dpacket->from;
 				dpacket_copy->p = packet_dup(p);
 				g_async_queue_push(worldq, dpacket_copy);
 			}
@@ -238,7 +238,7 @@ next:
 void inject_to_client(packet_t *p)
 {
 	struct directed_packet *dpacket = g_new(struct directed_packet, 1);
-	dpacket->to = PACKET_TO_CLIENT;
+	dpacket->from = PACKET_FROM_SERVER;
 	dpacket->p = p;
 	g_async_queue_push(iq, dpacket);
 }
@@ -246,7 +246,7 @@ void inject_to_client(packet_t *p)
 void inject_to_server(packet_t *p)
 {
 	struct directed_packet *dpacket = g_new(struct directed_packet, 1);
-	dpacket->to = PACKET_TO_SERVER;
+	dpacket->from = PACKET_FROM_CLIENT;
 	dpacket->p = p;
 	g_async_queue_push(iq, dpacket);
 }
