@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 
 # protocol.pl:
-# converts protocol.txt into protocol.x
+# converts protocol.txt into protocol-data.{c,h}
 
 use strict;
 use warnings;
@@ -46,7 +46,6 @@ while (my $line = <SPEC>)
 		die "fieldspec without a packet: $line" unless defined $fields;
 
 		my $fspec = $1;
-		$fspec =~ s/#.*//;
 		foreach my $field (split /\s*,\s*/, $fspec)
 		{
 			my $type = $types{$field} or die "unknown type: $field";
