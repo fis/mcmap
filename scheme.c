@@ -23,7 +23,7 @@ SCM_GLOBAL_SYMBOL(sym_server, "server");
 
 #define PACKET(id, cname, scmname, nfields, ...) \
 	SCM_SYMBOL(sym_packet_##cname, scmname);
-#include "protocol.x"
+#include "protocol.def"
 #undef PACKET
 
 static SCM packet_field_symbol_names[256][16];
@@ -149,7 +149,7 @@ SCM_DEFINE(scheme_packet_type, "packet-type", 1, 0, 0, (SCM packet_smob),
 	#define PACKET(id, cname, scmname, nfields, ...) \
 		case id: \
 			return sym_packet_##cname;
-	#include "protocol.x"
+	#include "protocol.def"
 	#undef PACKET
 
 	default:
@@ -285,7 +285,7 @@ void init_scheme()
 	#define FIELD(type, cname, scmname) \
 		packet_field_symbol_names[packet_id][field_num] = scm_from_utf8_symbol(scmname); \
 		field_num++ /* a comma appears next */
-	#include "protocol.x"
+	#include "protocol.def"
 	/* terminate the very last field_num++ */
 	;
 	#undef FIELD
@@ -295,7 +295,7 @@ void init_scheme()
 
 	#define PACKET(id, cname, scmname, nfields, ...) \
 		scm_hash_set_x(symbol_to_packet_type, scm_from_utf8_symbol(scmname), scm_from_uint(id));
-	#include "protocol.x"
+	#include "protocol.def"
 	#undef PACKET
 
 	#ifndef SCM_MAGIC_SNARFER

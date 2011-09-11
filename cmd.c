@@ -36,7 +36,7 @@ void init_cmd()
 		command->name = #cname; \
 		command->run = cmd_##cname; \
 		g_hash_table_insert(commands, command->name, command);
-	#include "cmd.x"
+	#include "cmd.def"
 	#undef COMMAND	
 }
 
