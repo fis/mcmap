@@ -26,6 +26,7 @@ SCM_GLOBAL_SYMBOL(sym_server, "server");
 #include "protocol.x"
 #undef PACKET
 
+static SCM packet_field_symbol_names[256][16];
 static SCM symbol_to_packet_type;
 
 SCM_SMOB(scm_tc16_packet_type, "packet", sizeof(packet_t));
@@ -164,47 +165,47 @@ SCM_DEFINE(scheme_packet_fields, "packet-fields", 1, 0, 0, (SCM packet_smob),
 	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
 	struct packet_format_desc fmt = packet_format[p->type];
 
-	SCM fields = scm_c_make_vector(fmt.nfields, SCM_BOOL_F);
+	SCM *field_names = packet_field_symbol_names[p->type];
+	SCM fields = scm_cons(SCM_BOOL_F, SCM_EOL);
+	SCM field_ptr = fields;
 
-	scm_t_array_handle handle;
-	size_t len;
-	ssize_t inc;
-	SCM *elt = scm_vector_writable_elements(fields, &handle, &len, &inc);
-
-	for (size_t i = 0; i < len; i++, elt += inc)
+	for (size_t i = 0; i < fmt.nfields; i++)
 	{
+		SCM value;
+
 		switch (fmt.ftype[i])
 		{
 		case FIELD_BYTE:
 		case FIELD_SHORT:
 		case FIELD_INT:
 		case FIELD_LONG:
-			*elt = scm_from_int64(packet_long(p, i));
+			value = scm_from_int64(packet_long(p, i));
 			break;
 
 		case FIELD_FLOAT:
 		case FIELD_DOUBLE:
-			*elt = scm_from_double(packet_double(p, i));
+			value = scm_from_double(packet_double(p, i));
 			break;
 
 		case FIELD_STRING:
 		case FIELD_STRING_UTF8:
 			{
 				struct buffer buf = packet_string(p, i);
-				*elt = scm_from_utf8_stringn((char *) buf.data, buf.len);
+				value = scm_from_utf8_stringn((char *) buf.data, buf.len);
 				g_free(buf.data);
 			}
 			break;
 
 		default:
-			/* just leave it as #f */
-			break;
+			value = SCM_BOOL_F;
 		}
+	
+		SCM new_field_ptr = scm_cons(scm_cons(field_names[i], value), SCM_EOL);
+		scm_set_cdr_x(field_ptr, new_field_ptr);
+		field_ptr = new_field_ptr;
 	}
 
-	scm_array_handle_release(&handle);
-
-	return fields;
+	return scm_cdr(fields);
 }
 #undef FUNC_NAME
 
@@ -243,6 +244,24 @@ SCM_DEFINE(scheme_packet_hook, "packet-hook", 1, 0, 0, (SCM type_symbol),
 
 void init_scheme()
 {
+	unsigned packet_id;
+	unsigned field_num;
+
+	#define PACKET(id, cname, scmname, nfields, ...) \
+		/* terminate the last field_num++ of the previous packet */ \
+		; \
+		packet_id = id; \
+		field_num = 0; \
+		__VA_ARGS__
+	#define FIELD(type, cname, scmname) \
+		packet_field_symbol_names[packet_id][field_num] = scm_from_utf8_symbol(scmname); \
+		field_num++ /* a comma appears next */
+	#include "protocol.x"
+	/* terminate the very last field_num++ */
+	;
+	#undef FIELD
+	#undef PACKET
+
 	symbol_to_packet_type = scm_permanent_object(scm_make_hash_table(SCM_UNDEFINED));
 
 	#define PACKET(id, cname, scmname, nfields, ...) \
