@@ -21,7 +21,7 @@ time: 0x04
 - long minutes: world time in minutes
 
 entity_equipment: 0x05
-- int id:       entity ID
+- int entity:   entity ID
 - short slot:   slot (0 = held, 1..4 = armor)
 - short item:   item ID
 - short damage: damage
@@ -32,7 +32,7 @@ spawn_position: 0x06
 - int z
 
 use_entity: 0x07
-- int player: entity ID of player (ignored)
+- int entity: entity ID of player (ignored)
 - int target: entity ID of target
 - bool left_click: true for left-click
 
@@ -84,22 +84,22 @@ entity_holding: 0x10
 - short slot: selected slot index (0..8)
 
 use_bed: 0x11
-- int player: Player ID
+- int entity: Player ID
 - byte unknown: who knows
 - int x
 - byte y
 - int z
 
 entity_animate: 0x12
-- int id: player ID
+- int entity: player ID
 - byte animation: animation ID
 
 entity_action: 0x13
-- int id: player ID
+- int entity: player ID
 - byte action: action ID
 
 entity_spawn_named: 0x14
-- int id:      player ID
+- int entity:  player ID
 - string name: player name
 - int x
 - int y
@@ -109,7 +109,7 @@ entity_spawn_named: 0x14
 - short item:  currently-holding item ID
 
 entity_spawn_pickup: 0x15
-- int id
+- int entity: entity ID
 - short item
 - byte count
 - short damage
@@ -122,10 +122,10 @@ entity_spawn_pickup: 0x15
 
 entity_collect: 0x16
 - int pickup: collected entity ID
-- int player: collecting entity ID
+- int entity: collecting entity ID
 
 entity_spawn_object: 0x17
-- int id
+- int entity: entity ID
 - byte type: spawned object type
 - int x
 - int y
@@ -133,7 +133,7 @@ entity_spawn_object: 0x17
 - object_data data: variable-length object data field
 
 entity_spawn_mob: 0x18
-- int id
+- int entity: entity ID
 - byte type: spawned mob type
 - int x
 - int y
@@ -143,7 +143,7 @@ entity_spawn_mob: 0x18
 - entity_data data: metadata stream
 
 entity_spawn_painting: 0x19
-- int id
+- int entity: entity ID
 - string name: painting name, eg. "Creepers"
 - int x
 - int y
@@ -159,30 +159,30 @@ unknown_0x1b: 0x1b
 - bool unknown_6: who knows
 
 entity_velocity: 0x1c
-- int id
+- int entity: entity ID
 - short dx: delta-x
 - short dy: delta-y
 - short dz: delta-z
 
 entity_destroy: 0x1d
-- int id
+- int entity: entity ID
 
 entity: 0x1e
-- int id
+- int entity: entity ID
 
 entity_rel_move: 0x1f
-- int id
+- int entity: entity ID
 - byte dx
 - byte dy
 - byte dz
 
 entity_look: 0x20
-- int id
+- int entity: entity ID
 - byte yaw
 - byte pitch
 
 entity_rel_move_look: 0x21
-- int id
+- int entity: entity ID
 - byte dx
 - byte dy
 - byte dz
@@ -190,7 +190,7 @@ entity_rel_move_look: 0x21
 - byte pitch
 
 entity_move: 0x22
-- int id
+- int entity: entity ID
 - int x: absolute coords here
 - int y
 - int z
@@ -198,15 +198,15 @@ entity_move: 0x22
 - byte pitch
 
 entity_damage: 0x26
-- int id
+- int entity: entity ID
 - byte status: entity status (hurt/dead/???)
 
 entity_attach: 0x27
-- int player: player entity ID
+- int entity: player entity ID
 - int vehicle: vehicle entity ID
 
 entity_metadata: 0x28
-- int id
+- int entity: entity ID
 - entity_data data: metadata stream
 
 prechunk: 0x32
@@ -250,7 +250,7 @@ explosion: 0x3c
 - explosion_array data: list of explosion records
 
 sound_effect: 0x3d
-- int id: sound effect ID
+- int effect: sound effect ID
 - int x
 - byte y
 - int z
@@ -260,7 +260,7 @@ new_or_invalid_state: 0x46
 - byte reason: 0 = invalid bed, 1/2 = start/end rain, 3 = game mode change
 
 thunderbolt: 0x47
-- int id: entity ID for the thunderbolt
+- int entity: entity ID for the thunderbolt
 - byte raining: always true at the moment
 - int x
 - int y
@@ -298,9 +298,9 @@ inventory_progress: 0x69
 - short value: progress bar value
 
 inventory_ack: 0x6a
-- byte window: window ID
-- short id:    transaction ID
-- bool ack:    true if the transaction was accepted
+- byte window:       window ID
+- short transaction: transaction ID
+- bool ack:          true if the transaction was accepted
 
 sign_update: 0x82
 - int x
@@ -313,11 +313,11 @@ sign_update: 0x82
 
 map_data: 0x83
 - short type: type of modified item (358 = map)
-- short id: map ID (item damage value)
+- short map: map ID (item damage value)
 - map_array data: map data
 
 increment_statistic: 0xc8
-- int id: Statistic ID
+- int statistic: Statistic ID
 - byte amount
 
 user_list_item: 0xc9
