@@ -157,6 +157,58 @@ SCM_DEFINE(scheme_packet_type, "packet-type", 1, 0, 0, (SCM packet_smob),
 }
 #undef FUNC_NAME
 
+SCM_DEFINE(scheme_packet_field, "packet-field", 2, 0, 0, (SCM packet_smob, SCM field_name),
+	"Return the given field of the packet.")
+#define FUNC_NAME "packet-field"
+{
+	SCM_VALIDATE_SMOB(1, packet_smob, packet_type);
+	SCM_VALIDATE_SYMBOL(1, field_name);
+
+	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
+	struct packet_format_desc fmt = packet_format[p->type];
+	SCM *field_names = packet_field_symbol_names[p->type];
+
+	/* This is O(n), but n is something like 7 at most, so it doesn't
+	   really matter. */
+	for (size_t i = 0; i < fmt.nfields; i++)
+	{
+		if (scm_is_eq(field_names[i], field_name))
+		{
+			switch (fmt.ftype[i])
+			{
+			case FIELD_BYTE:
+			case FIELD_SHORT:
+			case FIELD_INT:
+			case FIELD_LONG:
+				return scm_from_int64(packet_long(p, i));
+
+			case FIELD_FLOAT:
+			case FIELD_DOUBLE:
+				return scm_from_double(packet_double(p, i));
+
+			case FIELD_STRING:
+			case FIELD_STRING_UTF8:
+				{
+					struct buffer buf = packet_string(p, i);
+					SCM value = scm_from_utf8_stringn((char *) buf.data, buf.len);
+					g_free(buf.data);
+					return value;
+				}
+
+			default:
+				return SCM_BOOL_F;
+			}
+		}
+	}
+
+	scm_error(scm_out_of_range_key,
+		FUNC_NAME,
+		"Invalid field name for packet type ~A: ~A",
+		scm_list_2(scheme_packet_type(packet_smob), field_name),
+		SCM_BOOL_F);
+}
+#undef FUNC_NAME
+
 SCM_DEFINE(scheme_packet_fields, "packet-fields", 1, 0, 0, (SCM packet_smob),
 	"Return the fields of the packet as a vector.")
 #define FUNC_NAME "packet-fields"
@@ -164,42 +216,15 @@ SCM_DEFINE(scheme_packet_fields, "packet-fields", 1, 0, 0, (SCM packet_smob),
 	SCM_VALIDATE_SMOB(1, packet_smob, packet_type);
 	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
 	struct packet_format_desc fmt = packet_format[p->type];
-
 	SCM *field_names = packet_field_symbol_names[p->type];
+
 	SCM fields = scm_cons(SCM_BOOL_F, SCM_EOL);
 	SCM field_ptr = fields;
 
 	for (size_t i = 0; i < fmt.nfields; i++)
 	{
-		SCM value;
-
-		switch (fmt.ftype[i])
-		{
-		case FIELD_BYTE:
-		case FIELD_SHORT:
-		case FIELD_INT:
-		case FIELD_LONG:
-			value = scm_from_int64(packet_long(p, i));
-			break;
-
-		case FIELD_FLOAT:
-		case FIELD_DOUBLE:
-			value = scm_from_double(packet_double(p, i));
-			break;
-
-		case FIELD_STRING:
-		case FIELD_STRING_UTF8:
-			{
-				struct buffer buf = packet_string(p, i);
-				value = scm_from_utf8_stringn((char *) buf.data, buf.len);
-				g_free(buf.data);
-			}
-			break;
-
-		default:
-			value = SCM_BOOL_F;
-		}
-	
+		/* This is inefficient, but this function is inefficient in general, so who cares */
+		SCM value = scheme_packet_field(packet_smob, field_names[i]);
 		SCM new_field_ptr = scm_cons(scm_cons(field_names[i], value), SCM_EOL);
 		scm_set_cdr_x(field_ptr, new_field_ptr);
 		field_ptr = new_field_ptr;
