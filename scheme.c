@@ -1,6 +1,7 @@
 #include <glib.h>
 #include <libguile.h>
 
+#include "common.h"
 #include "protocol.h"
 #include "proxy.h"
 #include "scheme.h"
@@ -20,7 +21,11 @@
 SCM_GLOBAL_SYMBOL(sym_client, "client");
 SCM_GLOBAL_SYMBOL(sym_server, "server");
 
-static SCM packet_type_to_symbol;
+#define PACKET(id, cname, scmname, nfields, ...) \
+	SCM_SYMBOL(sym_packet_##cname, scmname);
+#include "protocol.x"
+#undef PACKET
+
 static SCM symbol_to_packet_type;
 
 SCM_SMOB(scm_tc16_packet_type, "packet", sizeof(packet_t));
@@ -137,7 +142,17 @@ SCM_DEFINE(scheme_packet_type, "packet-type", 1, 0, 0, (SCM packet_smob),
 {
 	SCM_VALIDATE_SMOB(1, packet_smob, packet_type);
 	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
-	return scm_hash_ref(packet_type_to_symbol, scm_from_uint(p->type), SCM_UNDEFINED);
+	switch (p->type)
+	{
+	#define PACKET(id, cname, scmname, nfields, ...) \
+		case id: \
+			return sym_packet_##cname;
+	#include "protocol.x"
+	#undef PACKET
+
+	default:
+		wtff("Invalid packet type %u", p->type);
+	}
 }
 #undef FUNC_NAME
 
@@ -228,16 +243,10 @@ SCM_DEFINE(scheme_packet_hook, "packet-hook", 1, 0, 0, (SCM type_symbol),
 
 void init_scheme()
 {
-	packet_type_to_symbol = scm_permanent_object(scm_make_hash_table(SCM_UNDEFINED));
 	symbol_to_packet_type = scm_permanent_object(scm_make_hash_table(SCM_UNDEFINED));
 
-	SCM packet_id;
-	SCM packet_scmname;
 	#define PACKET(id, cname, scmname, nfields, ...) \
-		packet_id = scm_from_uint(id); \
-		packet_scmname = scm_from_locale_symbol(scmname); \
-		scm_hash_set_x(packet_type_to_symbol, packet_id, packet_scmname); \
-		scm_hash_set_x(symbol_to_packet_type, packet_scmname, packet_id);
+		scm_hash_set_x(symbol_to_packet_type, scm_from_utf8_symbol(scmname), scm_from_uint(id));
 	#include "protocol.x"
 	#undef PACKET
 
