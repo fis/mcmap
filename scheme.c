@@ -143,6 +143,7 @@ SCM_DEFINE(scheme_packet_type, "packet-type", 1, 0, 0, (SCM packet_smob),
 {
 	SCM_VALIDATE_SMOB(1, packet_smob, packet_type);
 	packet_t *p = (packet_t *) SCM_SMOB_DATA(packet_smob);
+
 	switch (p->type)
 	{
 	#define PACKET(id, cname, scmname, nfields, ...) \
@@ -154,6 +155,8 @@ SCM_DEFINE(scheme_packet_type, "packet-type", 1, 0, 0, (SCM packet_smob),
 	default:
 		wtff("Invalid packet type %u", p->type);
 	}
+
+	scm_remember_upto_here_1(packet_smob);
 }
 #undef FUNC_NAME
 
@@ -249,6 +252,7 @@ SCM_DEFINE(scheme_packet_inject, "packet-inject", 2, 0, 0, (SCM inject_to, SCM p
 	else
 		SCM_OUT_OF_RANGE(1, inject_to);
 
+	scm_remember_upto_here_1(packet_smob);
 	return SCM_UNSPECIFIED;
 }
 #undef FUNC_NAME
