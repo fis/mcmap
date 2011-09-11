@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 
 # protocol.pl:
-# converts protocol.txt into protocol.x
+# converts protocol.txt into protocol.def
 
 use strict;
 use warnings;
