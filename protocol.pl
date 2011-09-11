@@ -27,7 +27,7 @@ my %types = (
 	'object_data' => 'FIELD_OBJECT_DATA'
 	);
 
-while (my $line = <SPEC>)
+while (my $line = <>)
 {
 	chomp $line;
 
@@ -65,7 +65,7 @@ foreach my $id (@packets)
 	my @ftypes = map { $_->[0] } @$fields; # TODO: also use the names
 	my $cname = uc $name;
 
-	printf CODE "PACKET(0x%02x, %s, %d, %s)\n",
+	printf "PACKET(0x%02x, %s, %d, %s)\n",
 		$id, $cname,
 		scalar @ftypes, @ftypes ? join(', ', @ftypes) : '0';
 }
