@@ -6,9 +6,6 @@
 use strict;
 use warnings;
 
-open SPEC, '<:utf8', 'protocol.txt' or die "can't read spec: $!";
-open CODE, '>:utf8', 'protocol.x' or die "can't write code: $!";
-
 # read spec
 
 my %packets;
@@ -30,7 +27,7 @@ my %types = (
 	'object_data' => 'FIELD_OBJECT_DATA'
 	);
 
-while (my $line = <SPEC>)
+while (my $line = <>)
 {
 	chomp $line;
 
@@ -64,13 +61,26 @@ my @packets = sort { $a <=> $b } keys %packets;
 
 foreach my $id (@packets)
 {
-	my ($name, $fields) = ($packets{$id}->{'name'}, $packets{$id}->{'fields'});
-	my @ftypes = map { $_->[0] } @$fields; # TODO: also use the names
+	my ($name, @fields) = ($packets{$id}->{name}, @{$packets{$id}->{fields}});
 	my $cname = uc $name;
 	my $scmname = $name;
 	$scmname =~ s/_/-/g;
 
-	printf CODE "PACKET(0x%02x, %s, \"%s\", %d, %s)\n",
-		$id, $cname, $scmname,
-		scalar @ftypes, @ftypes ? join(', ', @ftypes) : '0';
+	printf "PACKET(0x%02x, %s, \"%s\", %d", $id, $cname, $scmname, scalar @fields;
+	if (@fields)
+	{
+		foreach my $field (@fields)
+		{
+			my ($ftype, $fname) = @$field;
+			my $cfname = uc $fname;
+			my $scmfname = $fname;
+			$scmfname =~ s/_/-/g;
+			printf ", FIELD(%s, %s, \"%s\")", $ftype, $cfname, $scmfname;
+		}
+	}
+	else
+	{
+		print ", 0";
+	}
+	print ")\n";
 }

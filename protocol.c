@@ -16,7 +16,9 @@
 
 #define PACKET(id, cname, scmname, nfields, ...) \
 	static enum field_type packet_format_##cname[nfields ? nfields : 1] = { __VA_ARGS__ };
+#define FIELD(type, cname, scmname) type
 #include "protocol.x"
+#undef FIELD
 #undef PACKET
 
 struct packet_format_desc packet_format[] = {

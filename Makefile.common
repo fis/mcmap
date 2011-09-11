@@ -56,8 +56,8 @@ $(OBJDIR)/%.x: %.c | $(OBJDIR)
 
 $(OBJDIR)/scheme.d: $(OBJDIR)/scheme.x
 
-protocol.x: protocol.txt | protocol.pl
-	perl protocol.pl
+protocol.x: protocol.txt protocol.pl
+	perl protocol.pl < $< > $@
 
 -include $(deps)
 
