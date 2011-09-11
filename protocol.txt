@@ -4,21 +4,21 @@ login: 0x01
 - int id
   client -> server: protocol version
   server -> client: player entity ID
-- string nick
-  client -> server: nickname
+- string name
+  client -> server: player name
 - long seed
   server -> client: map seed value
-- byte dim
+- byte world
   server -> client: dimension (0 normal, -1 nether)
 
 handshake: 0x02
-- string data: username (from client), connection hash (from server)
+- string data: player name (from client), connection hash (from server)
 
 chat: 0x03
 - string message: up to 100 bytes
 
 time: 0x04
-- long time: world time in minutes
+- long minutes: world time in minutes
 
 entity_equipment: 0x05
 - int id:       entity ID
@@ -34,28 +34,28 @@ spawn_position: 0x06
 use_entity: 0x07
 - int player: entity ID of player (ignored)
 - int target: entity ID of target
-- bool left: true for left-click
+- bool left_click: true for left-click
 
 update_health: 0x08
 - short health: 0 .. 20 (in 0.5 hearts)
 
 respawn: 0x09
-- byte dim: world identifier
+- byte world: world identifier
 
 player_ping: 0x0a
-- bool ground: true if on ground
+- bool on_ground: true if on ground
 
 player_move: 0x0b
 - double x
 - double y
 - double stance
 - double z
-- bool ground: true if on ground
+- bool on_ground: true if on ground
 
 player_rotate: 0x0c
 - float yaw
 - float pitch
-- bool ground: true if on ground
+- bool on_ground: true if on ground
 
 player_move_rotate: 0x0d
 - double x
@@ -64,7 +64,7 @@ player_move_rotate: 0x0d
 - double z
 - float yaw
 - float pitch
-- bool ground: true if on ground
+- bool on_ground: true if on ground
 
 player_dig: 0x0e
 - byte action: 0..4 = start, dig, stop, break, drop
@@ -85,7 +85,7 @@ entity_holding: 0x10
 
 use_bed: 0x11
 - int player: Player ID
-- byte unk: who knows
+- byte unknown: who knows
 - int x
 - byte y
 - int z
@@ -148,15 +148,15 @@ entity_spawn_painting: 0x19
 - int x
 - int y
 - int z
-- int dir: 0..3 = -z, -x, +z, +x: direction the painting faces
+- int direction: 0..3 = -z, -x, +z, +x: direction the painting faces
 
 unknown_0x1b: 0x1b
-- float unk1: who knows
-- float unk2: who knows
-- float unk3: who knows
-- float unk4: who knows
-- bool unk5: who knows
-- bool unk6: who knows
+- float unknown_1: who knows
+- float unknown_2: who knows
+- float unknown_3: who knows
+- float unknown_4: who knows
+- bool unknown_5: who knows
+- bool unknown_6: who knows
 
 entity_velocity: 0x1c
 - int id
@@ -218,9 +218,9 @@ chunk: 0x33
 - int x:           block-level X/Y/Z offsets
 - short y
 - int z
-- byte xsize:      X size - 1
-- byte ysize:      Y size - 1
-- byte zsize:      Z size - 1
+- byte x_size:      X size - 1
+- byte y_size:      Y size - 1
+- byte z_size:      Z size - 1
 - byte_array data: compressed chunk data
 
 multi_set_block: 0x34
@@ -276,12 +276,12 @@ inventory_close: 0x65
 - byte window: window ID
 
 inventory_click: 0x66
-- byte window: window ID
-- short slot:  clicked slot (or -999 if outside)
-- bool right:  true when right-clicking
-- short id:    transaction ID
-- byte shift:  true if shift was held
-- item item:   clicked item in the slot
+- byte window:       window ID
+- short slot:        clicked slot (or -999 if outside)
+- bool right_click:  true when right-clicking
+- short transaction: transaction ID
+- byte shift:        true if shift was held
+- item item:         clicked item in the slot
 
 inventory_update: 0x67
 - byte window:  window ID
@@ -306,10 +306,10 @@ sign_update: 0x82
 - int x
 - short y
 - int z:
-- string line1: sign contents 
-- string line2
-- string line3
-- string line4
+- string line_1: sign contents 
+- string line_2
+- string line_3
+- string line_4
 
 map_data: 0x83
 - short type: type of modified item (358 = map)
