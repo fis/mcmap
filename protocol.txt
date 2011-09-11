@@ -320,5 +320,10 @@ increment_statistic: 0xc8
 - int id: Statistic ID
 - byte amount
 
+user_list_item: 0xc9
+- string name: player name
+- bool online: if false, name will be removed from userlist
+- short ping: ping of player in milliseconds
+
 disconnect: 0xff
 - string reason: disconnection reason
