@@ -72,5 +72,5 @@ foreach my $id (@packets)
 
 	printf CODE "PACKET(0x%02x, %s, \"%s\", %d, %s)\n",
 		$id, $cname, $scmname,
-		scalar @$fields, @ftypes ? join(', ', @ftypes) : '0';
+		scalar @ftypes, @ftypes ? join(', ', @ftypes) : '0';
 }
