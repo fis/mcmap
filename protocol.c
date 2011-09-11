@@ -17,14 +17,14 @@
 #define PACKET(id, cname, nfields, ...) \
 	static enum field_type packet_format_##cname[nfields ? nfields : 1] = { __VA_ARGS__ };
 #define FIELD(type, cname) type
-#include "protocol.x"
+#include "protocol.def"
 #undef FIELD
 #undef PACKET
 
 struct packet_format_desc packet_format[] = {
 #define PACKET(id, cname, nfields, ...) \
 	[PACKET_##cname] = { nfields, packet_format_##cname, 1 },
-#include "protocol.x"
+#include "protocol.def"
 #undef PACKET
 };
 

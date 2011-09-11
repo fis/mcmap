@@ -7,7 +7,7 @@
 enum packet_id {
 #define PACKET(id, cname, nfields, ...) \
 	PACKET_##cname = id,
-#include "protocol.x"
+#include "protocol.def"
 #undef PACKET
 };
 
