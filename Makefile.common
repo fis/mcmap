@@ -52,7 +52,7 @@ $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	$(call do, CC $<, $(CC) $(CFLAGS) $(OPTCFLAGS) -c -o $@ $<)
 
 protocol.x: protocol.txt | protocol.pl
-	perl protocol.pl
+	perl protocol.pl < $< > $@
 
 -include $(deps)
 

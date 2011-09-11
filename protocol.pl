@@ -6,9 +6,6 @@
 use strict;
 use warnings;
 
-open SPEC, '<:utf8', 'protocol.txt' or die "can't read spec: $!";
-open CODE, '>:utf8', 'protocol.x' or die "can't write code: $!";
-
 # read spec
 
 my %packets;
