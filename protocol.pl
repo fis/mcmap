@@ -61,11 +61,22 @@ my @packets = sort { $a <=> $b } keys %packets;
 
 foreach my $id (@packets)
 {
-	my ($name, $fields) = ($packets{$id}->{'name'}, $packets{$id}->{'fields'});
-	my @ftypes = map { $_->[0] } @$fields; # TODO: also use the names
+	my ($name, @fields) = ($packets{$id}->{name}, @{$packets{$id}->{fields}});
 	my $cname = uc $name;
 
-	printf "PACKET(0x%02x, %s, %d, %s)\n",
-		$id, $cname,
-		scalar @ftypes, @ftypes ? join(', ', @ftypes) : '0';
+	printf "PACKET(0x%02x, %s, %d", $id, $cname, scalar @fields;
+	if (@fields)
+	{
+		foreach my $field (@fields)
+		{
+			my ($ftype, $fname) = @$field;
+			my $cfname = uc $fname;
+			printf ", FIELD(%s, %s)", $ftype, $cfname;
+		}
+	}
+	else
+	{
+		print ", 0";
+	}
+	print ")\n";
 }
