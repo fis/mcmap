@@ -1,266 +1,329 @@
 keepalive: 0x00
 
 login: 0x01
-- int
+- int id
   client -> server: protocol version
   server -> client: player entity ID
-- string
-  client -> server: nickname
-- long
+- string name
+  client -> server: player name
+- long seed
   server -> client: map seed value
-- byte
+- byte world
   server -> client: dimension (0 normal, -1 nether)
 
 handshake: 0x02
-- string: username (from client), connection hash (from server)
+- string data: player name (from client), connection hash (from server)
 
 chat: 0x03
-- string: message (up to 100 bytes)
+- string message: up to 100 bytes
 
 time: 0x04
-- long: world time in minutes
+- long minutes: world time in minutes
 
 entity_equipment: 0x05
-- int:   entity ID
-- short: slot (0 = held, 1..4 = armor)
-- short: item ID
-- short: damage
+- int entity:   entity ID
+- short slot:   slot (0 = held, 1..4 = armor)
+- short item:   item ID
+- short damage: damage
 
 spawn_position: 0x06
-- int, int, int: X, Y, Z in block coords
+- int x: these are in block coords
+- int y
+- int z
 
 use_entity: 0x07
-- int: entity ID of player (ignored)
-- int: entity ID of target
-- bool: true for left-click
+- int entity: entity ID of player (ignored)
+- int target: entity ID of target
+- bool left_click: true for left-click
 
 update_health: 0x08
-- short: player health, 0 .. 20 (in 0.5 hearts)
+- short health: 0 .. 20 (in 0.5 hearts)
 
 respawn: 0x09
-- byte: world
+- byte world: world identifier
 
 player_ping: 0x0a
-- bool: true if on ground
+- bool on_ground: true if on ground
 
 player_move: 0x0b
-- double, double, double, double: X, Y, stance, Z
-- bool: true if on ground
+- double x
+- double y
+- double stance
+- double z
+- bool on_ground: true if on ground
 
 player_rotate: 0x0c
-- float, float: yaw, pitch
-- bool: true if on ground
+- float yaw
+- float pitch
+- bool on_ground: true if on ground
 
 player_move_rotate: 0x0d
-- double, double, double, double:
-  from client: X, stance, Y, Z
-  from server: X, Y, stance, Z
-- float, float: yaw, pitch
-- bool: true if on ground
+- double x
+- double y:      from client, stance
+- double stance: from client, y
+- double z
+- float yaw
+- float pitch
+- bool on_ground: true if on ground
 
 player_dig: 0x0e
-- byte: action (0..4 = start, dig, stop, break, drop)
-- int, byte, int: X, Y, Z
-- byte: face to hit
+- byte action: 0..4 = start, dig, stop, break, drop
+- int x
+- byte y
+- int z
+- byte face: 0..5 = which face to hit
 
 place: 0x0f
-- int, byte, int: X, Y, Z
-- byte: face to place against
-- item: what to place there
+- int x
+- byte y
+- int z
+- byte face: face to place against
+- item item: what to place there
 
 entity_holding: 0x10
-- short: selected slot index (0..8)
+- short slot: selected slot index (0..8)
 
 use_bed: 0x11
-- int: Player ID
-- byte: who knows
-- int: X?
-- byte: Y?
-- int: Z?
+- int entity: Player ID
+- byte unknown: who knows
+- int x
+- byte y
+- int z
 
 entity_animate: 0x12
-- int: player ID
-- byte: animation ID
+- int entity: player ID
+- byte animation: animation ID
 
 entity_action: 0x13
-- int: player ID
-- byte: action ID
+- int entity: player ID
+- byte action: action ID
 
 entity_spawn_named: 0x14
-- int:           player ID
-- string:        player name
-- int, int, int: X, Y, Z
-- byte, byte:    yaw, pitch
-- short:         currently-holding item ID
+- int entity:  player ID
+- string name: player name
+- int x
+- int y
+- int z
+- byte yaw
+- byte pitch
+- short item:  currently-holding item ID
 
 entity_spawn_pickup: 0x15
-- int:                entity ID
-- short, byte, short: item ID, count, damage
-- int, int, int:      X, Y, Z
-- byte, byte, byte:   yaw, pitch, roll
+- int entity: entity ID
+- short item
+- byte count
+- short damage
+- int x
+- int y
+- int z
+- byte yaw
+- byte pitch
+- byte roll
 
 entity_collect: 0x16
-- int: collected entity ID
-- int: collecting entity ID
+- int pickup: collected entity ID
+- int entity: collecting entity ID
 
 entity_spawn_object: 0x17
-- int:           entity ID
-- byte:          object type
-- int, int, int: X, Y, Z
-- object_data:   Variable length object data field.
+- int entity: entity ID
+- byte type: spawned object type
+- int x
+- int y
+- int z
+- object_data data: variable-length object data field
 
 entity_spawn_mob: 0x18
-- int:           entity ID
-- byte:          mob type
-- int, int, int: X, Y, Z
-- byte, byte:    yaw, pitch
-- entity_data:   metadata stream
+- int entity: entity ID
+- byte type: spawned mob type
+- int x
+- int y
+- int z
+- byte yaw
+- byte pitch
+- entity_data data: metadata stream
 
 entity_spawn_painting: 0x19
-- int:           entity ID
-- string:        painting name, eg. "Creepers"
-- int, int, int: X, Y, Z
-- int:           ???
+- int entity: entity ID
+- string name: painting name, eg. "Creepers"
+- int x
+- int y
+- int z
+- int direction: 0..3 = -z, -x, +z, +x: direction the painting faces
 
 unknown_0x1b: 0x1b
-- float: who knows
-- float: who knows
-- float: who knows
-- float: who knows
-- bool: who knows
-- bool: who knows
+- float unknown_1: who knows
+- float unknown_2: who knows
+- float unknown_3: who knows
+- float unknown_4: who knows
+- bool unknown_5: who knows
+- bool unknown_6: who knows
 
 entity_velocity: 0x1c
-- int:                 entity ID
-- short, short, short: velocity X, Y, Z
+- int entity: entity ID
+- short dx: delta-x
+- short dy: delta-y
+- short dz: delta-z
 
 entity_destroy: 0x1d
-- int: entity ID
+- int entity: entity ID
 
 entity: 0x1e
-- int: entity ID
+- int entity: entity ID
 
 entity_rel_move: 0x1f
-- int:              entity ID
-- byte, byte, byte: delta X, Y, Z
+- int entity: entity ID
+- byte dx
+- byte dy
+- byte dz
 
 entity_look: 0x20
-- int:        entity ID
-- byte, byte: yaw, pitch
+- int entity: entity ID
+- byte yaw
+- byte pitch
 
 entity_rel_move_look: 0x21
-- int:              entity ID
-- byte, byte, byte: delta X, Y, Z
-- byte, byte:       yaw, pitch
+- int entity: entity ID
+- byte dx
+- byte dy
+- byte dz
+- byte yaw
+- byte pitch
 
 entity_move: 0x22
-- int:           entity ID
-- int, int, int: absolute X, Y, Z
-- byte, byte:    yaw, pitch
+- int entity: entity ID
+- int x: absolute coords here
+- int y
+- int z
+- byte yaw
+- byte pitch
 
 entity_damage: 0x26
-- int:  entity ID
-- byte: status
+- int entity: entity ID
+- byte status: entity status (hurt/dead/???)
 
 entity_attach: 0x27
-- int: player ID
-- int: vehicle ID
+- int entity: player entity ID
+- int vehicle: vehicle entity ID
 
 entity_metadata: 0x28
-- int:         entity ID
-- entity_data: metadata stream
+- int entity: entity ID
+- entity_data data: metadata stream
 
 prechunk: 0x32
-- int, int: chunk X, Z
-- bool:     false to unload, true to initialize
+- int cx:    chunk X
+- int cz:    chunk Z
+- bool load: false to unload, true to initialize
 
 chunk: 0x33
-- int, short, int:  offset X, Y, Z
-- byte, byte, byte: size X, Y, Z
-- byte_array:       compressed chunk data
+- int x:           block-level X/Y/Z offsets
+- short y
+- int z
+- byte x_size:      X size - 1
+- byte y_size:      Y size - 1
+- byte z_size:      Z size - 1
+- byte_array data: compressed chunk data
 
 multi_set_block: 0x34
-- int, int:    chunk X, Z
-- block_array: uncompressed (coord, block, meta) tuples
+- int cx: chunk X
+- int cz: chunk Z
+- block_array data: uncompressed (coord, block, meta) tuples
 
 set_block: 0x35
-- int, byte, int: block X, Y, Z
-- byte, byte:     block type and metadata
+- int x
+- byte y
+- int z
+- byte data: block ID
+- byte meta: metadata value
 
 play_block: 0x36
-- int, short, int: block X, Y, Z
-- byte, byte:      instrument type and pitch
+- int x
+- short y
+- int z
+- byte type:  instrument type
+- byte pitch: note pitch
 
 explosion: 0x3c
-- double, double, double: X, Y, Z
-- float:                  maybe radius
-- explosion_array:        list of explosion records
+- double x
+- double y
+- double z
+- float radius:         maybe?
+- explosion_array data: list of explosion records
 
 sound_effect: 0x3d
-- int:    Effect ID
-- int:    X
-- byte:   Y
-- int:    Z
-- int:    Sound data
+- int effect: sound effect ID
+- int x
+- byte y
+- int z
+- int data: sound metadata for some events
 
 new_or_invalid_state: 0x46
-- byte:   Reason?
+- byte reason: 0 = invalid bed, 1/2 = start/end rain, 3 = game mode change
 
-weather: 0x47
-- int:    ID?
-- byte:   Raining?
-- int:    X?
-- int:    Y?
-- int:    Z?
+thunderbolt: 0x47
+- int entity: entity ID for the thunderbolt
+- byte raining: always true at the moment
+- int x
+- int y
+- int z
 
 inventory_open: 0x64
-- byte:        window ID
-- byte:        inventory type (0 = basic, 1 = workbench, 2 = furnace)
-- string_utf8: inventory window title
-- byte:        number of additional slots
+- byte window:       window ID
+- byte type:         inventory type (0 = basic, 1 = workbench, 2 = furnace)
+- string_utf8 title: inventory window title
+- byte slots:        number of additional slots
 
 inventory_close: 0x65
-- byte: window ID
+- byte window: window ID
 
 inventory_click: 0x66
-- byte:  window ID
-- short: clicked slot (or -999 if outside)
-- bool:  true when right-clicking
-- short: transaction ID
-- byte:  shift
-- item:  clicked item in the slot
+- byte window:       window ID
+- short slot:        clicked slot (or -999 if outside)
+- bool right_click:  true when right-clicking
+- short transaction: transaction ID
+- byte shift:        true if shift was held
+- item item:         clicked item in the slot
 
 inventory_update: 0x67
-- byte:  window ID
-- short: slot index
-- item:  item to place
+- byte window:  window ID
+- short slot:   slot index
+- item item:    item to place
 
 inventory_data: 0x68
-- byte:       window ID
-- item_array: full inventory contents
+- byte window:     window ID
+- item_array data: full inventory contents
 
 inventory_progress: 0x69
-- byte:  window ID
-- short: progress bar index
-- short: progress bar value
+- byte window: window ID
+- short bar:   progress bar index
+- short value: progress bar value
 
 inventory_ack: 0x6a
-- byte:  window ID
-- short: transaction ID
-- bool:  true if the transaction was accepted
+- byte window:       window ID
+- short transaction: transaction ID
+- bool ack:          true if the transaction was accepted
 
 sign_update: 0x82
-- int, short, int:                X, Y, Z
-- string, string, string, string: sign contents
+- int x
+- short y
+- int z:
+- string line_1: sign contents 
+- string line_2
+- string line_3
+- string line_4
 
 map_data: 0x83
-- short: unknown
-- short: map ID?
-- map_array: Map data
+- short type: type of modified item (358 = map)
+- short map: map ID (item damage value)
+- map_array data: map data
 
 increment_statistic: 0xc8
-- int: Statistic ID
-- byte: Amount
+- int statistic: Statistic ID
+- byte amount
+
+user_list_item: 0xc9
+- string name: player name
+- bool online: if false, name will be removed from userlist
+- short ping: ping of player in milliseconds
 
 disconnect: 0xff
-- string: disconnection reason
+- string reason: disconnection reason

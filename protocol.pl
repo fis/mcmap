@@ -46,11 +46,11 @@ while (my $line = <SPEC>)
 		die "fieldspec without a packet: $line" unless defined $fields;
 
 		my $fspec = $1;
-		foreach my $field (split /\s*,\s*/, $fspec)
-		{
-			my $type = $types{$field} or die "unknown type: $field";
-			push @$fields, $type;
-		}
+		$fspec =~ /^\s*(\w+)\s+(\w+)\s*$/ or die "bad fieldspec: $fspec";
+		my ($ftype, $fname) = ($1, $2);
+
+		my $type = $types{$ftype} or die "unknown type: $ftype";
+		push @$fields, [$type, $fname];
 	}
 	elsif ($line =~ /^\S/)
 	{
@@ -65,11 +65,12 @@ my @packets = sort { $a <=> $b } keys %packets;
 foreach my $id (@packets)
 {
 	my ($name, $fields) = ($packets{$id}->{'name'}, $packets{$id}->{'fields'});
+	my @ftypes = map { $_->[0] } @$fields; # TODO: also use the names
 	my $cname = uc $name;
 	my $scmname = $name;
 	$scmname =~ s/_/-/g;
 
 	printf CODE "PACKET(0x%02x, %s, \"%s\", %d, %s)\n",
 		$id, $cname, $scmname,
-		scalar @$fields, @$fields ? join(', ', @$fields) : '0';
+		scalar @$fields, @ftypes ? join(', ', @ftypes) : '0';
 }
