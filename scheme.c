@@ -73,13 +73,50 @@ SCM_DEFINE(scheme_make_packet, "make-packet", 1, 0, 1, (SCM type_symbol, SCM res
 	unsigned type = scm_to_uint(type_scm);
 	packet_constructor_t pc = packet_create(type);
 	struct packet_format_desc fmt = packet_format[type];
-	unsigned field;
-	unsigned nargs = 1;
+	SCM *field_names = packet_field_symbol_names[type];
 
-	for (field = 0; field < fmt.nfields && !scm_is_eq(rest, SCM_EOL); field++, rest = scm_cdr(rest))
+	unsigned field = 0;
+	bool in_keywords = false;
+	unsigned filled_fields = 0;
+
+	while (filled_fields < fmt.nfields && !scm_is_eq(rest, SCM_EOL))
 	{
-		nargs++;
-		SCM v = scm_car(rest);
+		SCM v;
+		SCM car = scm_car(rest);
+		if (scm_is_keyword(car))
+		{
+			in_keywords = true;
+			SCM kw_sym = scm_keyword_to_symbol(car);
+			bool ok = false;
+			for (size_t i = 0; i < fmt.nfields; i++)
+			{
+				if (scm_is_eq(kw_sym, field_names[i]))
+				{
+					field = i;
+					ok = true;
+					break;
+				}
+			}
+			if (!ok)
+			{
+				scm_error(scm_out_of_range_key,
+					FUNC_NAME,
+					"Invalid field name for packet type ~A: ~A",
+					scm_list_2(type_symbol, kw_sym),
+					SCM_BOOL_F);
+			}
+			rest = scm_cdr(rest);
+			v = scm_car(rest);
+		}
+		else
+		{
+			if (in_keywords)
+				scm_error(scm_arg_type_key, FUNC_NAME, "Expected keyword: ~A", scm_list_1(car), SCM_BOOL_F);
+			}
+			else
+				v = car;
+		}
+
 		char *s;
 
 		#define INTEGRAL(t) \
@@ -121,15 +158,21 @@ SCM_DEFINE(scheme_make_packet, "make-packet", 1, 0, 1, (SCM type_symbol, SCM res
 		#undef INTEGRAL
 		#undef FLOATING
 		#undef STRING
+
+		if (!in_keywords)
+			field++;
+
+		filled_fields++;
+		rest = scm_cdr(rest);
 	}
 
-	if (field < fmt.nfields || !scm_is_eq(rest, SCM_EOL))
+	if (filled_fields < fmt.nfields || !scm_is_eq(rest, SCM_EOL))
 	{
 		packet_constructor_free(&pc);
 		scm_error(scm_args_number_key,
 			FUNC_NAME,
 			"Wrong number of arguments to " FUNC_NAME " for packet type ~A; expected ~A but received ~A",
-			scm_list_3(type_symbol, scm_from_uint(fmt.nfields + 1), scm_sum(scm_from_uint(nargs), scm_length(rest))),
+			scm_list_3(type_symbol, scm_from_uint(fmt.nfields + 1), scm_sum(scm_from_uint(filled_fields + 1), scm_length(rest))),
 			SCM_BOOL_F);
 	}
 
