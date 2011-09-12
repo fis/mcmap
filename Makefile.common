@@ -44,7 +44,7 @@ $(OBJDIR):
 	mkdir $@
 
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
-	$(call do, CC $<, $(CC) $(CFLAGS) $(OPTCFLAGS) -c -o $@ $<)
+	$(call do, CC $<, $(CC) $(CFLAGS) -c -o $@ $<)
 
 protocol.def: protocol.txt protocol.pl
 	perl protocol.pl < $< > $@
