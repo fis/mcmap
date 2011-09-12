@@ -22,46 +22,73 @@
 
 struct proxy_config
 {
-	socket_t sock_cli, sock_srv;
+	packet_state_t state_cli;
+	packet_state_t state_srv;
 	GAsyncQueue *worldq;
 };
 
 static GAsyncQueue *iq = 0;
+static GAsyncQueue *worldq = 0;
+static struct proxy_config *cfg = 0;
+
+volatile bool kill_proxy = false;
 
 gpointer proxy_thread(gpointer data);
 
-void start_proxy(socket_t sock_cli, socket_t sock_srv)
+void start_proxy()
 {
-	iq = g_async_queue_new_full(packet_free);
-
-	GAsyncQueue *worldq = g_async_queue_new_full(packet_free);
-
 	/* TODO FIXME; call as world_init("world") or some-such to enable alpha-quality region persistence */
 	world_init(0);
 	g_thread_create(world_thread, worldq, false, 0);
 
 	/* start the proxying thread */
-	struct proxy_config *cfg = g_new(struct proxy_config, 1);
-	cfg->sock_cli = sock_cli;
-	cfg->sock_srv = sock_srv;
-	cfg->worldq = worldq;
 	g_thread_create(proxy_thread, cfg, false, 0);
+}
+
+void proxy_initialize_state()
+{
+	iq = g_async_queue_new_full(packet_free);
+	worldq = g_async_queue_new_full(packet_free);
+	cfg = g_new(struct proxy_config, 1);
+	cfg->worldq = worldq;
+}
+
+void proxy_initialize_socket_state(socket_t sock_cli, socket_t sock_srv)
+{
+	cfg->state_cli = (packet_state_t) PACKET_STATE_INIT(sock_cli);
+	cfg->state_srv = (packet_state_t) PACKET_STATE_INIT(sock_srv);
+}
+
+struct buffer proxy_serialize_state()
+{
+	struct buffer result = { sizeof(packet_state_t)*2, g_malloc(sizeof(packet_state_t)*2) };
+	memcpy(result.data, (unsigned char *) &cfg->state_cli, sizeof(packet_state_t));
+	memcpy(result.data + sizeof(packet_state_t), (unsigned char *) &cfg->state_srv, sizeof(packet_state_t));
+	return result;
+}
+
+void proxy_deserialize_state(struct buffer state)
+{
+	memcpy(&cfg->state_cli, (packet_state_t *) state.data, sizeof(packet_state_t));
+	memcpy(&cfg->state_srv, (packet_state_t *) (state.data + sizeof(packet_state_t)), sizeof(packet_state_t));
 }
 
 gpointer proxy_thread(gpointer data)
 {
 	struct proxy_config *cfg = data;
-	socket_t sock_cli = cfg->sock_cli, sock_srv = cfg->sock_srv;
 	GAsyncQueue *worldq = cfg->worldq;
-
-	packet_state_t state_cli = PACKET_STATE_INIT(sock_cli);
-	packet_state_t state_srv = PACKET_STATE_INIT(sock_srv);
 
 	while (1)
 	{
 		/* read in one packet from the injection queue or socket */
 
 		bool packet_must_free = true;
+
+		if (kill_proxy)
+		{
+			kill_proxy = false;
+			return NULL;
+		}
 
 		struct directed_packet *dpacket = g_async_queue_try_pop(iq);
 		struct directed_packet net_dpacket;
@@ -70,9 +97,9 @@ gpointer proxy_thread(gpointer data)
 		{
 			fd_set rfds;
 			FD_ZERO(&rfds);
-			FD_SET(sock_cli, &rfds);
-			FD_SET(sock_srv, &rfds);
-			int nfds = (sock_cli > sock_srv ? sock_cli : sock_srv) + 1;
+			FD_SET(cfg->state_cli.sock, &rfds);
+			FD_SET(cfg->state_srv.sock, &rfds);
+			int nfds = (cfg->state_cli.sock > cfg->state_srv.sock ? cfg->state_cli.sock : cfg->state_srv.sock) + 1;
 
 			int ret = select(nfds, &rfds, NULL, NULL, NULL);
 			if (ret == -1)
@@ -80,15 +107,15 @@ gpointer proxy_thread(gpointer data)
 			else if (ret == 0)
 				wtf("select returned 0!");
 
-			if (FD_ISSET(sock_cli, &rfds))
+			if (FD_ISSET(cfg->state_cli.sock, &rfds))
 			{
 				net_dpacket.from = PACKET_FROM_CLIENT;
-				net_dpacket.p = packet_read(&state_cli);
+				net_dpacket.p = packet_read(&cfg->state_cli);
 			}
-			else if (FD_ISSET(sock_srv, &rfds))
+			else if (FD_ISSET(cfg->state_srv.sock, &rfds))
 			{
 				net_dpacket.from = PACKET_FROM_SERVER;
-				net_dpacket.p = packet_read(&state_srv);
+				net_dpacket.p = packet_read(&cfg->state_srv);
 			}
 			else
 				wtf("Neither sock_cli nor sock_srv set in select's result");
@@ -106,7 +133,7 @@ gpointer proxy_thread(gpointer data)
 
 		packet_t *p = dpacket->p;
 		bool from_client = dpacket->from == PACKET_FROM_CLIENT;
-		socket_t sto = from_client ? sock_srv : sock_cli;
+		socket_t sto = from_client ? cfg->state_srv.sock : cfg->state_cli.sock;
 		char *desc = from_client ? "client -> server" : "server -> client";
 
 #if DEBUG_PROTOCOL >= 2 /* use for packet dumping for protocol analysis */

@@ -5,3 +5,4 @@ COMMAND(jumps)
 COMMAND(save)
 #endif
 COMMAND(slap)
+COMMAND(upgrade)

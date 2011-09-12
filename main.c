@@ -36,9 +36,27 @@ void load_colors(char **lines);
 
 int mcmap_main(int argc, char **argv)
 {
+	bool upgrading = false;
+	int upgrade_fd = -1;
+	socket_t sock_srv = -1;
+	socket_t sock_cli = -1;
+	int wnd_w = 512, wnd_h = 512;
+
 	setlocale(LC_ALL, "");
 
 	init_cmd();
+
+	if (argv[1] && argc >= 3 && !strcmp(argv[1], "--upgrade"))
+	{
+		upgrading = true;
+		upgrade_fd = atoi(argv[2]);
+		argv[2] = argv[0];
+		argv += 2;
+		argc -= 2;
+	}
+
+	main_argc = argc;
+	main_argv = argv;
 
 	/* command line option grokking */
 
@@ -77,8 +95,6 @@ int mcmap_main(int argc, char **argv)
 	{
 		dief("Unreasonable scale factor: %d", opt.scale);
 	}
-
-	int wnd_w = 512, wnd_h = 512;
 
 	if (opt.wndsize)
 	{
@@ -146,6 +162,9 @@ int mcmap_main(int argc, char **argv)
 
 	socket_init();
 
+	if (upgrading)
+		goto upgrade;
+
 	/* wait for a client to connect to us */
 
 	log_print("[INFO] Waiting for connection...");
@@ -170,7 +189,7 @@ int mcmap_main(int argc, char **argv)
 	if (listen(listener, SOMAXCONN) != 0)
 		die("network setup: listen() for listener");
 
-	socket_t sock_cli = accept(listener, 0, 0);
+	sock_cli = accept(listener, 0, 0);
 	if (sock_cli < 0)
 		die("network setup: accept() for listener");
 
@@ -198,7 +217,7 @@ int mcmap_main(int argc, char **argv)
 	if (aires != 0)
 		die("network setup: getaddrinfo() for server");
 
-	socket_t sock_srv = make_socket(serveraddr->ai_family, serveraddr->ai_socktype, serveraddr->ai_protocol);
+	sock_srv = make_socket(serveraddr->ai_family, serveraddr->ai_socktype, serveraddr->ai_protocol);
 
 	if (sock_srv < 0)
 		die("network setup: socket() for server");
@@ -209,6 +228,8 @@ int mcmap_main(int argc, char **argv)
 	freeaddrinfo(serveraddr);
 
 	/* start the proxy */
+
+upgrade:
 
 	log_print("[INFO] Starting up...");
 
@@ -228,7 +249,18 @@ int mcmap_main(int argc, char **argv)
 	SDL_EnableUNICODE(1);
 	g_thread_init(0);
 
-	start_proxy(sock_cli, sock_srv);
+	proxy_initialize_state();
+
+	if (upgrading)
+	{
+		struct buffer buf = read_buffer(upgrade_fd);
+		proxy_deserialize_state(buf);
+		g_free(buf.data);
+	}
+	else
+		proxy_initialize_socket_state(sock_cli, sock_srv);
+
+	start_proxy();
 
 	/* start the user interface side */
 

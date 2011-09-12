@@ -257,3 +257,29 @@ void cmd_slap(int cmdc, char **cmdv)
 
 	say("/me slaps %s around a bit with a large trout", cmdv[1]);
 }
+
+void cmd_upgrade(int cmdc, char **cmdv)
+{
+	kill_proxy = true;
+	while (kill_proxy);
+	console_cleanup();
+
+	char *filename;
+	int fd = g_file_open_tmp("mcmap.XXXXXX", &filename, NULL);
+	write_buffer(fd, proxy_serialize_state());
+	lseek(fd, 0, SEEK_SET);
+	unlink(filename);
+
+	char fd_str[256];
+	snprintf(fd_str, sizeof(fd_str), "%d", fd);
+	char *argv[_POSIX_ARG_MAX] = {main_argv[0], "--upgrade", fd_str};
+	for (int i = 1; i <= main_argc; i++)
+		argv[i+2] = main_argv[i];
+
+	int err = execv(main_argv[0], argv);
+	if (err < 0)
+	{
+		log_print("[DIED] //upgrade: %s", strerror(errno));
+		exit(1);
+	}
+}

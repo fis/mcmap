@@ -6,9 +6,16 @@
 
 #define NELEMS(array) (sizeof(array) / sizeof((array)[0]))
 
+int main_argc;
+char **main_argv;
+
 /* for glib */
 guint coord_hash(gconstpointer key);
 gboolean coord_equal(gconstpointer a, gconstpointer b);
+
+/* serialisation */
+void write_buffer(int fd, struct buffer buf);
+struct buffer read_buffer(int fd);
 
 /* logging and information */
 
