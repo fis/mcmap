@@ -331,7 +331,7 @@ void init_scheme()
 		(void) __VA_ARGS__
 	#define FIELD(type, cname, scmname) \
 		/* parentheses around this assignment so that the previous (void) cast
-		   doesn't mess it up */
+		   doesn't mess it up */ \
 		(packet_field_symbol_names[packet_id][field_num] = scm_from_utf8_symbol(scmname)); \
 		field_num++ /* a comma appears next */
 	#include "protocol.def"

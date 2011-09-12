@@ -62,12 +62,16 @@ void *real_main(void *data)
 	init_proxy();
 	init_scheme();
 
-	char *init_filename = g_strconcat(g_get_home_dir(), "/.mcmap/init.scm", NULL);
-	if (g_file_test(init_filename, G_FILE_TEST_EXISTS))
-	{
-		scm_c_primitive_load(init_filename);
-	}
+	char *init_filename = g_strconcat(g_path_get_dirname(argv[0]), "/../scheme/init.scm", NULL);
+	scm_c_primitive_load(init_filename);
 	g_free(init_filename);
+
+	char *user_init_filename = g_strconcat(g_get_home_dir(), "/.mcmap/init.scm", NULL);
+	if (g_file_test(user_init_filename, G_FILE_TEST_EXISTS))
+	{
+		scm_c_primitive_load(user_init_filename);
+	}
+	g_free(user_init_filename);
 
 	init_cmd();
 
