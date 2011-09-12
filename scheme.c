@@ -112,7 +112,6 @@ SCM_DEFINE(scheme_make_packet, "make-packet", 1, 0, 1, (SCM type_symbol, SCM res
 		{
 			if (in_keywords)
 				scm_error(scm_arg_type_key, FUNC_NAME, "Expected keyword: ~A", scm_list_1(car), SCM_BOOL_F);
-			}
 			else
 				v = car;
 		}
