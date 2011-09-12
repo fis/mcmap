@@ -266,7 +266,9 @@ void cmd_upgrade(int cmdc, char **cmdv)
 
 	char *filename;
 	int fd = g_file_open_tmp("mcmap.XXXXXX", &filename, NULL);
-	write_buffer(fd, proxy_serialize_state());
+	struct buffer proxy_state = proxy_serialize_state();
+	write_buffer(fd, proxy_state);
+	g_free(proxy_state.data);
 	lseek(fd, 0, SEEK_SET);
 	unlink(filename);
 
