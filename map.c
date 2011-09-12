@@ -1,9 +1,9 @@
 #include <math.h>
 #include <stdlib.h>
-#include <SDL.h>
-#include <SDL_ttf.h>
 
 #include <glib.h>
+#include <SDL.h>
+#include <SDL_ttf.h>
 
 #include "protocol.h"
 #include "common.h"
