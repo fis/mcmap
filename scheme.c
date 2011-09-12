@@ -171,7 +171,9 @@ SCM_DEFINE(scheme_make_packet, "make-packet", 1, 0, 1, (SCM type_symbol, SCM res
 		scm_error(scm_args_number_key,
 			FUNC_NAME,
 			"Wrong number of arguments to " FUNC_NAME " for packet type ~A; expected ~A but received ~A",
-			scm_list_3(type_symbol, scm_from_uint(fmt.nfields + 1), scm_sum(scm_from_uint(filled_fields + 1), scm_length(rest))),
+			scm_list_3(
+				type_symbol, scm_from_uint(fmt.nfields + 1),
+				scm_sum(scm_from_uint(filled_fields + 1), scm_length(rest))),
 			SCM_BOOL_F);
 	}
 
