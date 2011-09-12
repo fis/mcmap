@@ -137,6 +137,16 @@ SCM proxy_thread(void *data)
 		}
 #endif
 
+		/* pass it to Scheme */
+
+		SCM packet_smob = make_packet_smob(p);
+		SCM hook = packet_hooks[p->type];
+		/* FIXME: Need to spawn a thread of some kind to avoid complex handlers lagging
+		   everything down (but maybe this should be up to the handlers?) */
+		/* FIXME: Need to handle exceptions */
+		scm_c_run_hook(hook,
+			scm_list_2(from_client ? sym_client : sym_server, packet_smob));
+
 		/* either write it out or handle if it's a command to us */
 
 		if (from_client
@@ -155,15 +165,6 @@ SCM proxy_thread(void *data)
 			if (!packet_write(sto, p))
 				dief("proxy thread (%s) write failed", desc);
 		}
-
-		/* pass it to Scheme */
-		SCM packet_smob = make_packet_smob(p);
-		SCM hook = packet_hooks[p->type];
-		/* FIXME: Need to spawn a thread of some kind to avoid complex handlers lagging
-		   everything down (but maybe this should be up to the handlers?) */
-		/* FIXME: Need to handle exceptions */
-		scm_c_run_hook(hook,
-			scm_list_2(from_client ? sym_client : sym_server, packet_smob));
 
 		/* communicate interesting chunks to world thread */
 
