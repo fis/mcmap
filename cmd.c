@@ -94,7 +94,7 @@ SCM eval_thread(void *data)
 		tell("//eval: OK.");
 		return SCM_UNSPECIFIED;
 	}
-	char *result_string = scm_to_locale_string(scm_object_to_string(result, SCM_UNDEFINED));
+	char *result_string = scm_to_utf8_string(scm_object_to_string(result, SCM_UNDEFINED));
 	tell("//eval: %s", result_string);
 	g_free(code);
 	g_free(result_string);
