@@ -323,9 +323,14 @@ void init_scheme()
 		; \
 		packet_id = id; \
 		field_num = 0; \
-		__VA_ARGS__
+		/* packets with no fields have a dummy "0" variable argument for strict
+		   C99 compliance. we use (void) here so that clang doesn't generate
+		   a warning about an unused expression as it's expanded here */ \
+		(void) __VA_ARGS__
 	#define FIELD(type, cname, scmname) \
-		packet_field_symbol_names[packet_id][field_num] = scm_from_utf8_symbol(scmname); \
+		/* parentheses around this assignment so that the previous (void) cast
+		   doesn't mess it up */
+		(packet_field_symbol_names[packet_id][field_num] = scm_from_utf8_symbol(scmname)); \
 		field_num++ /* a comma appears next */
 	#include "protocol.def"
 	/* terminate the very last field_num++ */
