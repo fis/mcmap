@@ -223,7 +223,7 @@ void tell(char *fmt, ...)
 	char *msg = g_strdup_vprintf(fmt, ap);
 	va_end(ap);
 
-	static const char prefix[4] = { 0xc2, 0xa7, 'b', 0 };
+	static const char prefix[4] = { '\xc2', '\xa7', 'b', 0 };
 	char *cmsg = g_strjoin("", prefix, msg, NULL);
 
 	inject_to_client(packet_new(PACKET_CHAT, cmsg));
