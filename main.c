@@ -292,6 +292,7 @@ upgrade:
 		struct buffer buf = read_buffer(upgrade_fd);
 		proxy_deserialize_state(buf);
 		g_free(buf.data);
+		close(upgrade_fd);
 	}
 	else
 		proxy_initialize_socket_state(sock_cli, sock_srv);
