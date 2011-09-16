@@ -325,5 +325,7 @@ user_list_item: 0xc9
 - bool online: if false, name will be removed from userlist
 - short ping: ping of player in milliseconds
 
+server_list_ping: 0xfe
+
 disconnect: 0xff
 - string reason: disconnection reason

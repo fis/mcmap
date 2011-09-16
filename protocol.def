@@ -55,4 +55,5 @@ PACKET(0x82, SIGN_UPDATE, "sign-update", 7, FIELD(FIELD_INT, X, "x"), FIELD(FIEL
 PACKET(0x83, MAP_DATA, "map-data", 3, FIELD(FIELD_SHORT, TYPE, "type"), FIELD(FIELD_SHORT, MAP, "map"), FIELD(FIELD_MAP_ARRAY, DATA, "data"))
 PACKET(0xc8, INCREMENT_STATISTIC, "increment-statistic", 2, FIELD(FIELD_INT, STATISTIC, "statistic"), FIELD(FIELD_BYTE, AMOUNT, "amount"))
 PACKET(0xc9, USER_LIST_ITEM, "user-list-item", 3, FIELD(FIELD_STRING, NAME, "name"), FIELD(FIELD_BYTE, ONLINE, "online"), FIELD(FIELD_SHORT, PING, "ping"))
+PACKET(0xfe, SERVER_LIST_PING, "server-list-ping", 0, 0)
 PACKET(0xff, DISCONNECT, "disconnect", 1, FIELD(FIELD_STRING, REASON, "reason"))
