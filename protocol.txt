@@ -1,4 +1,5 @@
 keepalive: 0x00
+- int random: random keepalive ID
 
 login: 0x01
 - int id
@@ -8,8 +9,16 @@ login: 0x01
   client -> server: player name
 - long seed
   server -> client: map seed value
+- int mode
+  server -> client: game mode (0 survival, 1 creative)
 - byte world
   server -> client: dimension (0 normal, -1 nether)
+- byte unknown
+  server -> client: who knows? apparently 1 or 2...
+- byte world_height
+  server -> client: world height in blocks, usually 128
+- byte max_players
+  server -> client: maximum number of simultaneous players
 
 handshake: 0x02
 - string data: player name (from client), connection hash (from server)
@@ -38,6 +47,8 @@ use_entity: 0x07
 
 update_health: 0x08
 - short health: 0 .. 20 (in 0.5 hearts)
+- short food: 0 .. 20
+- float food_saturation: 0.0 .. 5.0 (what?)
 
 respawn: 0x09
 - byte world: world identifier
@@ -209,6 +220,17 @@ entity_metadata: 0x28
 - int entity: entity ID
 - entity_data data: metadata stream
 
+entity_effect: 0x29
+- int entity: entity ID
+- byte effect: effect ID
+- byte amplifier
+- short duration
+
+experience: 0x2b
+- byte level_experience: current experience within level
+- byte level: current level
+- short total_experience: total experience in all
+
 prechunk: 0x32
 - int cx:    chunk X
 - int cz:    chunk Z
@@ -267,10 +289,10 @@ thunderbolt: 0x47
 - int z
 
 inventory_open: 0x64
-- byte window:       window ID
-- byte type:         inventory type (0 = basic, 1 = workbench, 2 = furnace)
-- string_utf8 title: inventory window title
-- byte slots:        number of additional slots
+- byte window:  window ID
+- byte type:    inventory type (0 = basic, 1 = workbench, 2 = furnace)
+- string title: inventory window title
+- byte slots:   number of additional slots
 
 inventory_close: 0x65
 - byte window: window ID

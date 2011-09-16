@@ -501,7 +501,8 @@ struct buffer packet_string(packet_t *packet, unsigned field)
 			gsize conv_len;
 			buffer.data = (unsigned char *)g_convert((char*)&p[2], l*2, "UTF8", "UTF16BE", NULL, &conv_len, &error);
 			if (!buffer.data)
-				dief("g_convert UTF16BE->UTF8 failed (error: %s)", error->message);
+				dief("g_convert UTF16BE->UTF8 failed (error: %s; packet 0x%02x, field %u)",
+				     error->message, packet->type, field);
 			buffer.len = conv_len;
 		}
 		break;
