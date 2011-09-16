@@ -61,10 +61,10 @@ void proxy_initialize_state()
 	cfg->worldq = worldq;
 }
 
-void proxy_initialize_socket_state(socket_t sock_cli, socket_t sock_srv)
+void proxy_initialize_socket_state(packet_state_t *state_cli, packet_state_t *state_srv)
 {
-	cfg->state_cli = (packet_state_t) PACKET_STATE_INIT(sock_cli);
-	cfg->state_srv = (packet_state_t) PACKET_STATE_INIT(sock_srv);
+	cfg->state_cli = *state_cli;
+	cfg->state_srv = *state_srv;
 }
 
 struct buffer proxy_serialize_state()

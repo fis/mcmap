@@ -246,6 +246,9 @@ void *real_main(void *data)
 
 	/* wait for a "real" (non-ping) connection */
 
+	packet_state_t state_cli;
+	packet_state_t state_srv;
+
 	while (1)
 	{
 		/* wait for a client to connect to us */
@@ -270,8 +273,8 @@ void *real_main(void *data)
 
 		/* read the initial client packet to distinguish */
 
-		packet_state_t state_cli = PACKET_STATE_INIT(sock_cli);
-		packet_state_t state_srv = PACKET_STATE_INIT(sock_srv);
+		state_cli = (packet_state_t) PACKET_STATE_INIT(sock_cli);
+		state_srv = (packet_state_t) PACKET_STATE_INIT(sock_srv);
 
 		packet_t *query = packet_read(&state_cli);
 		packet_write(sock_srv, query);
@@ -330,7 +333,7 @@ upgrade:
 		close(upgrade_fd);
 	}
 	else
-		proxy_initialize_socket_state(sock_cli, sock_srv);
+		proxy_initialize_socket_state(&state_cli, &state_srv);
 
 	start_proxy();
 
