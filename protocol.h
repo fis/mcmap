@@ -111,4 +111,6 @@ jlong packet_long(packet_t *packet, unsigned field);
 double packet_double(packet_t *packet, unsigned field);
 struct buffer packet_string(packet_t *packet, unsigned field);
 
+void packet_dump(packet_t *packet);
+
 #endif /* MCMAP_PROTOCOL_H */
