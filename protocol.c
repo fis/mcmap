@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +30,13 @@ struct packet_format_desc packet_format[] = {
 };
 
 #define MAX_PACKET_FORMAT NELEMS(packet_format)
+
+static const char *packet_names[] = {
+#define PACKET(id, cname, ...) \
+	[id] = #cname,
+#include "protocol.def"
+#undef PACKET
+};
 
 /* packet reading/writing */
 
@@ -499,7 +507,8 @@ struct buffer packet_string(packet_t *packet, unsigned field)
 			gsize conv_len;
 			buffer.data = (unsigned char *)g_convert((char*)&p[2], l*2, "UTF8", "UTF16BE", NULL, &conv_len, &error);
 			if (!buffer.data)
-				dief("g_convert UTF16BE->UTF8 failed (error: %s)", error->message);
+				dief("g_convert UTF16BE->UTF8 failed (error: %s; packet 0x%02x, field %u)",
+				     error->message, packet->type, field);
 			buffer.len = conv_len;
 		}
 		break;
@@ -515,4 +524,95 @@ struct buffer packet_string(packet_t *packet, unsigned field)
 	}
 
 	return buffer;
+}
+
+void packet_dump(packet_t *packet)
+{
+	unsigned t = packet->type;
+
+	static const char *field_names[] =
+	{
+		[FIELD_BYTE] = "byte",
+		[FIELD_SHORT] = "short",
+		[FIELD_INT] = "int",
+		[FIELD_LONG] = "long",
+		[FIELD_FLOAT] = "float",
+		[FIELD_DOUBLE] = "double",
+		[FIELD_STRING] = "string",
+		[FIELD_STRING_UTF8] = "string/utf8",
+		[FIELD_ITEM] = "item",
+		[FIELD_BYTE_ARRAY] = "byte-array",
+		[FIELD_BLOCK_ARRAY] = "block-array",
+		[FIELD_ITEM_ARRAY] = "item-array",
+		[FIELD_EXPLOSION_ARRAY] = "explosion-array",
+		[FIELD_MAP_ARRAY] = "map-array",
+		[FIELD_ENTITY_DATA] = "entity-data",
+		[FIELD_OBJECT_DATA] = "object-data"
+	};
+
+	struct packet_format_desc *fmt;
+	if (t >= MAX_PACKET_FORMAT || !(fmt = &packet_format[t])->known)
+	{
+		log_print("[DUMP] Packet %u (0x%02x, unknown)", t, t);
+		return;
+	}
+	else
+		log_print("[DUMP] Packet %u (0x%02x, %s), %u field(s):", t, t, packet_names[t], fmt->nfields);
+
+	for (unsigned f = 0; f < fmt->nfields; f++)
+	{
+		const char *fname = field_names[fmt->ftype[f]];
+
+		jint ti;
+		jlong tl;
+		double td;
+		struct buffer tb;
+		char hexdump[64*3+1];
+
+		switch (fmt->ftype[f])
+		{
+		case FIELD_BYTE:
+		case FIELD_SHORT:
+		case FIELD_INT:
+			ti = packet_int(packet, f);
+			log_print("[DUMP]   field %d (%s): %"PRId32" (%08"PRIx32")",
+			          f, fname, ti, (uint32_t)ti);
+			break;
+
+		case FIELD_LONG:
+			tl = packet_long(packet, f);
+			log_print("[DUMP]   field %d (%s): %"PRId64" (%016"PRIx64")",
+			          f, fname, tl, (uint64_t)tl);
+			break;
+
+		case FIELD_FLOAT:
+		case FIELD_DOUBLE:
+			td = packet_double(packet, f);
+			log_print("[DUMP]   field %d (%s): %.6f (%.2g)",
+			          f, fname, td, td);
+			break;
+
+		case FIELD_STRING:
+		case FIELD_STRING_UTF8:
+			tb = packet_string(packet, f);
+			log_print("[DUMP]   field %d (%s): '%.*s'",
+			          f, fname, tb.len, tb.data);
+			g_free(tb.data);
+			break;
+
+		case FIELD_ITEM:
+		case FIELD_BYTE_ARRAY:
+		case FIELD_BLOCK_ARRAY:
+		case FIELD_ITEM_ARRAY:
+		case FIELD_EXPLOSION_ARRAY:
+		case FIELD_MAP_ARRAY:
+		case FIELD_ENTITY_DATA:
+		case FIELD_OBJECT_DATA:
+			for (unsigned start = packet->field_offset[f], end = packet->field_offset[f+1], at = 0;
+			     at < 64 && start < end; at++, start++)
+				sprintf(hexdump + at*3, " %02x", (unsigned)packet->bytes[start]);
+			log_print("[DUMP]   field %d (%s):%s",
+			          f, fname, hexdump);
+		}
+	}
 }
