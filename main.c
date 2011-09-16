@@ -165,37 +165,7 @@ int mcmap_main(int argc, char **argv)
 	if (upgrading)
 		goto upgrade;
 
-	/* wait for a client to connect to us */
-
-	log_print("[INFO] Waiting for connection...");
-
-	socket_t listener = make_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-	if (listener < 0)
-		die("network setup: socket() for listener");
-
-	{
-		int b = 1;
-		setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&b, sizeof b);
-	}
-
-	struct sockaddr_in listener_in = { 0 };
-	listener_in.sin_family = AF_INET;
-	listener_in.sin_addr.s_addr = htonl(INADDR_ANY);
-	listener_in.sin_port = htons(opt.localport);
-	if (bind(listener, (struct sockaddr *)&listener_in, sizeof listener_in) != 0)
-		die("network setup: bind() for listener");
-
-	if (listen(listener, SOMAXCONN) != 0)
-		die("network setup: listen() for listener");
-
-	sock_cli = accept(listener, 0, 0);
-	if (sock_cli < 0)
-		die("network setup: accept() for listener");
-
-	/* connect to the minecraft server side */
-
-	log_print("[INFO] Connecting to %s...", argv[1]);
+	/* resolve the provided server name */
 
 	struct addrinfo hints = { 0 }, *serveraddr;
 
@@ -217,14 +187,79 @@ int mcmap_main(int argc, char **argv)
 	if (aires != 0)
 		die("network setup: getaddrinfo() for server");
 
-	sock_srv = make_socket(serveraddr->ai_family, serveraddr->ai_socktype, serveraddr->ai_protocol);
+	/* setup the listening socket for the client */
 
-	if (sock_srv < 0)
-		die("network setup: socket() for server");
+	socket_t listener = make_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	if (connect(sock_srv, serveraddr->ai_addr, serveraddr->ai_addrlen) != 0)
-		die("network setup: connect() for server");
+	if (listener < 0)
+		die("network setup: socket() for listener");
 
+	{
+		int b = 1;
+		setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&b, sizeof b);
+	}
+
+	struct sockaddr_in listener_in = { 0 };
+	listener_in.sin_family = AF_INET;
+	listener_in.sin_addr.s_addr = htonl(INADDR_ANY);
+	listener_in.sin_port = htons(opt.localport);
+	if (bind(listener, (struct sockaddr *)&listener_in, sizeof listener_in) != 0)
+		die("network setup: bind() for listener");
+
+	if (listen(listener, SOMAXCONN) != 0)
+		die("network setup: listen() for listener");
+
+	/* wait for a "real" (non-ping) connection */
+
+	while (1)
+	{
+		/* wait for a client to connect to us */
+
+		log_print("[INFO] Waiting for connection...");
+
+		sock_cli = accept(listener, 0, 0);
+		if (sock_cli < 0)
+			die("network setup: accept() for listener");
+
+		/* connect to the minecraft server side */
+
+		log_print("[INFO] Connecting to %s...", argv[1]);
+
+		sock_srv = make_socket(serveraddr->ai_family, serveraddr->ai_socktype, serveraddr->ai_protocol);
+
+		if (sock_srv < 0)
+			die("network setup: socket() for server");
+
+		if (connect(sock_srv, serveraddr->ai_addr, serveraddr->ai_addrlen) != 0)
+			die("network setup: connect() for server");
+
+		/* read the initial client packet to distinguish */
+
+		packet_state_t state_cli = PACKET_STATE_INIT(sock_cli);
+		packet_state_t state_srv = PACKET_STATE_INIT(sock_srv);
+
+		packet_t *query = packet_read(&state_cli);
+		packet_write(sock_srv, query);
+
+		if (query->type != PACKET_SERVER_LIST_PING)
+			break; /* let the proxying commence */
+
+		log_print("[INFO] Server list ping; forwarding the response...");
+
+		/* try to forward the response */
+
+		packet_t *reply = packet_read(&state_srv);
+		if (reply->type != PACKET_DISCONNECT)
+			dief("Invalid PING reply from server: type 0x%02x", reply->type);
+		packet_write(sock_cli, reply);
+
+		/* ping done, resume waiting for the real connection */
+
+		close(sock_cli);
+		close(sock_srv);
+	}
+
+	close(listener);
 	freeaddrinfo(serveraddr);
 
 	/* start the proxy */
