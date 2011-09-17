@@ -784,7 +784,7 @@ void map_setscale(int scale, int relative)
 
 /* screen-drawing related code */
 
-void map_s2w(SDL_Surface *screen, int sx, int sy, jint *x, jint *z, jint *xo, jint *zo)
+void map_s2w(int sx, int sy, jint *x, jint *z, jint *xo, jint *zo)
 {
 	/* Pixel map_w/2 equals middle (rounded down) of block player_x.
 	 * Pixel map_w/2 - (map_scale-1)/2 equals left edge of block player_x.
@@ -805,7 +805,7 @@ void map_s2w(SDL_Surface *screen, int sx, int sy, jint *x, jint *z, jint *xo, ji
 	if (zo) *zo = sy - (py + dy*map_scale);
 }
 
-void map_w2s(SDL_Surface *screen, jint x, jint z, int *sx, int *sy)
+void map_w2s(jint x, jint z, int *sx, int *sy)
 {
 	int px = map_w/2 - (map_scale-1)/2;
 	int py = map_h/2 - (map_scale-1)/2;
@@ -832,7 +832,7 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 	int s = map_scale_indicator;
 
 	int x0, y0;
-	map_w2s(screen, player_x, player_z, &x0, &y0);
+	map_w2s(player_x, player_z, &x0, &y0);
 	x0 += (map_scale - s)/2;
 	y0 += (map_scale - s)/2;
 
@@ -890,7 +890,7 @@ static void map_draw_entity_marker(void *idp, void *ep, void *userdata)
 		return;
 
 	int ex, ez;
-	map_w2s(screen, e->pos.x, e->pos.z, &ex, &ez);
+	map_w2s(e->pos.x, e->pos.z, &ex, &ez);
 	ex += (map_scale - map_scale_indicator)/2;
 	ez += (map_scale - map_scale_indicator)/2;
 
@@ -918,7 +918,7 @@ void map_draw(SDL_Surface *screen)
 	jint scr_x1, scr_z1;
 	jint scr_x1o, scr_z1o;
 
-	map_s2w(screen, 0, 0, &scr_x1, &scr_z1, &scr_x1o, &scr_z1o);
+	map_s2w(0, 0, &scr_x1, &scr_z1, &scr_x1o, &scr_z1o);
 
 	jint scr_x2, scr_z2;
 	jint scr_x2o, scr_z2o;
@@ -1057,7 +1057,7 @@ void map_draw(SDL_Surface *screen)
 		SDL_GetMouseState(&mx, &my);
 		if (my >= map_h) goto no_block_info;
 
-		map_s2w(screen, mx, my, &hx, &hz, 0, 0);
+		map_s2w(mx, my, &hx, &hz, 0, 0);
 	}
 	else
 	{

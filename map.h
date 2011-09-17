@@ -51,8 +51,8 @@ void map_update_time(int daytime);
 void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsigned flags_toggle);
 void map_setscale(int scale, int relative);
 
-void map_s2w(SDL_Surface *screen, int sx, int sy, jint *x, jint *z, jint *xo, jint *zo);
-void map_w2s(SDL_Surface *screen, jint x, jint z, int *sx, int *sy);
+void map_s2w(int sx, int sy, jint *x, jint *z, jint *xo, jint *zo);
+void map_w2s(jint x, jint z, int *sx, int *sy);
 
 void map_repaint(void);
 
