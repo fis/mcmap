@@ -608,7 +608,7 @@ void map_update_player_pos(double x, double y, double z)
 }
 
 void map_update_ceiling()
-{	
+{
 	unsigned char *stack = world_stack(COORD(player_x, player_z), false);
 	jint old_ceiling_y = ceiling_y;
 	if (stack && player_y >= 0 && player_y < CHUNK_YSIZE)
