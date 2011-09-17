@@ -167,7 +167,7 @@ int mcmap_main(int argc, char **argv)
 
 	/* resolve the provided server name */
 
-	struct addrinfo hints, *serveraddr;
+	struct addrinfo hints = { 0 }, *serveraddr;
 
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -199,7 +199,7 @@ int mcmap_main(int argc, char **argv)
 		setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&b, sizeof b);
 	}
 
-	struct sockaddr_in listener_in;
+	struct sockaddr_in listener_in = { 0 };
 	listener_in.sin_family = AF_INET;
 	listener_in.sin_addr.s_addr = htonl(INADDR_ANY);
 	listener_in.sin_port = htons(opt.localport);
