@@ -54,8 +54,8 @@ struct region_file
 static void region_free(gpointer gp)
 {
 	struct region *region = gp;
-	for (int i = 0; i < NELEMS(region->chunks); i++)
-		for (int j = 0; j < NELEMS(region->chunks[i]); j++)
+	for (size_t i = 0; i < NELEMS(region->chunks); i++)
+		for (size_t j = 0; j < NELEMS(region->chunks[i]); j++)
 			g_free(region->chunks[i][j]);
 	g_free(region);
 }
@@ -139,8 +139,8 @@ struct region *world_region(coord_t cc, bool gen)
 	region->key = rc;
 
 	/* Can't use g_malloc0; NULL might not be all-bits-zero */
-	for (int i = 0; i < NELEMS(region->chunks); i++)
-		for (int j = 0; j < NELEMS(region->chunks[i]); j++)
+	for (size_t i = 0; i < NELEMS(region->chunks); i++)
+		for (size_t j = 0; j < NELEMS(region->chunks[i]); j++)
 			region->chunks[i][j] = NULL;
 
 	region->file = 0;
@@ -282,15 +282,25 @@ bool world_handle_chunk(jint x0, jint y0, jint z0,
 			ADVANCE_BUFFER(zb, ys);
 
 #ifdef FEAT_FULLCHUNK
-			if ((ys+1)/2 <= zb_meta.len)
-				memcpy(&c->meta[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2) + y0/2], zb_meta.data, (ys+1)/2);
-			if ((ys+1)/2 <= zb_light_blocks.len)
-				memcpy(&c->light_blocks[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2) + y0/2], zb_light_blocks.data, (ys+1)/2);
-			if ((ys+1)/2 <= zb_light_sky.len)
-				memcpy(&c->light_sky[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2) + y0/2], zb_light_sky.data, (ys+1)/2);
-			ADVANCE_BUFFER(zb_meta, (ys+1)/2);
-			ADVANCE_BUFFER(zb_light_blocks, (ys+1)/2);
-			ADVANCE_BUFFER(zb_light_sky, (ys+1)/2);
+			size_t bytes = (ys+1)/2;
+
+			if (bytes <= zb_meta.len)
+			{
+				memcpy(&c->meta[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2) + y0/2], zb_meta.data, bytes);
+				ADVANCE_BUFFER(zb_meta, bytes);
+			}
+
+			if (bytes <= zb_light_blocks.len)
+			{
+				memcpy(&c->light_blocks[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2) + y0/2], zb_light_blocks.data, bytes);
+				ADVANCE_BUFFER(zb_light_blocks, (ys+1)/2);
+			}
+
+			if (bytes <= zb_light_sky.len)
+			{
+				memcpy(&c->light_sky[(CHUNK_XOFF(x)*CHUNK_ZSIZE + CHUNK_ZOFF(z))*(CHUNK_YSIZE/2) + y0/2], zb_light_sky.data, bytes);
+				ADVANCE_BUFFER(zb_light_sky, (ys+1)/2);
+			}
 #endif
 
 			jint h = c->height[CHUNK_XOFF(x)][CHUNK_ZOFF(z)];
@@ -513,13 +523,11 @@ SCM world_thread(void *data)
 			break;
 
 		case PACKET_PLAYER_ROTATE:
-			map_update_player_dir(packet_double(packet, 0),
-			                      packet_double(packet, 1));
+			map_update_player_dir(packet_double(packet, 0));
 			break;
 
 		case PACKET_PLAYER_MOVE_ROTATE:
-			map_update_player_dir(packet_double(packet, 4),
-			                      packet_double(packet, 5));
+			map_update_player_dir(packet_double(packet, 4));
 
 			/* fall-thru to PACKET_PLAYER_MOVE */
 

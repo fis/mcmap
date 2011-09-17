@@ -133,8 +133,9 @@ struct nbt_tag *nbt_struct_field(struct nbt_tag *s, const char *name)
 	for (unsigned i = 0; i < s->data.structv->len; i++)
 	{
 		struct nbt_tag *field = g_ptr_array_index(s->data.structv, i);
+		size_t field_namelen = (field->namelen[0] << 8) | field->namelen[1];
 
-		if (((field->namelen[0] << 8) | field->namelen[1]) != namelen)
+		if (field_namelen != namelen)
 			continue;
 		if (memcmp(field->name, name, namelen) != 0)
 			continue;
@@ -266,7 +267,7 @@ static struct nbt_tag *parse_tag(uint8_t *data, unsigned len, unsigned *taglen)
 	if (len < 3)
 		die("truncated NBT tag: short namelen");
 
-	int namelen = jshort_read(&data[1]);
+	size_t namelen = jshort_read(&data[1]);
 
 	if (len < 3+namelen)
 		die("truncated NBT tag: short name");
@@ -324,7 +325,7 @@ static struct nbt_tag *parse_tag(uint8_t *data, unsigned len, unsigned *taglen)
 	case NBT_TAG_BLOB:
 		if (len < 4) die("truncated NBT tag: short blob len");
 		t = jint_read(data);
-		if (len < 4+t) die("truncated NBT tag: short blob data");
+		if (len < 4 + (size_t)t) die("truncated NBT tag: short blob data");
 		tag->data.blobv.len = t;
 		tag->data.blobv.data = g_memdup(&data[4], t);
 		*taglen += 4 + t;
@@ -333,7 +334,7 @@ static struct nbt_tag *parse_tag(uint8_t *data, unsigned len, unsigned *taglen)
 	case NBT_TAG_STR:
 		if (len < 2) die("truncated NBT tag: short str len");
 		t = jshort_read(data);
-		if (len < 2+t) die("truncated NBT tag: short str data");
+		if (len < 2 + (size_t)t) die("truncated NBT tag: short str data");
 		tag->data.blobv.len = t;
 		tag->data.blobv.data = g_memdup(&data[2], t);
 		*taglen += 2 + t;

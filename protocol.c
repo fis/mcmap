@@ -109,14 +109,16 @@ static jint buf_get_jint(packet_state_t *state)
 
 packet_t *packet_read(packet_state_t *state)
 {
-	int t = buf_getc(state);
+	jint t = buf_getc(state);
 	if (t < 0)
 		return 0;
 
-	state->p.type = t;
+	unsigned type = t;
+
+	state->p.type = type;
 
 	struct packet_format_desc *fmt;
-	if (t >= MAX_PACKET_FORMAT || !(fmt = &packet_format[t])->known)
+	if (type >= MAX_PACKET_FORMAT || !(fmt = &packet_format[t])->known)
 	{
 #if DEBUG_PROTOCOL >= 1
 		log_print("IMMINENT CRASH, reading tail for log");
@@ -127,7 +129,7 @@ packet_t *packet_read(packet_state_t *state)
 			          buf[i+0],buf[i+1],buf[i+2],buf[i+3],buf[i+4],buf[i+5],buf[i+6],buf[i+7],
 			          buf[i+8],buf[i+9],buf[i+10],buf[i+11],buf[i+12],buf[i+13],buf[i+14],buf[i+15]);
 #endif
-		dief("Unknown packet id: 0x%02x", t);
+		dief("Unknown packet id: 0x%02x", type);
 	}
 
 	state->p.field_offset = state->offset;

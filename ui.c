@@ -209,7 +209,7 @@ static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen)
 	{
 		/* teleport */
 		jint x, z;
-		map_s2w(screen, e->x, e->y, &x, &z, 0, 0);
+		map_s2w(e->x, e->y, &x, &z, 0, 0);
 		teleport(x, z);
 	}
 }

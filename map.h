@@ -41,7 +41,7 @@ void map_update(coord_t c1, coord_t c2);
 
 void map_update_player_pos(double x, double y, double z);
 void map_update_ceiling(void);
-void map_update_player_dir(double yaw, double pitch);
+void map_update_player_dir(double yaw);
 void map_update_player_id(jint id);
 
 void map_update_alt(jint y, int relative);
@@ -51,8 +51,8 @@ void map_update_time(int daytime);
 void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsigned flags_toggle);
 void map_setscale(int scale, int relative);
 
-void map_s2w(SDL_Surface *screen, int sx, int sy, jint *x, jint *z, jint *xo, jint *zo);
-void map_w2s(SDL_Surface *screen, jint x, jint z, int *sx, int *sy);
+void map_s2w(int sx, int sy, jint *x, jint *z, jint *xo, jint *zo);
+void map_w2s(jint x, jint z, int *sx, int *sy);
 
 void map_repaint(void);
 
