@@ -106,7 +106,7 @@ packet_t *packet_read(packet_state_t *state)
 #if DEBUG_PROTOCOL >= 1
 		log_print("IMMINENT CRASH, reading tail for log");
 		unsigned char buf[256];
-		for (int i = 0; i < sizeof buf; i++) buf[i] = buf_getc();
+		for (int i = 0; i < sizeof buf; i++) buf[i] = buf_getc(state);
 		for (int i = 0; i < sizeof buf; i+=16)
 			log_print("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
 			          buf[i+0],buf[i+1],buf[i+2],buf[i+3],buf[i+4],buf[i+5],buf[i+6],buf[i+7],
