@@ -226,6 +226,10 @@ entity_effect: 0x29
 - byte amplifier
 - short duration
 
+entity_effect_remove: 0x2a
+- int entity: entity ID
+- byte effect: effect ID
+
 experience: 0x2b
 - byte level_experience: current experience within level
 - byte level: current level
