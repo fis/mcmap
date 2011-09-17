@@ -391,7 +391,7 @@ static void map_paint_region_iso(struct map_region *region)
 
 			jint wy = (map_flags & MAP_FLAG_CHOP ? ceiling_y-1 : CHUNK_YSIZE-1);
 
-			int visible_blocks = 0;
+			unsigned visible_blocks = 0;
 			rgba_t visible_colors[16]; /* at most this many transparent blocks */
 			int first_face = 0; /* 0 = left, 1 = right, 2 = top */
 
