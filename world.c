@@ -512,13 +512,11 @@ gpointer world_thread(gpointer data)
 			break;
 
 		case PACKET_PLAYER_ROTATE:
-			map_update_player_dir(packet_double(packet, 0),
-			                      packet_double(packet, 1));
+			map_update_player_dir(packet_double(packet, 0));
 			break;
 
 		case PACKET_PLAYER_MOVE_ROTATE:
-			map_update_player_dir(packet_double(packet, 4),
-			                      packet_double(packet, 5));
+			map_update_player_dir(packet_double(packet, 4));
 
 			/* fall-thru to PACKET_PLAYER_MOVE */
 

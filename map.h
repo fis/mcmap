@@ -41,7 +41,7 @@ void map_update(coord_t c1, coord_t c2);
 
 void map_update_player_pos(double x, double y, double z);
 void map_update_ceiling(void);
-void map_update_player_dir(double yaw, double pitch);
+void map_update_player_dir(double yaw);
 void map_update_player_id(jint id);
 
 void map_update_alt(jint y, int relative);

@@ -621,7 +621,7 @@ void map_update_ceiling()
 	}
 }
 
-void map_update_player_dir(double yaw, double pitch)
+void map_update_player_dir(double yaw)
 {
 	int new_yaw = 0;
 
