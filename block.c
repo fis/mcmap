@@ -98,7 +98,7 @@ struct block_info block_info[256] = {
 	[0x5d] = {"redstone repeater (off)", SOLID, NO_TRAIT},
 	[0x5e] = {"redstone repeater (on)", SOLID, NO_TRAIT},
 	[0x5f] = {"locked chest", SOLID, NO_TRAIT},
-	[0x60] = {"trapdoor", SOLID}
+	[0x60] = {"trapdoor", SOLID, NO_TRAIT}
 };
 
 // TODO: Add player and unloaded
