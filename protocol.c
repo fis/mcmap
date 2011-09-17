@@ -38,9 +38,9 @@ static const char *packet_names[] = {
 #undef PACKET
 };
 
-#define PACKET(id, cname, nfields, ...) \
+#define PACKET(id, cname, scmname, nfields, ...) \
 	static const char *packet_field_names_##cname[nfields ? nfields : 1] = { __VA_ARGS__ };
-#define FIELD(ftype, cname) \
+#define FIELD(ftype, cname, scmname) \
 	#cname
 #include "protocol.def"
 #undef FIELD
