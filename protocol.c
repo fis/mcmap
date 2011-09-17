@@ -637,5 +637,7 @@ void packet_dump(packet_t *packet)
 				sprintf(hexdump + at*3, " %02x", (unsigned)packet->bytes[start]);
 			DUMP("%s", hexdump);
 		}
+
+		#undef DUMP
 	}
 }
