@@ -61,8 +61,8 @@ int mcmap_main(int argc, char **argv)
 	/* command line option grokking */
 
 	static GOptionEntry gopt_entries[] = {
-		{ "nocolor", 'c', 0, G_OPTION_ARG_NONE, &opt.noansi, "Disable ANSI color escapes" },
-		{ "nomap", 'm', 0, G_OPTION_ARG_NONE, &opt.nomap, "Disable the map" },
+		{ "nocolor", 'c', 0, G_OPTION_ARG_NONE, &opt.noansi, "Disable ANSI color escapes", NULL },
+		{ "nomap", 'm', 0, G_OPTION_ARG_NONE, &opt.nomap, "Disable the map", NULL },
 		{ "port", 'p', 0, G_OPTION_ARG_INT, &opt.localport, "Local port to listen at", "P" },
 		{ "size", 's', 0, G_OPTION_ARG_STRING, &opt.wndsize, "Fixed-size window size", "WxH" },
 		{ "scale", 'x', 0, G_OPTION_ARG_INT, &opt.scale, "Zoom factor", "N" },
@@ -167,7 +167,7 @@ int mcmap_main(int argc, char **argv)
 
 	/* resolve the provided server name */
 
-	struct addrinfo hints = { 0 }, *serveraddr;
+	struct addrinfo hints, *serveraddr;
 
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -199,7 +199,7 @@ int mcmap_main(int argc, char **argv)
 		setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&b, sizeof b);
 	}
 
-	struct sockaddr_in listener_in = { 0 };
+	struct sockaddr_in listener_in;
 	listener_in.sin_family = AF_INET;
 	listener_in.sin_addr.s_addr = htonl(INADDR_ANY);
 	listener_in.sin_port = htons(opt.localport);
@@ -331,7 +331,7 @@ void load_colors(char **lines)
 		rgba_t color = RGBA(color_r, color_g, color_b, color_a);
 
 		bool ok = false;
-		for (int block = 0; block < NELEMS(block_info); block++)
+		for (size_t block = 0; block < NELEMS(block_info); block++)
 		{
 			if (block_info[block].name && strcmp(block_info[block].name, block_name) == 0)
 			{
