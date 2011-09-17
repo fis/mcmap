@@ -38,6 +38,21 @@ static const char *packet_names[] = {
 #undef PACKET
 };
 
+#define PACKET(id, cname, nfields, ...) \
+	static const char *packet_field_names_##cname[nfields ? nfields : 1] = { __VA_ARGS__ };
+#define FIELD(ftype, cname) \
+	#cname
+#include "protocol.def"
+#undef FIELD
+#undef PACKET
+
+static const char **packet_field_names[] = {
+#define PACKET(id, cname, nfields, ...) \
+	[id] = packet_field_names_##cname,
+#include "protocol.def"
+#undef PACKET
+};
+
 /* packet reading/writing */
 
 static int buf_fill(packet_state_t *state)
@@ -106,7 +121,7 @@ packet_t *packet_read(packet_state_t *state)
 #if DEBUG_PROTOCOL >= 1
 		log_print("IMMINENT CRASH, reading tail for log");
 		unsigned char buf[256];
-		for (int i = 0; i < sizeof buf; i++) buf[i] = buf_getc();
+		for (int i = 0; i < sizeof buf; i++) buf[i] = buf_getc(state);
 		for (int i = 0; i < sizeof buf; i+=16)
 			log_print("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
 			          buf[i+0],buf[i+1],buf[i+2],buf[i+3],buf[i+4],buf[i+5],buf[i+6],buf[i+7],
@@ -530,7 +545,7 @@ void packet_dump(packet_t *packet)
 {
 	unsigned t = packet->type;
 
-	static const char *field_names[] =
+	static const char *field_type_names[] =
 	{
 		[FIELD_BYTE] = "byte",
 		[FIELD_SHORT] = "short",
@@ -559,9 +574,24 @@ void packet_dump(packet_t *packet)
 	else
 		log_print("[DUMP] Packet %u (0x%02x, %s), %u field(s):", t, t, packet_names[t], fmt->nfields);
 
+	unsigned pad = 0;
+	char padding[256];
+	memset(padding, ' ', 255);
 	for (unsigned f = 0; f < fmt->nfields; f++)
 	{
-		const char *fname = field_names[fmt->ftype[f]];
+		unsigned field_pad =
+			strlen(field_type_names[fmt->ftype[f]]) +
+			strlen(packet_field_names[t][f]) +
+			1; /* the space between them */
+		if (field_pad > pad)
+			pad = field_pad;
+	}
+	padding[pad] = '\0';
+
+	for (unsigned f = 0; f < fmt->nfields; f++)
+	{
+		const char *ftype = field_type_names[fmt->ftype[f]];
+		const char *fname = packet_field_names[t][f];
 
 		jint ti;
 		jlong tl;
@@ -569,34 +599,34 @@ void packet_dump(packet_t *packet)
 		struct buffer tb;
 		char hexdump[64*3+1];
 
+		#define DUMP(fmt, ...) \
+			log_print("[DUMP]   %d. %s %s:%s" fmt, \
+			          f, ftype, fname, padding + strlen(ftype) + strlen(fname) + 1, __VA_ARGS__)
+
 		switch (fmt->ftype[f])
 		{
 		case FIELD_BYTE:
 		case FIELD_SHORT:
 		case FIELD_INT:
 			ti = packet_int(packet, f);
-			log_print("[DUMP]   field %d (%s): %"PRId32" (%08"PRIx32")",
-			          f, fname, ti, (uint32_t)ti);
+			DUMP(" %"PRId32" (%08"PRIx32")", ti, (uint32_t)ti);
 			break;
 
 		case FIELD_LONG:
 			tl = packet_long(packet, f);
-			log_print("[DUMP]   field %d (%s): %"PRId64" (%016"PRIx64")",
-			          f, fname, tl, (uint64_t)tl);
+			DUMP(" %"PRId64" (%016"PRIx64")", tl, (uint64_t)tl);
 			break;
 
 		case FIELD_FLOAT:
 		case FIELD_DOUBLE:
 			td = packet_double(packet, f);
-			log_print("[DUMP]   field %d (%s): %.6f (%.2g)",
-			          f, fname, td, td);
+			DUMP(" %.6f (%.2g)", td, td);
 			break;
 
 		case FIELD_STRING:
 		case FIELD_STRING_UTF8:
 			tb = packet_string(packet, f);
-			log_print("[DUMP]   field %d (%s): '%.*s'",
-			          f, fname, tb.len, tb.data);
+			DUMP(" '%.*s'", tb.len, tb.data);
 			g_free(tb.data);
 			break;
 
@@ -611,8 +641,9 @@ void packet_dump(packet_t *packet)
 			for (unsigned start = packet->field_offset[f], end = packet->field_offset[f+1], at = 0;
 			     at < 64 && start < end; at++, start++)
 				sprintf(hexdump + at*3, " %02x", (unsigned)packet->bytes[start]);
-			log_print("[DUMP]   field %d (%s):%s",
-			          f, fname, hexdump);
+			DUMP("%s", hexdump);
 		}
+
+		#undef DUMP
 	}
 }

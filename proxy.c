@@ -149,20 +149,13 @@ SCM proxy_thread(void *data)
 		socket_t sto = from_client ? cfg->state_srv.sock : cfg->state_cli.sock;
 		char *desc = from_client ? "client -> server" : "server -> client";
 
-#if DEBUG_PROTOCOL >= 2 /* use for packet dumping for protocol analysis */
+#if DEBUG_PROTOCOL == 2 /* use for packet dumping for protocol analysis */
 		if (p->type == PACKET_UPDATE_HEALTH /*|| p->type == PACKET_PLAYER_MOVE || p->type == PACKET_PLAYER_MOVE_ROTATE*/)
-		{
-			int i, nf = packet_nfields(p);
+			packet_dump(p);
+#endif
 
-			fprintf(stderr, "packet: %u [%s]\n", p->type, desc);
-			for (i = 0; i < nf; i++)
-			{
-				fprintf(stderr, "  field %d:", i);
-				for (unsigned u = p->field_offset[i]; u < p->field_offset[i+1]; u++)
-					fprintf(stderr, " %02x", p->bytes[u]);
-				fprintf(stderr, "\n");
-			}
-		}
+#if DEBUG_PROTOCOL >= 3
+		packet_dump(p);
 #endif
 
 		/* pass it to Scheme */
