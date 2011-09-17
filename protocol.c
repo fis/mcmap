@@ -32,7 +32,7 @@ struct packet_format_desc packet_format[] = {
 #define MAX_PACKET_FORMAT NELEMS(packet_format)
 
 static const char *packet_names[] = {
-#define PACKET(id, cname, ...) \
+#define PACKET(id, cname, nfields, ...) \
 	[id] = #cname,
 #include "protocol.def"
 #undef PACKET
