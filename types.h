@@ -6,6 +6,7 @@
 
 /* Java types used by the protocol */
 typedef int8_t jbyte;
+typedef uint8_t jubyte;
 typedef int16_t jshort;
 typedef int32_t jint;
 typedef int64_t jlong;

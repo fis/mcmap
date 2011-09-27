@@ -15,9 +15,9 @@ login: 0x01
   server -> client: dimension (0 normal, -1 nether)
 - byte unknown
   server -> client: who knows? apparently 1 or 2...
-- byte world_height
+- ubyte world_height
   server -> client: world height in blocks, usually 128
-- byte max_players
+- ubyte max_players
   server -> client: maximum number of simultaneous players
 
 handshake: 0x02
@@ -52,6 +52,10 @@ update_health: 0x08
 
 respawn: 0x09
 - byte world: world identifier
+- byte difficulty: 0..3: peaceful, easy, normal, hard
+- byte creative: 0 for survival, 1 for creative
+- short world_height: usually 128 again
+- long seed
 
 player_ping: 0x0a
 - bool on_ground: true if on ground
@@ -160,6 +164,13 @@ entity_spawn_painting: 0x19
 - int y
 - int z
 - int direction: 0..3 = -z, -x, +z, +x: direction the painting faces
+
+experience_orb: 0x1a
+- int entity: entity ID
+- int x
+- int y
+- int z
+- short count
 
 unknown_0x1b: 0x1b
 - float unknown_1: who knows
@@ -283,11 +294,13 @@ sound_effect: 0x3d
 - int data: sound metadata for some events
 
 new_or_invalid_state: 0x46
-- byte reason: 0 = invalid bed, 1/2 = start/end rain, 3 = game mode change
+- state_data state:
+  first byte: 0 = invalid bed, 1/2 = start/end rain, 3 = game mode change
+  second byte [if 3]: game mode
 
 thunderbolt: 0x47
 - int entity: entity ID for the thunderbolt
-- byte raining: always true at the moment
+- bool unknown: always true at the moment
 - int x
 - int y
 - int z
@@ -327,6 +340,12 @@ inventory_ack: 0x6a
 - byte window:       window ID
 - short transaction: transaction ID
 - bool ack:          true if the transaction was accepted
+
+inventory_creative: 0x6b
+- short slot: inventory slot
+- short item: item ID being placed
+- short count
+- short damage
 
 sign_update: 0x82
 - int x

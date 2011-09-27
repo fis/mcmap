@@ -14,6 +14,7 @@ enum packet_id {
 enum field_type
 {
 	FIELD_BYTE,
+	FIELD_UBYTE,
 	FIELD_SHORT,
 	FIELD_INT,
 	FIELD_LONG,
@@ -29,6 +30,7 @@ enum field_type
 	FIELD_MAP_ARRAY,
 	FIELD_ENTITY_DATA,
 	FIELD_OBJECT_DATA,
+	FIELD_STATE_DATA,
 };
 
 struct packet_format_desc
@@ -91,6 +93,7 @@ typedef struct packet_constructor packet_constructor_t;
 
 packet_constructor_t packet_create(enum packet_id type);
 void packet_add_jbyte(packet_constructor_t *pc, jbyte v);
+void packet_add_jubyte(packet_constructor_t *pc, jubyte v);
 void packet_add_jshort(packet_constructor_t *pc, jshort v);
 void packet_add_jint(packet_constructor_t *pc, jint v);
 void packet_add_jlong(packet_constructor_t *pc, jlong v);

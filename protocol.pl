@@ -12,7 +12,7 @@ my %packets;
 my $fields = undef;
 
 my %types = (
-	'bool' => 'FIELD_BYTE', 'byte' => 'FIELD_BYTE',
+	'bool' => 'FIELD_BYTE', 'byte' => 'FIELD_BYTE', 'ubyte' => 'FIELD_UBYTE',
 	'short' => 'FIELD_SHORT', 'int' => 'FIELD_INT', 'long' => 'FIELD_LONG',
 	'float' => 'FIELD_FLOAT', 'double' => 'FIELD_DOUBLE',
 	'string' => 'FIELD_STRING',
@@ -24,7 +24,8 @@ my %types = (
 	'explosion_array' => 'FIELD_EXPLOSION_ARRAY',
 	'map_array' => 'FIELD_MAP_ARRAY',
 	'entity_data' => 'FIELD_ENTITY_DATA',
-	'object_data' => 'FIELD_OBJECT_DATA'
+	'object_data' => 'FIELD_OBJECT_DATA',
+	'state_data' => 'FIELD_STATE_DATA',
 	);
 
 while (my $line = <>)

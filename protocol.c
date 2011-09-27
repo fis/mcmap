@@ -141,6 +141,7 @@ packet_t *packet_read(packet_state_t *state)
 		switch (fmt->ftype[f])
 		{
 		case FIELD_BYTE:
+		case FIELD_UBYTE:
 			if (!buf_skip(state, 1)) return 0;
 			break;
 
@@ -226,6 +227,12 @@ packet_t *packet_read(packet_state_t *state)
 			if (t > 0)
 				if (!buf_skip(state, 6)) return 0; // Skip 3 short
 			break;
+
+		case FIELD_STATE_DATA:
+			t = buf_getc(state);
+			if (t == 3)
+				if (!buf_skip(state, 1)) return 0;
+			break;
 		}
 	}
 
@@ -295,6 +302,13 @@ void packet_add_jbyte(packet_constructor_t *pc, jbyte v)
 {
 	packet_add_field(pc);
 	g_byte_array_append(pc->data, (uint8_t *) &v, 1);
+	pc->offset++;
+}
+
+void packet_add_jubyte(packet_constructor_t *pc, jubyte v)
+{
+	packet_add_field(pc);
+	g_byte_array_append(pc->data, &v, 1);
 	pc->offset++;
 }
 
@@ -399,6 +413,10 @@ packet_t *packet_new(enum packet_id type, ...)
 			packet_add_jbyte(&pc, va_arg(ap, int));
 			break;
 
+		case FIELD_UBYTE:
+			packet_add_jubyte(&pc, va_arg(ap, int));
+			break;
+
 		case FIELD_SHORT:
 			packet_add_jshort(&pc, va_arg(ap, int));
 			break;
@@ -462,6 +480,9 @@ jint packet_int(packet_t *packet, unsigned field)
 	{
 	case FIELD_BYTE:
 		return *(jbyte *)p;
+
+	case FIELD_UBYTE:
+		return *(jubyte *)p;
 
 	case FIELD_SHORT:
 		return jshort_read(p);
@@ -544,6 +565,7 @@ void packet_dump(packet_t *packet)
 	static const char *field_type_names[] =
 	{
 		[FIELD_BYTE] = "byte",
+		[FIELD_BYTE] = "ubyte",
 		[FIELD_SHORT] = "short",
 		[FIELD_INT] = "int",
 		[FIELD_LONG] = "long",
@@ -558,7 +580,8 @@ void packet_dump(packet_t *packet)
 		[FIELD_EXPLOSION_ARRAY] = "explosion-array",
 		[FIELD_MAP_ARRAY] = "map-array",
 		[FIELD_ENTITY_DATA] = "entity-data",
-		[FIELD_OBJECT_DATA] = "object-data"
+		[FIELD_OBJECT_DATA] = "object-data",
+		[FIELD_STATE_DATA] = "state-data",
 	};
 
 	struct packet_format_desc *fmt;
@@ -602,6 +625,7 @@ void packet_dump(packet_t *packet)
 		switch (fmt->ftype[f])
 		{
 		case FIELD_BYTE:
+		case FIELD_UBYTE:
 		case FIELD_SHORT:
 		case FIELD_INT:
 			ti = packet_int(packet, f);
@@ -634,6 +658,7 @@ void packet_dump(packet_t *packet)
 		case FIELD_MAP_ARRAY:
 		case FIELD_ENTITY_DATA:
 		case FIELD_OBJECT_DATA:
+		case FIELD_STATE_DATA:
 			for (unsigned start = packet->field_offset[f], end = packet->field_offset[f+1], at = 0;
 			     at < 64 && start < end; at++, start++)
 				sprintf(hexdump + at*3, " %02x", (unsigned)packet->bytes[start]);
