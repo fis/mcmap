@@ -23,25 +23,6 @@ gboolean coord_equal(gconstpointer a, gconstpointer b)
 	return COORD_EQUAL(*ca, *cb);
 }
 
-void write_buffer(int fd, struct buffer buf)
-{
-	if (write(fd, &buf.len, sizeof(unsigned)) != sizeof(unsigned))
-		die("write_buffer failed to write length");
-	if (write(fd, buf.data, buf.len) != buf.len)
-		die("write_buffer failed to write data");
-}
-
-struct buffer read_buffer(int fd)
-{
-	struct buffer buf;
-	if (read(fd, &buf.len, sizeof(unsigned)) != sizeof(unsigned))
-		die("read_buffer failed to read length");
-	buf.data = g_malloc(buf.len);
-	if (read(fd, buf.data, buf.len) != buf.len)
-		die("read_buffer failed to read data");
-	return buf;
-}
-
 void teleport(int x, int z)
 {
 	tell("Sorry, teleportation is currently out of order!");

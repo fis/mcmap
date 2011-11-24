@@ -36,27 +36,9 @@ void load_colors(char **lines);
 
 int mcmap_main(int argc, char **argv)
 {
-	bool upgrading = false;
-	int upgrade_fd = -1;
-	socket_t sock_srv = -1;
-	socket_t sock_cli = -1;
-	int wnd_w = 512, wnd_h = 512;
-
 	setlocale(LC_ALL, "");
 
 	init_cmd();
-
-	if (argv[1] && argc >= 3 && !strcmp(argv[1], "--upgrade"))
-	{
-		upgrading = true;
-		upgrade_fd = atoi(argv[2]);
-		argv[2] = argv[0];
-		argv += 2;
-		argc -= 2;
-	}
-
-	main_argc = argc;
-	main_argv = argv;
 
 	/* command line option grokking */
 
@@ -95,6 +77,8 @@ int mcmap_main(int argc, char **argv)
 	{
 		dief("Unreasonable scale factor: %d", opt.scale);
 	}
+
+	int wnd_w = 512, wnd_h = 512;
 
 	if (opt.wndsize)
 	{
@@ -162,9 +146,6 @@ int mcmap_main(int argc, char **argv)
 
 	socket_init();
 
-	if (upgrading)
-		goto upgrade;
-
 	/* resolve the provided server name */
 
 	struct addrinfo hints = { 0 }, *serveraddr;
@@ -211,6 +192,8 @@ int mcmap_main(int argc, char **argv)
 
 	/* wait for a "real" (non-ping) connection */
 
+	socket_t sock_cli;
+	socket_t sock_srv;
 	packet_state_t state_cli;
 	packet_state_t state_srv;
 
@@ -267,8 +250,6 @@ int mcmap_main(int argc, char **argv)
 
 	/* start the proxy */
 
-upgrade:
-
 	log_print("[INFO] Starting up...");
 
 	/* required because sometimes SDL initialisation fails after g_thread_init */
@@ -287,19 +268,7 @@ upgrade:
 	SDL_EnableUNICODE(1);
 	g_thread_init(0);
 
-	proxy_initialize_state();
-
-	if (upgrading)
-	{
-		struct buffer buf = read_buffer(upgrade_fd);
-		proxy_deserialize_state(buf);
-		g_free(buf.data);
-		close(upgrade_fd);
-	}
-	else
-		proxy_initialize_socket_state(&state_cli, &state_srv);
-
-	start_proxy();
+	start_proxy(sock_cli, sock_srv);
 
 	/* start the user interface side */
 
