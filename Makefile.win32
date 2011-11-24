@@ -18,7 +18,5 @@ LDFLAGS += -lws2_32 -Wl,--subsystem,console
 LDFLAGS += -Lwin/glib/lib -lglib-2.0 -lgobject-2.0 -lgthread-2.0 -lz
 LDFLAGS += -Lwin/SDL-1.2.14/lib -lSDL -lSDL_ttf
 
-$(OBJDIR)/mcmapper$(EXE): LDFLAGS += -lpng14
-
 win32-res.o: win32.rc win32-res.h
 	$(WINDRES) -O coff $< $@

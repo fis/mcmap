@@ -5,8 +5,6 @@ libs := glib-2.0 gthread-2.0 sdl
 
 include Makefile.common
 
-$(OBJDIR)/mcmapper$(EXE): LDFLAGS += -lpng
-
 PKGCFLAGS := $(shell pkg-config --cflags $(libs))
 
 ifeq ($(PKGCFLAGS),)
