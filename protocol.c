@@ -565,7 +565,7 @@ void packet_dump(packet_t *packet)
 	static const char *field_type_names[] =
 	{
 		[FIELD_BYTE] = "byte",
-		[FIELD_BYTE] = "ubyte",
+		[FIELD_UBYTE] = "ubyte",
 		[FIELD_SHORT] = "short",
 		[FIELD_INT] = "int",
 		[FIELD_LONG] = "long",
