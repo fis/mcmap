@@ -17,7 +17,7 @@
 static int console_readline = 0;
 static int opipe_read, opipe_write;
 
-static gpointer console_thread(gpointer userdata);
+static gpointer console_thread(gpointer data);
 
 void socket_init() {}
 
@@ -62,7 +62,7 @@ static void console_line_ready(char *line)
 	rl_callback_handler_install("> ", console_line_ready);
 }
 
-static gpointer console_thread(gpointer userdata)
+static gpointer console_thread(gpointer data)
 {
 	struct pollfd pfds[2] = {
 		{ .fd = opipe_read, .events = POLLIN },
