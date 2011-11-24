@@ -20,7 +20,7 @@
 /* miscellaneous helper routines */
 
 static void handle_key(SDL_KeyboardEvent *e, int *repaint);
-static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen);
+static void handle_mouse(SDL_MouseButtonEvent *e);
 
 /* start the user interface side */
 
@@ -77,7 +77,7 @@ void start_ui(bool map, int scale, bool resizable, int wnd_w, int wnd_h)
 				break;
 
 			case SDL_MOUSEBUTTONDOWN:
-				handle_mouse(&e.button, screen);
+				handle_mouse(&e.button);
 				break;
 
 			case SDL_VIDEORESIZE:
@@ -202,7 +202,7 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 	}
 }
 
-static void handle_mouse(SDL_MouseButtonEvent *e, SDL_Surface *screen)
+static void handle_mouse(SDL_MouseButtonEvent *e)
 {
 	if (e->button == SDL_BUTTON_RIGHT && e->y < map_h)
 	{
