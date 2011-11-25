@@ -47,7 +47,7 @@ struct map_region
 #define REGION_ISO_H (REGION_XSIZE + REGION_ZSIZE + CHUNK_YSIZE - 1)
 
 double player_dx = 0.0, player_dy = 0.0, player_dz = 0.0;
-jint player_x = 0, player_y = 0, player_z = 0;
+coord3_t player_pos = { .x = 0, .y = 0, .z = 0 };
 jshort player_health = 0;
 
 jint ceiling_y = CHUNK_YSIZE;
@@ -585,21 +585,19 @@ static void map_update_all()
 
 void map_update_player_pos(double x, double y, double z)
 {
-	jint new_x = floor(x), new_y = floor(y), new_z = floor(z);
+	coord3_t new_pos = COORD3(floor(x), floor(y), floor(z));
 
-	if (new_x == player_x && new_y == player_y && new_z == player_z)
+	if (COORD3_EQUAL(player_pos, new_pos))
 		return;
 
 	player_dx = x;
 	player_dy = y;
 	player_dz = z;
 
-	player_x = new_x;
-	player_y = new_y;
-	player_z = new_z;
+	player_pos = new_pos;
 
 	if (map_mode == MAP_MODE_CROSS && (map_flags & MAP_FLAG_FOLLOW_Y))
-		map_update_alt(new_y, 0);
+		map_update_alt(new_pos.y, 0);
 	else if ((map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_ISOMETRIC)
 	         && (map_flags & MAP_FLAG_CHOP))
 		map_update_ceiling();
@@ -609,11 +607,11 @@ void map_update_player_pos(double x, double y, double z)
 
 void map_update_ceiling()
 {
-	unsigned char *stack = world_stack(COORD(player_x, player_z), false);
+	unsigned char *stack = world_stack(COORD3_XZ(player_pos), false);
 	jint old_ceiling_y = ceiling_y;
-	if (stack && player_y >= 0 && player_y < CHUNK_YSIZE)
+	if (stack && player_pos.y >= 0 && player_pos.y < CHUNK_YSIZE)
 	{
-		for (ceiling_y = player_y + 2; ceiling_y < CHUNK_YSIZE; ceiling_y++)
+		for (ceiling_y = player_pos.y + 2; ceiling_y < CHUNK_YSIZE; ceiling_y++)
 			if (!IS_HOLLOW(stack[ceiling_y]))
 				break;
 		if (ceiling_y != old_ceiling_y)
@@ -703,7 +701,7 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 	map_flags ^= flags_toggle;
 
 	if (mode == MAP_MODE_CROSS && (old_mode != MAP_MODE_CROSS || (map_flags & MAP_FLAG_FOLLOW_Y)))
-		map_y = player_y;
+		map_y = player_pos.y;
 
 	if (map_mode != old_mode || map_flags != old_flags)
 	{
@@ -786,8 +784,8 @@ void map_setscale(int scale, int relative)
 
 coord_t map_s2w(int sx, int sy, jint *xo, jint *zo)
 {
-	/* Pixel map_w/2 equals middle (rounded down) of block player_x.
-	 * Pixel map_w/2 - (map_scale-1)/2 equals left edge of block player_x.
+	/* Pixel map_w/2 equals middle (rounded down) of block player_pos.x.
+	 * Pixel map_w/2 - (map_scale-1)/2 equals left edge of block player_pos.x.
 	 * Compute offset from there, divide by scale, round toward negative. */
 
 	int px = map_w/2 - (map_scale-1)/2;
@@ -801,7 +799,7 @@ coord_t map_s2w(int sx, int sy, jint *xo, jint *zo)
 	if (xo) *xo = sx - (px + dx*map_scale);
 	if (zo) *zo = sy - (py + dy*map_scale);
 
-	return COORD(player_x + dx, player_z + dy);
+	return COORD(player_pos.x + dx, player_pos.z + dy);
 }
 
 void map_w2s(coord_t cc, int *sx, int *sy)
@@ -809,8 +807,8 @@ void map_w2s(coord_t cc, int *sx, int *sy)
 	int px = map_w/2 - (map_scale-1)/2;
 	int py = map_h/2 - (map_scale-1)/2;
 
-	*sx = px + (cc.x - player_x)*map_scale;
-	*sy = py + (cc.z - player_z)*map_scale;
+	*sx = px + (cc.x - player_pos.x)*map_scale;
+	*sy = py + (cc.z - player_pos.z)*map_scale;
 }
 
 static inline void map_draw_player_marker(SDL_Surface *screen)
@@ -831,7 +829,7 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 	int s = map_scale_indicator;
 
 	int x0, y0;
-	map_w2s(COORD(player_x, player_z), &x0, &y0);
+	map_w2s(COORD3_XZ(player_pos), &x0, &y0);
 	x0 += (map_scale - s)/2;
 	y0 += (map_scale - s)/2;
 
@@ -943,8 +941,8 @@ void map_draw(SDL_Surface *screen)
 	if (map_mode == MAP_MODE_ISOMETRIC)
 	{
 		/* TODO FIXME... */
-		reg_x1 = REGION_XIDX(player_x);
-		reg_z1 = REGION_ZIDX(player_z);
+		reg_x1 = REGION_XIDX(player_pos.x);
+		reg_z1 = REGION_ZIDX(player_pos.z);
 		reg_x2 = reg_x1;
 		reg_z2 = reg_z1;
 	}
@@ -987,9 +985,9 @@ void map_draw(SDL_Surface *screen)
 
 			if (map_mode == MAP_MODE_ISOMETRIC)
 			{
-				int px = (player_x - rc.x)*map_scale;
-				int py = (CHUNK_YSIZE-1 - player_y)*map_scale;
-				int pz = (player_z - rc.z)*map_scale;
+				int px = (player_pos.x - rc.x)*map_scale;
+				int py = (CHUNK_YSIZE-1 - player_pos.y)*map_scale;
+				int pz = (player_pos.z - rc.z)*map_scale;
 				reg_sx = map_w / 2 - px - pz;
 				reg_sy = map_h / 2 - (REGION_XSIZE-1)*map_scale + px - pz - py;
 				reg_sw = REGION_ISO_W;
@@ -1062,7 +1060,7 @@ void map_draw(SDL_Surface *screen)
 	}
 	else
 	{
-		hcc = COORD(player_x, player_z);
+		hcc = COORD3_XZ(player_pos);
 	}
 
 	struct chunk *hc = world_chunk(hcc, false);
@@ -1075,7 +1073,7 @@ void map_draw(SDL_Surface *screen)
 	if (map_focused)
 		hcy = map_mode == MAP_MODE_CROSS ? map_y : hc->height[hcx][hcz];
 	else
-		hcy = player_y;
+		hcy = player_pos.y;
 
 	unsigned char block = hc->blocks[hcx][hcz][hcy];
 

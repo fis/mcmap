@@ -67,9 +67,9 @@ done:
 void cmd_coords(int cmdc, char **cmdv)
 {
 	if (cmdc == 2 && strcmp(cmdv[1], "-say") == 0)
-		say("/me is at (%d,%d) (y=%d)", player_x, player_z, player_y);
+		say("/me is at (%d,%d) (y=%d)", player_pos.x, player_pos.z, player_pos.y);
 	else if (cmdc == 1)
-		tell("//coords: (%d,%d) (y=%d)", player_x, player_z, player_y);
+		tell("//coords: (%d,%d) (y=%d)", player_pos.x, player_pos.z, player_pos.y);
 	else
 		tell("usage: //coords [-say]");
 }

@@ -25,17 +25,27 @@ void jlong_write(unsigned char *p, jlong v);
 void jfloat_write(unsigned char *p, jfloat v);
 void jdouble_write(unsigned char *p, jdouble v);
 
-/* 2d points */
+/* points */
 
 struct coord
 {
 	jint x, z;
 };
 
+struct coord3
+{
+	jint x, y, z;
+};
+
 typedef struct coord coord_t;
+typedef struct coord3 coord3_t;
 
 #define COORD(xv, zv) ((coord_t){ .x = (xv), .z = (zv) })
 #define COORD_EQUAL(a,b) ((a).x == (b).x && (a).z == (b).z)
+
+#define COORD3(xv, yv, zv) ((coord3_t){ .x = (xv), .y = (yv), .z = (zv) })
+#define COORD3_EQUAL(a,b) ((a).x == (b).x && (a).y == (b).y && (a).z == (b).z)
+#define COORD3_XZ(cc3) COORD((cc3).x, (cc3).z)
 
 /* colors */
 
