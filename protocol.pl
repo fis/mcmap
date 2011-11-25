@@ -7,7 +7,7 @@ my $state = 'none';
 my @fields;
 my $special;
 
-my $debug = (shift // '') eq '-v';
+my $debug = (shift || '') eq '-v';
 
 my %types = (
 	'bool' => 'FIELD_BYTE',
