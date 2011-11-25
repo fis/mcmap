@@ -95,7 +95,7 @@ int mcmap_main(int argc, char **argv)
 	{
 		char *jump_file;
 		GError *error = 0;
-		struct Jump *jump;
+		coord_t *jump;
 		char *file_ptr;
 		if (!g_file_get_contents(opt.jumpfile, &jump_file, NULL, &error))
 			die(error->message);
@@ -112,7 +112,7 @@ int mcmap_main(int argc, char **argv)
 		{
 			char *field;
 			char *name;
-			jump = g_new(struct Jump, 1);
+			jump = g_new(coord_t, 1);
 			FIELD(name = strdup(field));
 			FIELD(jump->x = atoi(field));
 			FIELD(jump->z = atoi(field));

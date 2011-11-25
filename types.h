@@ -27,7 +27,7 @@ void jlong_write(unsigned char *p, jlong v);
 void jfloat_write(unsigned char *p, jfloat v);
 void jdouble_write(unsigned char *p, jdouble v);
 
-/* 2d points for hash table keys */
+/* 2d points */
 
 struct coord
 {

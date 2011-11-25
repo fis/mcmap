@@ -784,7 +784,7 @@ void map_setscale(int scale, int relative)
 
 /* screen-drawing related code */
 
-void map_s2w(int sx, int sy, jint *x, jint *z, jint *xo, jint *zo)
+coord_t map_s2w(int sx, int sy, jint *xo, jint *zo)
 {
 	/* Pixel map_w/2 equals middle (rounded down) of block player_x.
 	 * Pixel map_w/2 - (map_scale-1)/2 equals left edge of block player_x.
@@ -798,20 +798,19 @@ void map_s2w(int sx, int sy, jint *x, jint *z, jint *xo, jint *zo)
 	dx = dx >= 0 ? dx/map_scale : (dx-(map_scale-1))/map_scale;
 	dy = dy >= 0 ? dy/map_scale : (dy-(map_scale-1))/map_scale;
 
-	*x = player_x + dx;
-	*z = player_z + dy;
-
 	if (xo) *xo = sx - (px + dx*map_scale);
 	if (zo) *zo = sy - (py + dy*map_scale);
+
+	return COORD(player_x + dx, player_z + dy);
 }
 
-void map_w2s(jint x, jint z, int *sx, int *sy)
+void map_w2s(coord_t cc, int *sx, int *sy)
 {
 	int px = map_w/2 - (map_scale-1)/2;
 	int py = map_h/2 - (map_scale-1)/2;
 
-	*sx = px + (x - player_x)*map_scale;
-	*sy = py + (z - player_z)*map_scale;
+	*sx = px + (cc.x - player_x)*map_scale;
+	*sy = py + (cc.z - player_z)*map_scale;
 }
 
 static inline void map_draw_player_marker(SDL_Surface *screen)
@@ -832,7 +831,7 @@ static inline void map_draw_player_marker(SDL_Surface *screen)
 	int s = map_scale_indicator;
 
 	int x0, y0;
-	map_w2s(player_x, player_z, &x0, &y0);
+	map_w2s(COORD(player_x, player_z), &x0, &y0);
 	x0 += (map_scale - s)/2;
 	y0 += (map_scale - s)/2;
 
@@ -890,7 +889,7 @@ static void map_draw_entity_marker(void *idp, void *ep, void *userdata)
 		return;
 
 	int ex, ez;
-	map_w2s(e->pos.x, e->pos.z, &ex, &ez);
+	map_w2s(e->pos, &ex, &ez);
 	ex += (map_scale - map_scale_indicator)/2;
 	ez += (map_scale - map_scale_indicator)/2;
 
@@ -918,7 +917,9 @@ void map_draw(SDL_Surface *screen)
 	jint scr_x1, scr_z1;
 	jint scr_x1o, scr_z1o;
 
-	map_s2w(0, 0, &scr_x1, &scr_z1, &scr_x1o, &scr_z1o);
+	coord_t scr1 = map_s2w(0, 0, &scr_x1o, &scr_z1o);
+	scr_x1 = scr1.x;
+	scr_z1 = scr1.z;
 
 	jint scr_x2, scr_z2;
 	jint scr_x2o, scr_z2o;
@@ -1050,27 +1051,25 @@ void map_draw(SDL_Surface *screen)
 	SDL_Rect r = { .x = 0, .y = screen->h - 24, .w = screen->w, .h = 24 };
 	SDL_FillRect(screen, &r, 0);
 
-	jint hx, hz;
+	coord_t hcc;
 	if (map_focused)
 	{
 		int mx, my;
 		SDL_GetMouseState(&mx, &my);
 		if (my >= map_h) goto no_block_info;
 
-		map_s2w(mx, my, &hx, &hz, 0, 0);
+		hcc = map_s2w(mx, my, 0, 0);
 	}
 	else
 	{
-		hx = player_x;
-		hz = player_z;
+		hcc = COORD(player_x, player_z);
 	}
 
-	coord_t hcc = COORD(hx, hz);
 	struct chunk *hc = world_chunk(hcc, false);
 	if (!hc) goto no_block_info;
 
-	jint hcx = CHUNK_XOFF(hx);
-	jint hcz = CHUNK_ZOFF(hz);
+	jint hcx = CHUNK_XOFF(hcc.x);
+	jint hcz = CHUNK_ZOFF(hcc.z);
 
 	jint hcy;
 	if (map_focused)
@@ -1104,7 +1103,7 @@ void map_draw(SDL_Surface *screen)
 		g_free(left_text);
 	}
 
-	char *right_text = g_strdup_printf("x: %-5d z: %-5d y: %-3d", hx, hz, hcy);
+	char *right_text = g_strdup_printf("x: %-5d z: %-5d y: %-3d", hcc.x, hcc.z, hcy);
 	SDL_Surface *right_surface = TTF_RenderText_Shaded(map_font, right_text, white, black);
 	SDL_Rect right_src = { .x = 0, .y = 0, .w = right_surface->w, .h = right_surface->h };
 	int right_offset_width;

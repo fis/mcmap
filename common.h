@@ -51,14 +51,8 @@ struct options
 
 /* teleportation */
 
-struct Jump
-{
-        int x;
-        int z;
-};
-
 GHashTable *jumps;
 
-void teleport(int x, int z);
+void teleport(coord_t cc);
 
 #endif /* MCMAP_COMMON_H */

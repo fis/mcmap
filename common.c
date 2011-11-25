@@ -23,7 +23,7 @@ gboolean coord_equal(gconstpointer a, gconstpointer b)
 	return COORD_EQUAL(*ca, *cb);
 }
 
-void teleport(int x, int z)
+void teleport(coord_t cc)
 {
 	tell("Sorry, teleportation is currently out of order!");
 }

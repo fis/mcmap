@@ -78,15 +78,15 @@ void cmd_goto(int cmdc, char **cmdv)
 {
 	if (cmdc == 2)
 	{
-		struct Jump *jump = g_hash_table_lookup(jumps, cmdv[1]);
+		coord_t *jump = g_hash_table_lookup(jumps, cmdv[1]);
 		if (jump == NULL)
 			tell("//goto: no such jump (try //jumps list)");
 		else
-			teleport(jump->x, jump->z);
+			teleport(*jump);
 	}
 	else if (cmdc == 3)
 	{
-		teleport(atoi(cmdv[1]), atoi(cmdv[2]));
+		teleport(COORD(atoi(cmdv[1]), atoi(cmdv[2])));
 	}
 	else
 	{
@@ -118,7 +118,7 @@ usage:
 #define FOREACH_JUMP(name, jump) \
 	GHashTableIter jump_iter; \
 	char *name; \
-	struct Jump *jump; \
+	coord_t *jump; \
 	g_hash_table_iter_init(&jump_iter, jumps); \
 	while (g_hash_table_iter_next(&jump_iter, (gpointer *) &name, (gpointer *) &jump))
 
@@ -161,7 +161,7 @@ void jumps_save(char *filename)
 
 void jumps_add(char *name, int x, int z, bool is_command)
 {
-	struct Jump *jump = g_malloc(sizeof(struct Jump));
+	coord_t *jump = g_malloc(sizeof(coord_t));
 	jump->x = x;
 	jump->z = z;
 	g_hash_table_insert(jumps, strdup(name), jump);

@@ -207,9 +207,7 @@ static void handle_mouse(SDL_MouseButtonEvent *e)
 	if (e->button == SDL_BUTTON_RIGHT && e->y < map_h)
 	{
 		/* teleport */
-		jint x, z;
-		map_s2w(e->x, e->y, &x, &z, 0, 0);
-		teleport(x, z);
+		teleport(map_s2w(e->x, e->y, 0, 0));
 	}
 }
 
