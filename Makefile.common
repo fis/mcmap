@@ -18,7 +18,7 @@ objs += $(sources:%.c=$(OBJDIR)/%.o)
 extra_objs += $(extra_sources:%.c=$(OBJDIR)/%.o)
 deps += $(sources:%.c=$(OBJDIR)/%.d) $(extra_sources:%.c=$(OBJDIR)/%.d)
 
-.PHONY: all clean
+.PHONY: all clean protocol
 
 ifdef V
 define do
@@ -46,8 +46,8 @@ $(OBJDIR):
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	$(call do, CC $<, $(CC) $(CFLAGS) -c -o $@ $<)
 
-protocol.def: protocol.txt protocol.pl
-	perl protocol.pl < $< > $@
+protocol: protocol.pl
+	curl -sS 'http://wiki.vg/wiki/index.php?title=Protocol&action=raw' | perl protocol.pl > protocol.def
 
 -include $(deps)
 

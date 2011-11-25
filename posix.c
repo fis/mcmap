@@ -52,7 +52,7 @@ static void console_line_ready(char *line)
 	if (line)
 	{
 		add_history(line);
-		inject_to_server(packet_new(PACKET_CHAT, line));
+		inject_to_server(packet_new(PACKET_CHAT_MESSAGE, line));
 	}
 	else /* ^D */
 		exit(0);

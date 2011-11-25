@@ -492,28 +492,28 @@ gpointer world_thread(gpointer data)
 
 		switch (packet->type)
 		{
-		case PACKET_CHUNK:
+		case PACKET_MAP_CHUNK:
 			p = &packet->bytes[packet->field_offset[6]];
 			handle_compressed_chunk(packet_int(packet, 0), packet_int(packet, 1), packet_int(packet, 2),
 			                        packet_int(packet, 3)+1, packet_int(packet, 4)+1, packet_int(packet, 5)+1,
 			                        (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3], &p[4], true);
 			break;
 
-		case PACKET_MULTI_SET_BLOCK:
+		case PACKET_MULTI_BLOCK_CHANGE:
 			p = &packet->bytes[packet->field_offset[2]];
 			t = (p[0] << 8) | p[1];
 			handle_multi_set_block(packet_int(packet, 0), packet_int(packet, 1),
 			                       t, p+2, p+2+t*2);
 			break;
 
-		case PACKET_SET_BLOCK:
+		case PACKET_BLOCK_CHANGE:
 			handle_set_block(packet_int(packet, 0),
 			                 packet_int(packet, 1),
 			                 packet_int(packet, 2),
 			                 packet_int(packet, 3));
 			break;
 
-		case PACKET_LOGIN:
+		case PACKET_LOGIN_REQUEST:
 			if (from == PACKET_FROM_SERVER)
 			{
 				entity_player = packet_int(packet, 0);
@@ -521,16 +521,16 @@ gpointer world_thread(gpointer data)
 			}
 			break;
 
-		case PACKET_PLAYER_ROTATE:
+		case PACKET_PLAYER_LOOK:
 			map_update_player_dir(packet_double(packet, 0));
 			break;
 
-		case PACKET_PLAYER_MOVE_ROTATE:
+		case PACKET_PLAYER_POSITION_AND_LOOK:
 			map_update_player_dir(packet_double(packet, 4));
 
-			/* fall-thru to PACKET_PLAYER_MOVE */
+			/* fall-thru to PACKET_PLAYER_POSITION */
 
-		case PACKET_PLAYER_MOVE:
+		case PACKET_PLAYER_POSITION:
 			if (entity_vehicle < 0)
 				map_update_player_pos(packet_double(packet, 0),
 				                      packet_double(packet, 1),
@@ -547,7 +547,7 @@ gpointer world_thread(gpointer data)
 			break;
 
 
-		case PACKET_ENTITY_SPAWN_NAMED:
+		case PACKET_NAMED_ENTITY_SPAWN:
 			entity_add(packet_int(packet, 0),
 			           packet_string(packet, 1).data,
 			           packet_int(packet, 2),
@@ -555,7 +555,7 @@ gpointer world_thread(gpointer data)
 			           packet_int(packet, 4));
 			break;
 
-		case PACKET_ENTITY_SPAWN_OBJECT:
+		case PACKET_PICKUP_SPAWN:
 			entity_add(packet_int(packet, 0),
 			           0,
 			           packet_int(packet, 2),
@@ -563,12 +563,12 @@ gpointer world_thread(gpointer data)
 			           packet_int(packet, 4));
 			break;
 
-		case PACKET_ENTITY_DESTROY:
+		case PACKET_DESTROY_ENTITY:
 			entity_del(packet_int(packet, 0));
 			break;
 
-		case PACKET_ENTITY_REL_MOVE:
-		case PACKET_ENTITY_REL_MOVE_LOOK:
+		case PACKET_ENTITY_RELATIVE_MOVE:
+		case PACKET_ENTITY_LOOK_AND_RELATIVE_MOVE:
 			entity_move(packet_int(packet, 0),
 			            packet_int(packet, 1),
 			            packet_int(packet, 2),
@@ -576,7 +576,7 @@ gpointer world_thread(gpointer data)
 			            1);
 			break;
 
-		case PACKET_ENTITY_MOVE:
+		case PACKET_ENTITY_TELEPORT:
 			entity_move(packet_int(packet, 0),
 			            packet_int(packet, 1),
 			            packet_int(packet, 2),
@@ -584,7 +584,7 @@ gpointer world_thread(gpointer data)
 			            0);
 			break;
 
-		case PACKET_ENTITY_ATTACH:
+		case PACKET_ATTACH_ENTITY:
 			if (packet_int(packet, 0) == entity_player)
 			{
 				jint new_vehicle = packet_int(packet, 1);
@@ -596,7 +596,7 @@ gpointer world_thread(gpointer data)
 			}
 			break;
 
-		case PACKET_TIME:
+		case PACKET_TIME_UPDATE:
 			tl = packet_long(packet, 0);
 			tl %= 24000;
 			map_update_time(tl);
@@ -606,7 +606,7 @@ gpointer world_thread(gpointer data)
 			player_health = packet_int(packet, 0);
 			break;
 
-		case PACKET_CHAT:
+		case PACKET_CHAT_MESSAGE:
 			msg = packet_string(packet, 0);
 			if (msg.len >= 3 && msg.data[0] == '/' && msg.data[1] == '/')
 			{

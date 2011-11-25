@@ -235,7 +235,7 @@ int mcmap_main(int argc, char **argv)
 		/* try to forward the response */
 
 		packet_t *reply = packet_read(&state_srv);
-		if (reply->type != PACKET_DISCONNECT)
+		if (reply->type != PACKET_DISCONNECT_OR_KICK)
 			dief("Invalid PING reply from server: type 0x%02x", reply->type);
 		packet_write(sock_cli, reply);
 

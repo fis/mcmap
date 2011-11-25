@@ -109,7 +109,7 @@ gpointer proxy_thread(gpointer data)
 		char *desc = from_client ? "client -> server" : "server -> client";
 
 #if DEBUG_PROTOCOL == 2 /* use for packet dumping for protocol analysis */
-		if (p->type == PACKET_UPDATE_HEALTH /*|| p->type == PACKET_PLAYER_MOVE || p->type == PACKET_PLAYER_MOVE_ROTATE*/)
+		if (p->type == PACKET_UPDATE_HEALTH /*|| p->type == PACKET_PLAYER_POSITION || p->type == PACKET_PLAYER_POSITION_AND_LOOK*/)
 			packet_dump(p);
 #endif
 
@@ -120,7 +120,7 @@ gpointer proxy_thread(gpointer data)
 		/* either write it out or handle if it's a command to us */
 
 		if (from_client
-		    && p->type == PACKET_CHAT
+		    && p->type == PACKET_CHAT_MESSAGE
 		    && (p->bytes[1] || p->bytes[2] > 2)
 		    && memcmp(&p->bytes[3], "\x00/\x00/", 4) == 0)
 		{
@@ -143,25 +143,25 @@ gpointer proxy_thread(gpointer data)
 
 		switch (p->type)
 		{
-		case PACKET_CHUNK:
-		case PACKET_MULTI_SET_BLOCK:
-		case PACKET_SET_BLOCK:
+		case PACKET_MAP_CHUNK:
+		case PACKET_MULTI_BLOCK_CHANGE:
+		case PACKET_BLOCK_CHANGE:
 			if (opt.nomap)
 				break;
 			/* fall-through to processing */
 
-		case PACKET_LOGIN:
-		case PACKET_PLAYER_MOVE:
-		case PACKET_PLAYER_ROTATE:
-		case PACKET_PLAYER_MOVE_ROTATE:
-		case PACKET_ENTITY_SPAWN_NAMED:
-		case PACKET_ENTITY_SPAWN_OBJECT:
-		case PACKET_ENTITY_DESTROY:
-		case PACKET_ENTITY_REL_MOVE:
-		case PACKET_ENTITY_REL_MOVE_LOOK:
-		case PACKET_ENTITY_MOVE:
-		case PACKET_ENTITY_ATTACH:
-		case PACKET_TIME:
+		case PACKET_LOGIN_REQUEST:
+		case PACKET_PLAYER_POSITION:
+		case PACKET_PLAYER_LOOK:
+		case PACKET_PLAYER_POSITION_AND_LOOK:
+		case PACKET_NAMED_ENTITY_SPAWN:
+		case PACKET_PICKUP_SPAWN:
+		case PACKET_DESTROY_ENTITY:
+		case PACKET_ENTITY_RELATIVE_MOVE:
+		case PACKET_ENTITY_LOOK_AND_RELATIVE_MOVE:
+		case PACKET_ENTITY_TELEPORT:
+		case PACKET_ATTACH_ENTITY:
+		case PACKET_TIME_UPDATE:
 		case PACKET_UPDATE_HEALTH:
 			{
 				struct directed_packet *dpacket_copy = g_new(struct directed_packet, 1);
@@ -171,7 +171,7 @@ gpointer proxy_thread(gpointer data)
 			}
 			break;
 
-		case PACKET_CHAT:
+		case PACKET_CHAT_MESSAGE:
 			if (!from_client)
 			{
 				struct buffer msg = packet_string(p, 0);
@@ -218,7 +218,7 @@ void tell(char *fmt, ...)
 	static const char prefix[4] = { '\xc2', '\xa7', 'b', 0 };
 	char *cmsg = g_strjoin("", prefix, msg, NULL);
 
-	inject_to_client(packet_new(PACKET_CHAT, cmsg));
+	inject_to_client(packet_new(PACKET_CHAT_MESSAGE, cmsg));
 
 	g_free(cmsg);
 	g_free(msg);
@@ -231,6 +231,6 @@ void say(char *fmt, ...)
 	char *msg = g_strdup_vprintf(fmt, ap);
 	va_end(ap);
 
-	inject_to_server(packet_new(PACKET_CHAT, msg));
+	inject_to_server(packet_new(PACKET_CHAT_MESSAGE, msg));
 	g_free(msg);
 }
