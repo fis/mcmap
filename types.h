@@ -10,8 +10,6 @@ typedef uint8_t jubyte;
 typedef int16_t jshort;
 typedef int32_t jint;
 typedef int64_t jlong;
-
-/* hope your system has suitable little-endian IEEE-compatible types... */
 typedef float jfloat;
 typedef double jdouble;
 
