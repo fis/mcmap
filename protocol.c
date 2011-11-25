@@ -164,11 +164,6 @@ packet_t *packet_read(packet_state_t *state)
 			if (!buf_skip(state, t*2)) return 0;
 			break;
 
-		case FIELD_STRING_UTF8:
-			t = buf_get_jshort(state);
-			if (!buf_skip(state, t)) return 0;
-			break;
-
 		case FIELD_ITEM:
 			t = buf_get_jshort(state);
 			if (t != -1)
@@ -226,12 +221,6 @@ packet_t *packet_read(packet_state_t *state)
 			t = buf_get_jint(state);
 			if (t > 0)
 				if (!buf_skip(state, 6)) return 0; // Skip 3 short
-			break;
-
-		case FIELD_STATE_DATA:
-			t = buf_getc(state);
-			if (t == 3)
-				if (!buf_skip(state, 1)) return 0;
 			break;
 		}
 	}
@@ -368,17 +357,6 @@ void packet_add_string(packet_constructor_t *pc, unsigned char *v)
 	g_free(conv);
 }
 
-void packet_add_string_utf8(packet_constructor_t *pc, unsigned char *v)
-{
-	packet_add_field(pc);
-	int len = strlen((char *) v);
-	unsigned char lenb[2];
-	jshort_write(lenb, len);
-	g_byte_array_append(pc->data, lenb, 2);
-	g_byte_array_append(pc->data, v, len);
-	pc->offset += 2 + len;
-}
-
 packet_t *packet_construct(packet_constructor_t *pc)
 {
 	g_array_append_val(pc->offsets, pc->offset);
@@ -442,10 +420,6 @@ packet_t *packet_new(enum packet_id type, ...)
 
 		case FIELD_STRING:
 			packet_add_string(&pc, va_arg(ap, unsigned char *));
-			break;
-
-		case FIELD_STRING_UTF8:
-			packet_add_string_utf8(&pc, va_arg(ap, unsigned char *));
 			break;
 
 		default:
@@ -545,11 +519,6 @@ struct buffer packet_string(packet_t *packet, unsigned field)
 		}
 		break;
 
-	case FIELD_STRING_UTF8:
-		buffer.len = jshort_read(p);
-		buffer.data = (unsigned char *)g_strndup((char*)&p[2], buffer.len);
-		break;
-
 	default:
 		dief("can't interpret field type %d as string (packet 0x%02x, field %u)",
 		     packet_format[packet->type].ftype[field], packet->type, field);
@@ -572,7 +541,6 @@ void packet_dump(packet_t *packet)
 		[FIELD_FLOAT] = "float",
 		[FIELD_DOUBLE] = "double",
 		[FIELD_STRING] = "string",
-		[FIELD_STRING_UTF8] = "string/utf8",
 		[FIELD_ITEM] = "item",
 		[FIELD_BYTE_ARRAY] = "byte-array",
 		[FIELD_BLOCK_ARRAY] = "block-array",
@@ -581,7 +549,6 @@ void packet_dump(packet_t *packet)
 		[FIELD_MAP_ARRAY] = "map-array",
 		[FIELD_ENTITY_DATA] = "entity-data",
 		[FIELD_OBJECT_DATA] = "object-data",
-		[FIELD_STATE_DATA] = "state-data",
 	};
 
 	struct packet_format_desc *fmt;
@@ -644,7 +611,6 @@ void packet_dump(packet_t *packet)
 			break;
 
 		case FIELD_STRING:
-		case FIELD_STRING_UTF8:
 			tb = packet_string(packet, f);
 			DUMP(" '%.*s'", tb.len, tb.data);
 			g_free(tb.data);
@@ -658,7 +624,6 @@ void packet_dump(packet_t *packet)
 		case FIELD_MAP_ARRAY:
 		case FIELD_ENTITY_DATA:
 		case FIELD_OBJECT_DATA:
-		case FIELD_STATE_DATA:
 			for (unsigned start = packet->field_offset[f], end = packet->field_offset[f+1], at = 0;
 			     at < 64 && start < end; at++, start++)
 				sprintf(hexdump + at*3, " %02x", (unsigned)packet->bytes[start]);

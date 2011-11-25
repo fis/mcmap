@@ -21,7 +21,6 @@ enum field_type
 	FIELD_FLOAT,
 	FIELD_DOUBLE,
 	FIELD_STRING,
-	FIELD_STRING_UTF8,
 	FIELD_ITEM,
 	FIELD_BYTE_ARRAY,
 	FIELD_BLOCK_ARRAY,
@@ -30,7 +29,6 @@ enum field_type
 	FIELD_MAP_ARRAY,
 	FIELD_ENTITY_DATA,
 	FIELD_OBJECT_DATA,
-	FIELD_STATE_DATA,
 };
 
 struct packet_format_desc
@@ -100,7 +98,6 @@ void packet_add_jlong(packet_constructor_t *pc, jlong v);
 void packet_add_jfloat(packet_constructor_t *pc, jfloat v);
 void packet_add_jdouble(packet_constructor_t *pc, jdouble v);
 void packet_add_string(packet_constructor_t *pc, unsigned char *v);
-void packet_add_string_utf8(packet_constructor_t *pc, unsigned char *v);
 packet_t *packet_construct(packet_constructor_t *pc);
 
 packet_t *packet_new(enum packet_id type, ...);
