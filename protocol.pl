@@ -26,7 +26,7 @@ my %types = (
 );
 
 my %specials = (
-	'ADD_OBJECT_VEHICLE' => [ 5, 'FIELD_OBJECT_DATA' ],
+	'ADD_OBJECT_OR_VEHICLE' => [ 5, 'FIELD_OBJECT_DATA' ],
 	'MAP_CHUNK' => [ 6, 'FIELD_BYTE_ARRAY' ],
 	'MULTI_BLOCK_CHANGE' => [ 2, 'FIELD_BLOCK_ARRAY' ],
 	'EXPLOSION' => [ 4, 'FIELD_EXPLOSION_ARRAY' ],
