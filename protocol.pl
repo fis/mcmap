@@ -72,7 +72,7 @@ while (my $line = <>)
 			if ($line ne "|}\n")
 			{
 				$line =~ /^\| class=".*" \| (.*)$/ or next;
-				my $name = sanitise($1) || 'unknown';
+				my $name = sanitise($1) || 'UNKNOWN';
 				$line = <>;
 				$line =~ /^\| class=".*" \| (.*)$/ or next;
 				my $type = $types{lc $1} or die "unknown field type $1";
