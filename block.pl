@@ -46,25 +46,34 @@ while (my $line = <>)
 		$traits{$name} || 'NO';
 }
 
-print "};\n";
+print <<EOF;
+};
 
-# bonus: check colors.c for completeness
+char *default_colors[] = {
+EOF
 
 my %colored;
-open my $colors, '<', 'colors.c' or die $!;
+open my $colors, '<', 'colors.txt' or die $!;
 while (<$colors>)
 {
-	next unless /^\t"(.*):/;
+	chomp;
+	/^(.*):/ or die "colors.txt: invalid line: $_\n";
 	if (!$names{$1})
 	{
-		print STDERR "colors.c: invalid block: $1\n";
+		print STDERR "colors.txt: invalid block: $1\n";
 	}
+	print "\t\"$_\",\n";
 	$colored{$1} = 1;
 }
 foreach my $name (keys %names)
 {
 	unless ($colored{$name})
 	{
-		print STDERR "colors.c: missing color: $name\n";
+		print STDERR "colors.txt: missing color: $name\n";
 	}
 }
+
+print <<EOF
+	0
+};
+EOF

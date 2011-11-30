@@ -1,6 +1,6 @@
 # mcmap/Makefile.common  -*- mode: makefile -*-
 
-sources += block.c colors.c cmd.c common.c console.c map.c nbt.c protocol.c proxy.c ui.c world.c
+sources += block.c cmd.c common.c console.c map.c nbt.c protocol.c proxy.c ui.c world.c
 extra_sources += main.c
 
 EXTRACFLAGS ?= -Wall -Werror
@@ -49,7 +49,7 @@ $(OBJDIR)/%.o: %.c | $(OBJDIR)
 protocol: protocol.pl
 	curl -sS 'http://wiki.vg/wiki/index.php?title=Protocol&action=raw' | perl protocol.pl > protocol.def
 
-block: block.pl
+block: block.pl colors.txt
 	curl -Ss 'http://www.minecraftwiki.net/index.php?title=Data_values&action=raw' | perl block.pl > block.c
 
 -include $(deps)

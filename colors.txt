@@ -1,0 +1,52 @@
+air: 135 206 235
+stone: 180 180 180
+grass: 34 180 0
+dirt: 158 123 18
+cobblestone: 128 128 128
+wood: 133 78 0
+sapling: 0 132 0
+water: 39 161 225
+lava: 255 81 0
+sand: 245 245 69
+gravel: 222 190 160
+gold ore: 255 180 0
+iron ore: 92 92 92
+coal ore: 51 51 51
+wood: 95 55 0
+leaves: 0 132 0
+glass: 185 234 231 170
+lapis lazuli ore: 65 102 245
+lapis lazuli block: 65 102 245
+sandstone: 245 245 69
+tall grass: 34 180 0
+wool: 240 240 240
+dandelion: 137 180 0
+rose: 122 130 0
+gold block: 255 180 0
+iron block: 92 92 92
+double slabs: 180 180 180
+slabs: 180 180 180
+brick: 160 0 0
+moss stone: 0 255 0
+obsidian: 61 0 61
+torch: 255 255 0
+fire: 255 108 0
+wooden stairs: 133 78 0
+redstone wire: 160 0 0
+diamond ore: 0 255 255
+diamond block: 0 255 255
+farmland: 114 76 9
+cobblestone stairs: 128 128 128
+redstone ore: 160 0 0
+redstone torch (off): 160 0 0
+redstone torch (on): 160 0 0
+snow: 238 238 255 127
+ice: 211 255 255 127
+snow block: 238 255 255
+clay block: 165 42 42
+sugar cane: 0 255 0
+pumpkin: 246 156 0
+netherrack: 121 17 0
+soul sand: 107 43 15
+glowstone: 186 157 0
+jack-o-lantern: 246 156 0
