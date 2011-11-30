@@ -55,9 +55,18 @@ struct chunk
 #endif
 };
 
+enum entity_type
+{
+	ENTITY_PLAYER,
+	ENTITY_MOB,
+	ENTITY_PICKUP,
+};
+
 struct entity
 {
 	jint id;
+	enum entity_type type;
+	jshort subtype; /* item ID or mob type */
 	unsigned char *name;
 	coord_t pos;
 	jint ax, ay, az; /* in absolute-int format */

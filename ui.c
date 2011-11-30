@@ -174,6 +174,17 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 		}
 		break;
 #endif
+
+	case 'm':
+		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_MOBS);
+		*repaint = 1;
+		break;
+
+	case 'p':
+		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_PICKUPS);
+		*repaint = 1;
+		break;
+
 	case 0:
 		break;
 	default:

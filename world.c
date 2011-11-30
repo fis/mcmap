@@ -412,11 +412,14 @@ static void handle_set_block(jint x, jint y, jint z, jint type)
 		map_update(cc, cc);
 }
 
-static void entity_add(jint id, unsigned char *name, jint x, jint y, jint z)
+static void entity_add(jint id, enum entity_type type, jshort subtype,
+                       unsigned char *name, jint x, jint y, jint z)
 {
 	struct entity *e = g_malloc(sizeof *e);
 
 	e->id = id;
+	e->type = type;
+	e->subtype = subtype;
 	e->name = name;
 	e->ax = x;
 	e->ay = y;
@@ -571,6 +574,8 @@ static gpointer world_thread(gpointer data)
 
 		case PACKET_NAMED_ENTITY_SPAWN:
 			entity_add(packet_int(packet, 0),
+			           ENTITY_PLAYER,
+			           0,
 			           packet_string(packet, 1).data,
 			           packet_int(packet, 2),
 			           packet_int(packet, 3),
@@ -579,6 +584,18 @@ static gpointer world_thread(gpointer data)
 
 		case PACKET_PICKUP_SPAWN:
 			entity_add(packet_int(packet, 0),
+			           ENTITY_PICKUP,
+			           packet_int(packet, 1),
+			           0,
+			           packet_int(packet, 4),
+			           packet_int(packet, 5),
+			           packet_int(packet, 6));
+			break;
+
+		case PACKET_MOB_SPAWN:
+			entity_add(packet_int(packet, 0),
+			           ENTITY_MOB,
+			           packet_int(packet, 1),
 			           0,
 			           packet_int(packet, 2),
 			           packet_int(packet, 3),

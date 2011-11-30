@@ -19,6 +19,8 @@
 enum special_color_names
 {
 	COLOR_PLAYER,
+	COLOR_MOB,
+	COLOR_PICKUP,
 	COLOR_UNLOADED,
 	COLOR_MAX_SPECIAL
 };
@@ -28,6 +30,8 @@ rgba_t block_colors[256];
 // TODO: Move this out, make it configurable
 static rgba_t special_colors[COLOR_MAX_SPECIAL] = {
 	[COLOR_PLAYER] = {255, 0, 255, 255},
+	[COLOR_MOB] = {0, 0, 255, 255},
+	[COLOR_PICKUP] = {0, 255, 0, 255},
 	[COLOR_UNLOADED] = {16, 16, 16, 255},
 };
 
@@ -726,6 +730,12 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 			break;
 		}
 
+		if (map_flags & MAP_FLAG_MOBS)
+			g_string_append(modestr, " (mobs)");
+
+		if (map_flags & MAP_FLAG_PICKUPS)
+			g_string_append(modestr, " (pickups)");
+
 		tell("%s", modestr->str);
 		g_string_free(modestr, TRUE);
 	}
@@ -879,8 +889,21 @@ static void map_draw_entity_marker(void *idp, void *ep, void *userdata)
 	struct entity *e = ep;
 	SDL_Surface *screen = userdata;
 
-	if (!e->name)
+	if (e->type == ENTITY_MOB && !(map_flags & MAP_FLAG_MOBS))
 		return;
+
+	if (e->type == ENTITY_PICKUP && !(map_flags & MAP_FLAG_PICKUPS))
+		return;
+
+	rgba_t color;
+
+	switch (e->type)
+	{
+	case ENTITY_PLAYER: color = special_colors[COLOR_PLAYER]; break;
+	case ENTITY_MOB: color = special_colors[COLOR_MOB]; break;
+	case ENTITY_PICKUP: color = special_colors[COLOR_PICKUP]; break;
+	default: wtff("bad entity type: %d", e->type);
+	}
 
 	int ex, ez;
 	map_w2s(e->pos, &ex, &ez);
@@ -892,7 +915,7 @@ static void map_draw_entity_marker(void *idp, void *ep, void *userdata)
 
 	SDL_Rect r = { .x = ex, .y = ez, .w = map_scale_indicator, .h = map_scale_indicator };
 	// TODO: handle alpha in surface mode
-	SDL_FillRect(screen, &r, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_PLAYER])));
+	SDL_FillRect(screen, &r, pack_rgb(IGNORE_ALPHA(color)));
 }
 
 void map_draw(SDL_Surface *screen)

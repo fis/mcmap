@@ -20,6 +20,8 @@ enum map_mode
 #define MAP_FLAG_LIGHTS 0x02
 #define MAP_FLAG_NIGHT 0x04
 #define MAP_FLAG_CHOP 0x08
+#define MAP_FLAG_MOBS 0x10
+#define MAP_FLAG_PICKUPS 0x20
 
 extern enum map_mode map_mode;
 extern unsigned map_flags;
