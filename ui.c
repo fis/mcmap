@@ -215,10 +215,23 @@ static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 
 static void handle_mouse(SDL_MouseButtonEvent *e)
 {
-	if (e->button == SDL_BUTTON_RIGHT && e->y < map_h)
+	switch (e->button)
 	{
+	case SDL_BUTTON_RIGHT:
+		if (e->y >= map_h)
+			break;
+
 		/* teleport */
 		teleport(map_s2w(e->x, e->y, 0, 0));
+		break;
+
+	case SDL_BUTTON_WHEELUP:
+		map_setscale(+1, 1);
+		break;
+
+	case SDL_BUTTON_WHEELDOWN:
+		map_setscale(-1, 1);
+		break;
 	}
 }
 

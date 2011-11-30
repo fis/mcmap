@@ -66,6 +66,7 @@ static jint map_y = 0;
 static int map_darken = 0;
 static unsigned map_rshift, map_gshift, map_bshift;
 
+static int map_base_scale = 1;
 static int map_scale = 1;
 static int map_scale_indicator = 3;
 
@@ -768,12 +769,22 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 
 void map_setscale(int scale, int relative)
 {
-	int s = relative ? map_scale + scale : scale;
-	if (s < 1) s = 1;
+	int sb = relative ? map_base_scale + scale : scale;
+	if (sb < 1) sb = 1;
+
+	int s;
+	if (sb > 5)
+		s = (sb - 3) * (sb - 3);
+	else
+		s = sb;
+
+	if (s > 256)
+		s = 256;
 
 	if (s == map_scale)
 		return;
 
+	map_base_scale = sb;
 	map_scale = s;
 
 	if (map_scale <= 5)
