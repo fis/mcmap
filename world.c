@@ -32,8 +32,6 @@ static jlong world_seed = 0;
 static int spawn_known = 0;
 static jint spawn_x = 0, spawn_y = 0, spawn_z = 0;
 
-volatile int world_running = 1;
-
 static char *world_path = 0;
 static char *region_path = 0;
 
@@ -197,13 +195,19 @@ static bool handle_compressed_chunk(jint x0, jint y0, jint z0,
 	};
 
 	if ((err = inflateInit(&zstr)) != Z_OK)
-		stopf("chunk update decompression: inflateInit: %s", zError(err));
+	{
+		log_print("[WHAT] chunk update decompression: inflateInit: %s", zError(err));
+		return false;
+	}
 
 	while (zstr.avail_in)
 	{
 		err = inflate(&zstr, Z_PARTIAL_FLUSH);
 		if (err != Z_OK && err != Z_STREAM_END)
-			stopf("chunk update decompression: inflate: %s", zError(err));
+		{
+			log_print("[WHAT] chunk update decompression: inflate: %s", zError(err));
+			return false;
+		}
 		if (err == Z_STREAM_END)
 			break;
 	}
@@ -212,11 +216,17 @@ static bool handle_compressed_chunk(jint x0, jint y0, jint z0,
 	inflateEnd(&zstr);
 
 	if (zbuf_len < xs*ys*zs)
-		stopf("broken decompressed chunk length: %d != %d and < %d",
+	{
+		log_print("[WHAT] broken decompressed chunk length: %d != %d and < %d",
 		      (int)zbuf_len, (int)(5*xs*ys*zs+1)/2, xs*ys*zs);
+		return false;
+	}
 
 	if (y0 > CHUNK_YSIZE)
-		stopf("too high chunk update: %d..%d", y0, y0+ys-1);
+	{
+		log_print("[WHAT] too high chunk update: %d..%d", y0, y0+ys-1);
+		return false;
+	}
 	else if (y0 + ys > CHUNK_YSIZE)
 		ys = CHUNK_YSIZE - y0;
 

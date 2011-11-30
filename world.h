@@ -63,8 +63,6 @@ struct entity
 	jint ax, ay, az; /* in absolute-int format */
 };
 
-extern volatile int world_running;
-
 void world_init(const char *path);
 void world_destroy(void);
 

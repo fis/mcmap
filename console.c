@@ -53,11 +53,8 @@ void log_print(char *fmt, ...)
 	va_end(ap);
 }
 
-void log_die(int is_stop, char *fmt, ...)
+void log_die(char *fmt, ...)
 {
-	if (!is_stop)
-		console_cleanup();
-
 	GString *msg = tstamp();
 	g_string_append_printf(msg, "[DIED] ");
 
@@ -65,13 +62,6 @@ void log_die(int is_stop, char *fmt, ...)
 	va_start(ap, fmt);
 	log_vput(msg, fmt, ap);
 	va_end(ap);
-
-	if (is_stop)
-	{
-		world_running = 0;
-		g_thread_exit(0);
-		/* never reached */
-	}
 
 	exit(1);
 }

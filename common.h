@@ -13,7 +13,7 @@ gboolean coord_equal(gconstpointer a, gconstpointer b);
 /* logging and information */
 
 void log_print(char *fmt, ...) __attribute__((format(printf, 1, 2)));
-void log_die(int is_stop, char *fmt, ...) __attribute__((noreturn, format(printf, 2, 3)));
+void log_die(char *fmt, ...) __attribute__((noreturn, format(printf, 1, 2)));
 
 /* fatal error handling */
 
@@ -21,11 +21,8 @@ void log_die(int is_stop, char *fmt, ...) __attribute__((noreturn, format(printf
    standards-compliance. Since the non-*f functions work perfectly in
    this case, it's not a big deal. */
 
-#define dief(fmt, ...) log_die(0, fmt, __VA_ARGS__)
+#define dief(fmt, ...) log_die(fmt, __VA_ARGS__)
 #define die(msg) dief("%s", msg)
-
-#define stopf(fmt, ...) log_die(1, fmt, __VA_ARGS__)
-#define stop(msg) stopf("%s", msg)
 
 #define wtff(fmt, ...) dief("%s:%d: " fmt, __FILE__, __LINE__, __VA_ARGS__)
 #define wtf(msg) wtff("%s", msg)

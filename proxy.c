@@ -138,9 +138,6 @@ gpointer proxy_thread(gpointer data)
 
 		/* communicate interesting chunks to world thread */
 
-		if (!world_running)
-			goto next;
-
 		switch (p->type)
 		{
 		case PACKET_MAP_CHUNK:
@@ -182,7 +179,6 @@ gpointer proxy_thread(gpointer data)
 			break;
 		}
 
-next:
 		if (packet_must_free)
 		{
 			packet_free(p);
