@@ -6,10 +6,6 @@
 
 #define NELEMS(array) (sizeof(array) / sizeof((array)[0]))
 
-/* for glib */
-guint coord_hash(gconstpointer key);
-gboolean coord_equal(gconstpointer a, gconstpointer b);
-
 /* options */
 
 struct options

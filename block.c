@@ -1,5 +1,7 @@
 #include <string.h>
 
+#include <glib.h>
+
 #include "block.h"
 
 struct block_info block_info[256] = {

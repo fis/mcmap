@@ -47,6 +47,10 @@ typedef struct coord3 coord3_t;
 #define COORD3_EQUAL(a,b) ((a).x == (b).x && (a).y == (b).y && (a).z == (b).z)
 #define COORD3_XZ(cc3) COORD((cc3).x, (cc3).z)
 
+/* for glib */
+guint coord_hash(gconstpointer key);
+gboolean coord_equal(gconstpointer a, gconstpointer b);
+
 /* colors */
 
 struct rgba
