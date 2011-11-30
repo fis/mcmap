@@ -5,6 +5,7 @@
 
 #include "protocol.h"
 #include "common.h"
+#include "console.h"
 #include "nbt.h"
 
 /* NBT tag data structure */

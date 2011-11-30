@@ -15,6 +15,7 @@
 #include "cmd.h"
 #include "protocol.h"
 #include "common.h"
+#include "console.h"
 #include "map.h"
 #include "nbt.h"
 #include "world.h"

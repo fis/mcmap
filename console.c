@@ -12,8 +12,6 @@
 
 int console_outfd = 1;
 
-/* log-printing methods in common.h */
-
 static GString *tstamp(void)
 {
 	char stamp[sizeof "HH:MM:SS "];

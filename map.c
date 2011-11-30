@@ -7,6 +7,7 @@
 
 #include "protocol.h"
 #include "common.h"
+#include "console.h"
 #include "config.h"
 #include "map.h"
 #include "block.h"

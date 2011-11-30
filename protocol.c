@@ -8,6 +8,7 @@
 
 #include "protocol.h"
 #include "common.h"
+#include "console.h"
 
 /*
  * reference:
