@@ -24,7 +24,6 @@ struct proxy_config
 {
 	packet_state_t state_cli;
 	packet_state_t state_srv;
-	GAsyncQueue *worldq;
 };
 
 static GAsyncQueue *iq = 0;
@@ -35,17 +34,13 @@ void start_proxy(socket_t sock_cli, socket_t sock_srv)
 {
 	iq = g_async_queue_new_full(packet_free);
 
-	GAsyncQueue *worldq = g_async_queue_new_full(packet_free);
-
-	/* TODO FIXME; call as world_init("world") or some-such to enable alpha-quality region persistence */
-	world_init(0);
-	g_thread_create(world_thread, worldq, false, 0);
+	/* TODO FIXME; call as world_start("world") or some-such to enable alpha-quality region persistence */
+	world_start(0);
 
 	/* start the proxying thread */
 	struct proxy_config *cfg = g_new(struct proxy_config, 1);
 	cfg->state_cli = (packet_state_t) PACKET_STATE_INIT(sock_cli);
 	cfg->state_srv = (packet_state_t) PACKET_STATE_INIT(sock_srv);
-	cfg->worldq = worldq;
 	g_thread_create(proxy_thread, cfg, false, 0);
 }
 
@@ -54,7 +49,6 @@ gpointer proxy_thread(gpointer data)
 	struct proxy_config *cfg = data;
 	socket_t sock_cli = cfg->state_cli.sock;
 	socket_t sock_srv = cfg->state_srv.sock;
-	GAsyncQueue *worldq = cfg->worldq;
 
 	while (1)
 	{
@@ -124,11 +118,7 @@ gpointer proxy_thread(gpointer data)
 		    && (p->bytes[1] || p->bytes[2] > 2)
 		    && memcmp(&p->bytes[3], "\x00/\x00/", 4) == 0)
 		{
-			/* TODO: Eliminate duplication with this and the later injection */
-			struct directed_packet *dpacket_copy = g_new(struct directed_packet, 1);
-			dpacket_copy->from = dpacket->from;
-			dpacket_copy->p = packet_dup(p);
-			g_async_queue_push(worldq, dpacket_copy);
+			world_push(dpacket);
 		}
 		else
 		{
@@ -160,12 +150,7 @@ gpointer proxy_thread(gpointer data)
 		case PACKET_ATTACH_ENTITY:
 		case PACKET_TIME_UPDATE:
 		case PACKET_UPDATE_HEALTH:
-			{
-				struct directed_packet *dpacket_copy = g_new(struct directed_packet, 1);
-				dpacket_copy->from = dpacket->from;
-				dpacket_copy->p = packet_dup(p);
-				g_async_queue_push(worldq, dpacket_copy);
-			}
+			world_push(dpacket);
 			break;
 
 		case PACKET_CHAT_MESSAGE:

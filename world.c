@@ -36,6 +36,10 @@ static jint spawn_x = 0, spawn_y = 0, spawn_z = 0;
 static char *world_path = 0;
 static char *region_path = 0;
 
+static GAsyncQueue *worldq = 0;
+
+static gpointer world_thread(gpointer data);
+
 struct region_file
 {
 	int fd;
@@ -65,10 +69,12 @@ static void entity_free(gpointer ep)
 	g_free(e);
 }
 
-void world_init(const char *path)
+void world_start(const char *path)
 {
 	region_table = g_hash_table_new_full(coord_hash, coord_equal, 0, region_free);
 	world_entities = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
+	worldq = g_async_queue_new_full(packet_free);
+	g_thread_create(world_thread, 0, false, 0);
 
 	/* locate/create the world directory as required */
 
@@ -119,6 +125,14 @@ void world_init(const char *path)
 		/* TODO FIXME: debugging code: load all regions to memory at start */
 		world_regfile_load(region);
 	}
+}
+
+void world_push(struct directed_packet *dpacket)
+{
+	struct directed_packet *dpacket_copy = g_new(struct directed_packet, 1);
+	dpacket_copy->from = dpacket->from;
+	dpacket_copy->p = packet_dup(dpacket->p);
+	g_async_queue_push(worldq, dpacket_copy);
 }
 
 struct region *world_region(coord_t cc, bool gen)
@@ -484,13 +498,11 @@ static void entity_move(jint id, jint x, jint y, jint z, int relative)
 		map_repaint();
 }
 
-gpointer world_thread(gpointer data)
+static gpointer world_thread(gpointer data)
 {
-	GAsyncQueue *q = data;
-
 	while (1)
 	{
-		struct directed_packet *dpacket = g_async_queue_pop(q);
+		struct directed_packet *dpacket = g_async_queue_pop(worldq);
 		enum packet_origin from = dpacket->from;
 		packet_t *packet = dpacket->p;
 		g_free(dpacket);

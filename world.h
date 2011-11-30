@@ -63,10 +63,9 @@ struct entity
 	jint ax, ay, az; /* in absolute-int format */
 };
 
-void world_init(const char *path);
-void world_destroy(void);
+void world_start(const char *path);
 
-gpointer world_thread(gpointer data);
+void world_push(struct directed_packet *dpacket);
 
 struct region *world_region(coord_t cc, bool gen);
 struct chunk *world_chunk(coord_t cc, bool gen);

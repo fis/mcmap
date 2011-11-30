@@ -50,6 +50,18 @@ struct packet
 
 typedef struct packet packet_t;
 
+enum packet_origin
+{
+        PACKET_FROM_CLIENT,
+        PACKET_FROM_SERVER,
+};
+
+struct directed_packet
+{
+        enum packet_origin from;
+        packet_t *p;
+};
+
 #define MAX_PACKET_SIZE 262144
 #define MAX_FIELDS 16
 

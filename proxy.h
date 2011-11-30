@@ -1,18 +1,6 @@
 #ifndef MCMAP_PROXY_H
 #define MCMAP_PROXY_H 1
 
-enum packet_origin
-{
-	PACKET_FROM_CLIENT,
-	PACKET_FROM_SERVER,
-};
-
-struct directed_packet
-{
-	enum packet_origin from;
-	packet_t *p;
-};
-
 void start_proxy(socket_t sock_cli, socket_t sock_srv);
 
 /* packet injection */
