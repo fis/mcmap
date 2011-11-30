@@ -57,19 +57,19 @@ open my $colors, '<', 'colors.txt' or die $!;
 while (<$colors>)
 {
 	chomp;
-	/^(.*):/ or die "colors.txt: invalid line: $_\n";
+	/^(.*):/ or die "invalid line: $_\n";
 	if (!$names{$1})
 	{
-		print STDERR "colors.txt: invalid block: $1\n";
+		print STDERR "invalid block: $1\n";
 	}
 	print "\t\"$_\",\n";
 	$colored{$1} = 1;
 }
-foreach my $name (keys %names)
+foreach my $name (sort keys %names)
 {
 	unless ($colored{$name})
 	{
-		print STDERR "colors.txt: missing color: $name\n";
+		print STDERR "missing color: $name\n";
 	}
 }
 
