@@ -67,7 +67,7 @@ static int map_scale_indicator = 3;
 enum map_mode map_mode = MAP_MODE_SURFACE;
 unsigned map_flags = 0;
 
-static GMutex * volatile map_mutex = 0;
+G_LOCK_DEFINE_STATIC(map_mutex);
 
 static int player_yaw = 0;
 
@@ -87,7 +87,6 @@ void map_init(SDL_Surface *screen)
 	map_gshift = screen_fmt->Gshift;
 	map_bshift = screen_fmt->Bshift;
 	regions = g_hash_table_new_full(coord_hash, coord_equal, 0, map_destroy_region);
-	map_mutex = g_mutex_new();
 	/* flags on by default: */
 	map_flags |= MAP_FLAG_CHOP | MAP_FLAG_FOLLOW_Y;
 #ifdef FEAT_FULLCHUNK
@@ -551,16 +550,14 @@ void map_update_region(coord_t cc)
 
 void map_update(coord_t c1, coord_t c2)
 {
-	if (!map_mutex)
-		return; /* defensive code if called by world before map_init */
-
-	g_mutex_lock(map_mutex);
+	G_LOCK(map_mutex);
 
 	for (jint cz = c1.z; cz <= c2.z; cz += CHUNK_ZSIZE)
 		for (jint cx = c1.x; cx <= c2.x; cx += CHUNK_XSIZE)
 			map_update_chunk(COORD(cx, cz));
 
-	g_mutex_unlock(map_mutex);
+	G_UNLOCK(map_mutex);
+
 	map_repaint();
 }
 
@@ -569,9 +566,7 @@ static void map_update_all()
 	GHashTableIter region_iter;
 	struct map_region *region;
 
-	if (!map_mutex)
-		return; /* defensive code if called by world before map_init */
-	g_mutex_lock(map_mutex);
+	G_LOCK(map_mutex);
 
 	g_hash_table_iter_init(&region_iter, regions);
 
@@ -580,7 +575,7 @@ static void map_update_all()
 		map_update_region(region->key);
 	}
 
-	g_mutex_unlock(map_mutex);
+	G_UNLOCK(map_mutex);
 }
 
 void map_update_player_pos(double x, double y, double z)
@@ -741,7 +736,7 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 		GHashTableIter region_iter;
 		struct map_region *region;
 
-		g_mutex_lock(map_mutex);
+		G_LOCK(map_mutex);
 
 		g_hash_table_iter_init(&region_iter, regions);
 
@@ -752,7 +747,7 @@ void map_setmode(enum map_mode mode, unsigned flags_on, unsigned flags_off, unsi
 			region->surf = 0;
 		}
 
-		g_mutex_unlock(map_mutex);
+		G_UNLOCK(map_mutex);
 	}
 
 	/* mark everything dirty for next repaint */
@@ -908,7 +903,7 @@ void map_draw(SDL_Surface *screen)
 
 	/* draw the map */
 
-	g_mutex_lock(map_mutex);
+	G_LOCK(map_mutex);
 
 	/* locate the screen corners in (sub-)block coordinates */
 
@@ -1034,15 +1029,15 @@ void map_draw(SDL_Surface *screen)
 
 	SDL_UnlockSurface(screen);
 
-	g_mutex_unlock(map_mutex);
+	G_UNLOCK(map_mutex);
 
 	/* player indicators and such */
 
 	map_draw_player_marker(screen);
 	
-	g_mutex_lock(entity_mutex);
+	G_LOCK(entity_mutex);
 	g_hash_table_foreach(world_entities, map_draw_entity_marker, screen);
-	g_mutex_unlock(entity_mutex);
+	G_UNLOCK(entity_mutex);
 
 	/* the status bar */
 

@@ -23,7 +23,7 @@
 static GHashTable *region_table = 0;
 
 GHashTable *world_entities = 0;
-GMutex *entity_mutex = 0;
+G_LOCK_DEFINE(entity_mutex);
 
 static jint entity_player = -1;
 static jint entity_vehicle = -1;
@@ -70,7 +70,6 @@ void world_init(const char *path)
 {
 	region_table = g_hash_table_new_full(coord_hash, coord_equal, 0, region_free);
 	world_entities = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
-	entity_mutex = g_mutex_new();
 
 	/* locate/create the world directory as required */
 
@@ -400,9 +399,9 @@ static void entity_add(jint id, unsigned char *name, jint x, jint y, jint z)
 
 	e->pos = COORD(x/32, z/32);
 
-	g_mutex_lock(entity_mutex);
+	G_LOCK(entity_mutex);
 	g_hash_table_replace(world_entities, &e->id, e);
-	g_mutex_unlock(entity_mutex);
+	G_UNLOCK(entity_mutex);
 
 	if (name)
 	{
@@ -427,7 +426,7 @@ static void entity_del(jint id)
 	/* FIXME: This is ugly */
 	char *name = e->name ? g_strdup((char *) e->name) : 0;
 
-	g_mutex_lock(entity_mutex);
+	G_LOCK(entity_mutex);
 	g_hash_table_remove(world_entities, &id);
 
 	if (name)
@@ -437,7 +436,7 @@ static void entity_del(jint id)
 		map_repaint();
 	}
 
-	g_mutex_unlock(entity_mutex);
+	G_UNLOCK(entity_mutex);
 }
 
 static void entity_move(jint id, jint x, jint y, jint z, int relative)
