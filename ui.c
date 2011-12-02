@@ -16,11 +16,12 @@
 #include "map.h"
 #include "world.h"
 #include "proxy.h"
+#include "ui.h"
 
 /* miscellaneous helper routines */
 
-static void handle_key(SDL_KeyboardEvent *e, int *repaint);
-static void handle_mouse(SDL_MouseButtonEvent *e);
+static bool handle_key(SDL_KeyboardEvent *e);
+static bool handle_mouse(SDL_MouseButtonEvent *e);
 
 /* start the user interface side */
 
@@ -49,14 +50,16 @@ void start_ui(bool map, int scale, bool resizable, int wnd_w, int wnd_h)
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
 		map_init(screen);
-		map_setscale(scale, 0);
+
+		/* - 1 because it's a delta */
+		map_zoom(scale - 1);
 	}
 
 	/* enter SDL main loop */
 
 	while (1)
 	{
-		int repaint = 0;
+		bool repaint = false;
 
 		/* process pending events, coalesce repaints */
 
@@ -73,20 +76,20 @@ void start_ui(bool map, int scale, bool resizable, int wnd_w, int wnd_h)
 				return;
 
 			case SDL_KEYDOWN:
-				handle_key(&e.key, &repaint);
+				repaint |= handle_key(&e.key);
 				break;
 
 			case SDL_MOUSEBUTTONDOWN:
-				handle_mouse(&e.button);
+				repaint |= handle_mouse(&e.button);
 				break;
 
 			case SDL_VIDEORESIZE:
-				/* the map doesn't seem to like being zero pixels high */
+				/* the map doesn't seem to like being zero pixels high; see issue #6 */
 				if (e.resize.h < 36) e.resize.h = 36;
 				map_w = e.resize.w;
 				map_h = e.resize.h - 24;
 				screen = SDL_SetVideoMode(e.resize.w, e.resize.h, 32, SDL_SWSURFACE|SDL_RESIZABLE);
-				repaint = 1;
+				repaint = true;
 				break;
 
 			case SDL_ACTIVEEVENT:
@@ -97,7 +100,7 @@ void start_ui(bool map, int scale, bool resizable, int wnd_w, int wnd_h)
 			case SDL_VIDEOEXPOSE:
 			case SDL_MOUSEMOTION:
 			case MCMAP_EVENT_REPAINT:
-				repaint = 1;
+				repaint = true;
 				break;
 			}
 		}
@@ -115,123 +118,49 @@ void start_ui(bool map, int scale, bool resizable, int wnd_w, int wnd_h)
 
 /* helper routine implementations */
 
-static void handle_key(SDL_KeyboardEvent *e, int *repaint)
+static bool handle_key(SDL_KeyboardEvent *e)
 {
-	switch (e->keysym.unicode)
+	struct map_mode *mode = map_modes[e->keysym.unicode];
+
+	if (mode && map_mode != mode)
 	{
-	case '1':
-		map_setmode(MAP_MODE_SURFACE, 0, 0, 0);
-		*repaint = 1;
-		break;
-
-	case '2':
-		map_setmode(MAP_MODE_CROSS, 0, 0, 0);
-		*repaint = 1;
-		break;
-
-	case '3':
-		map_setmode(MAP_MODE_TOPO, 0, 0, 0);
-		*repaint = 1;
-		break;
-
-	case '4':
-		map_setmode(MAP_MODE_ISOMETRIC, 0, 0, 0);
-		*repaint = 1;
-		break;
-
-	case 'c':
-		if (map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_ISOMETRIC)
-		{
-			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_CHOP);
-			map_update_ceiling();
-			*repaint = 1;
-		}
-		break;
-
-	case 'f':
-		if (map_mode == MAP_MODE_CROSS)
-		{
-			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_FOLLOW_Y);
-			*repaint = 1;
-		}
-		break;
-
-#ifdef FEAT_FULLCHUNK
-	case 'l':
-		if (map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_ISOMETRIC)
-		{
-			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
-			*repaint = 1;
-		}
-		break;
-
-	case 'n':
-		if ((map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_ISOMETRIC)
-		    && (map_flags & MAP_FLAG_LIGHTS))
-		{
-			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_NIGHT);
-			*repaint = 1;
-		}
-		break;
-#endif
-
-	case 'm':
-		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_MOBS);
-		*repaint = 1;
-		break;
-
-	case 'p':
-		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_PICKUPS);
-		*repaint = 1;
-		break;
-
-	case 0:
-		break;
-	default:
-		return;
+		map_set_mode(mode);
+		return true;
 	}
+
 	switch (e->keysym.sym)
 	{
-	case SDLK_UP:
-		map_update_alt(+1, 1);
-		break;
-
-	case SDLK_DOWN:
-		map_update_alt(-1, 1);
-		break;
-
 	case SDLK_PAGEUP:
-		map_setscale(+1, 1);
-		break;
+		return map_zoom(+1);
 
 	case SDLK_PAGEDOWN:
-		map_setscale(-1, 1);
-		break;
+		return map_zoom(-1);
 
 	default:
-		break;
+		return map_mode->handle_key(map_mode->data, e);
 	}
 }
 
-static void handle_mouse(SDL_MouseButtonEvent *e)
+static bool handle_mouse(SDL_MouseButtonEvent *e)
 {
 	switch (e->button)
 	{
 	case SDL_BUTTON_RIGHT:
 		if (e->y >= map_h)
-			break;
+			return false;
 
 		/* teleport */
-		teleport(map_s2w(e->x, e->y, 0, 0));
-		break;
+		teleport(COORD3_XZ(map_mode->s2w(map_mode->data, e->x, e->y)));
+		return false;
 
 	case SDL_BUTTON_WHEELUP:
-		map_setscale(+1, 1);
-		break;
+		return map_zoom(+1);
 
 	case SDL_BUTTON_WHEELDOWN:
-		map_setscale(-1, 1);
-		break;
+		return map_zoom(-1);
+
+	default:
+		return false;
 	}
 }
 

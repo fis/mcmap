@@ -72,6 +72,8 @@ struct entity
 	jint ax, ay, az; /* in absolute-int format */
 };
 
+extern int world_time;
+
 void world_start(const char *path);
 
 void world_push(struct directed_packet *dpacket);
