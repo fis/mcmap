@@ -24,7 +24,7 @@ static void handle_mouse(SDL_MouseButtonEvent *e);
 
 /* start the user interface side */
 
-void start_ui(bool map, int scale, bool resizable, int wnd_w, int wnd_h)
+void start_ui(bool map, bool resizable, int wnd_w, int wnd_h)
 {
 	console_init();
 
@@ -49,7 +49,6 @@ void start_ui(bool map, int scale, bool resizable, int wnd_w, int wnd_h)
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
 		map_init(screen);
-		map_setscale(scale, 0);
 	}
 
 	/* enter SDL main loop */
@@ -117,100 +116,8 @@ void start_ui(bool map, int scale, bool resizable, int wnd_w, int wnd_h)
 
 static void handle_key(SDL_KeyboardEvent *e, int *repaint)
 {
-	switch (e->keysym.unicode)
-	{
-	case '1':
-		map_setmode(MAP_MODE_SURFACE, 0, 0, 0);
-		*repaint = 1;
-		break;
-
-	case '2':
-		map_setmode(MAP_MODE_CROSS, 0, 0, 0);
-		*repaint = 1;
-		break;
-
-	case '3':
-		map_setmode(MAP_MODE_TOPO, 0, 0, 0);
-		*repaint = 1;
-		break;
-
-	case '4':
-		map_setmode(MAP_MODE_ISOMETRIC, 0, 0, 0);
-		*repaint = 1;
-		break;
-
-	case 'c':
-		if (map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_ISOMETRIC)
-		{
-			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_CHOP);
-			map_update_ceiling();
-			*repaint = 1;
-		}
-		break;
-
-	case 'f':
-		if (map_mode == MAP_MODE_CROSS)
-		{
-			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_FOLLOW_Y);
-			*repaint = 1;
-		}
-		break;
-
-#ifdef FEAT_FULLCHUNK
-	case 'l':
-		if (map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_ISOMETRIC)
-		{
-			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_LIGHTS);
-			*repaint = 1;
-		}
-		break;
-
-	case 'n':
-		if ((map_mode == MAP_MODE_SURFACE || map_mode == MAP_MODE_ISOMETRIC)
-		    && (map_flags & MAP_FLAG_LIGHTS))
-		{
-			map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_NIGHT);
-			*repaint = 1;
-		}
-		break;
-#endif
-
-	case 'm':
-		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_MOBS);
-		*repaint = 1;
-		break;
-
-	case 'p':
-		map_setmode(MAP_MODE_NOCHANGE, 0, 0, MAP_FLAG_PICKUPS);
-		*repaint = 1;
-		break;
-
-	case 0:
-		break;
-	default:
-		return;
-	}
-	switch (e->keysym.sym)
-	{
-	case SDLK_UP:
-		map_update_alt(+1, 1);
-		break;
-
-	case SDLK_DOWN:
-		map_update_alt(-1, 1);
-		break;
-
-	case SDLK_PAGEUP:
-		map_setscale(+1, 1);
-		break;
-
-	case SDLK_PAGEDOWN:
-		map_setscale(-1, 1);
-		break;
-
-	default:
-		break;
-	}
+	// FIXME
+	return;
 }
 
 static void handle_mouse(SDL_MouseButtonEvent *e)
@@ -222,15 +129,7 @@ static void handle_mouse(SDL_MouseButtonEvent *e)
 			break;
 
 		/* teleport */
-		teleport(map_s2w(e->x, e->y, 0, 0));
-		break;
-
-	case SDL_BUTTON_WHEELUP:
-		map_setscale(+1, 1);
-		break;
-
-	case SDL_BUTTON_WHEELDOWN:
-		map_setscale(-1, 1);
+		teleport(COORD3_XZ(map_mode->s2w(e->x, e->y)));
 		break;
 	}
 }

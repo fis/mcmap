@@ -638,7 +638,7 @@ static gpointer world_thread(gpointer data)
 		case PACKET_TIME_UPDATE:
 			tl = packet_long(packet, 0);
 			tl %= 24000;
-			map_update_time(tl);
+			// FIXME
 			break;
 
 		case PACKET_UPDATE_HEALTH:
