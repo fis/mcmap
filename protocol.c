@@ -238,7 +238,7 @@ packet_t *packet_read(packet_state_t *state)
 
 int packet_write(socket_t sock, packet_t *packet)
 {
-	gsize left = packet->size;
+	size_t left = packet->size;
 	char *p = (char*)packet->bytes;
 
 	while (left)
@@ -346,7 +346,7 @@ void packet_add_string(packet_constructor_t *pc, unsigned char *v)
 {
 	packet_add_field(pc);
 	GError *error = NULL;
-	gsize conv_len;
+	size_t conv_len;
 	char *conv = g_convert((char *) v, -1, "UTF16BE", "UTF8", NULL, &conv_len, &error);
 	if (!conv)
 		dief("g_convert UTF8->UTF16BE failed (error: %s, string: '%s')", error->message, (char *) v);
@@ -511,7 +511,7 @@ struct buffer packet_string(packet_t *packet, unsigned field)
 		{
 			int l = jshort_read(p);
 			GError *error = NULL;
-			gsize conv_len;
+			size_t conv_len;
 			buffer.data = (unsigned char *)g_convert((char*)&p[2], l*2, "UTF8", "UTF16BE", NULL, &conv_len, &error);
 			if (!buffer.data)
 				dief("g_convert UTF16BE->UTF8 failed (error: %s; packet 0x%02x, field %u)",
