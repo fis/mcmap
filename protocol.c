@@ -57,7 +57,7 @@ static const char **packet_field_names[] = {
 
 /* packet reading/writing */
 
-static int buf_fill(packet_state_t *state)
+static bool buf_fill(packet_state_t *state)
 {
 	if (state->buf_start > 0 && state->buf_end == MAX_PACKET_SIZE)
 	{
@@ -71,20 +71,20 @@ static int buf_fill(packet_state_t *state)
 	if (got <= 0)
 	{
 		state->buf_pos = state->buf_start = state->buf_end = 0;
-		return 0;
+		return false;
 	}
 
 	state->buf_end += got;
-	return 1;
+	return true;
 }
 
-static int buf_skip(packet_state_t *state, unsigned n)
+static bool buf_skip(packet_state_t *state, unsigned n)
 {
 	if (n < 0)
 		dief("%d passed to buf_skip! Broken server or desync", n);
 	while (state->buf_pos + n > state->buf_end)
 		if (!buf_fill(state))
-			return 0;
+			return false;
 	state->buf_pos += n;
 	return 1;
 }
