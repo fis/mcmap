@@ -123,7 +123,7 @@ gpointer proxy_thread(gpointer data)
 		else
 		{
 			if (!packet_write(sto, p))
-				dief("proxy thread (%s) write failed", desc);
+				dief("proxy thread (%s) write failed: %s", desc, strerror(errno));
 		}
 
 		/* communicate interesting chunks to world thread */
