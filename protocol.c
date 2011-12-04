@@ -132,6 +132,7 @@ static bool buf_skip_item(packet_state_t *state)
 	case 0x135: case 0x136: case 0x137: case 0x138: case 0x139:
 	case 0x13A: case 0x13B: case 0x13C: case 0x13D:
 		len = buf_get_jshort(state);
+		if (len == -1) break;
 		if (!buf_skip(state, len)) return false;
 		break;
 	}
