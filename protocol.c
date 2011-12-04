@@ -80,6 +80,8 @@ static int buf_fill(packet_state_t *state)
 
 static int buf_skip(packet_state_t *state, unsigned n)
 {
+	if (n < 0)
+		dief("%d passed to buf_skip! Broken server or desync", n);
 	while (state->buf_pos + n > state->buf_end)
 		if (!buf_fill(state))
 			return 0;
