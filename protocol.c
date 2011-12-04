@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <glib.h>
 
@@ -236,18 +237,19 @@ packet_t *packet_read(packet_state_t *state)
 	return &state->p;
 }
 
+/* FIXME: duplication with log_vput in console.c */
 int packet_write(socket_t sock, packet_t *packet)
 {
-	size_t left = packet->size;
-	char *p = (char*)packet->bytes;
+	struct buffer buf = { packet->size, (unsigned char *) packet->bytes };
 
-	while (left)
+	while (buf.len > 0)
 	{
-		int sent = send(sock, p, left, 0);
-		if (sent < 0)
+		ssize_t sent = send(sock, buf.data, buf.len, 0);
+		if (sent < 0 && errno == EINTR)
+			continue;
+		else if (sent < 0)
 			return 0;
-		left -= sent;
-		p += sent;
+		ADVANCE_BUFFER(buf, sent);
 	}
 
 	return 1;
