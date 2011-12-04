@@ -199,9 +199,6 @@ packet_t *packet_read(packet_state_t *state)
 
 		case FIELD_ITEM:
 			if (!buf_skip_item(state)) return 0;
-			t = buf_get_jshort(state);
-			if (t != -1)
-				if (!buf_skip(state, 3)) return 0;
 			break;
 
 		case FIELD_BYTE_ARRAY:
