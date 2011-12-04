@@ -111,6 +111,34 @@ static jint buf_get_jint(packet_state_t *state)
 	return jint_read(&state->buf[state->buf_pos-4]);
 }
 
+static bool buf_skip_item(packet_state_t *state)
+{
+	jshort item = buf_get_jshort(state);
+	if (item == -1) return true;
+	if (!buf_skip(state, 3)) return false;
+
+	/* TODO FIXME: Scrape this list from the wiki, too */
+	jshort len;
+	switch (item)
+	{
+	case 0x103: case 0x105: case 0x15A: case 0x167: case 0x10C:
+	case 0x10D: case 0x10E: case 0x10F: case 0x122: case 0x110:
+	case 0x111: case 0x112: case 0x113: case 0x123: case 0x10B:
+	case 0x100: case 0x101: case 0x102: case 0x124: case 0x114:
+	case 0x115: case 0x116: case 0x117: case 0x125: case 0x11B:
+	case 0x11C: case 0x11D: case 0x11E: case 0x126: case 0x12A:
+	case 0x12B: case 0x12C: case 0x12D: case 0x12E: case 0x12F:
+	case 0x130: case 0x131: case 0x132: case 0x133: case 0x134:
+	case 0x135: case 0x136: case 0x137: case 0x138: case 0x139:
+	case 0x13A: case 0x13B: case 0x13C: case 0x13D:
+		len = buf_get_jshort(state);
+		if (!buf_skip(state, len)) return false;
+		break;
+	}
+
+	return true;
+}
+
 packet_t *packet_read(packet_state_t *state)
 {
 	jint t = buf_getc(state);
@@ -169,6 +197,7 @@ packet_t *packet_read(packet_state_t *state)
 			break;
 
 		case FIELD_ITEM:
+			if (!buf_skip_item(state)) return 0;
 			t = buf_get_jshort(state);
 			if (t != -1)
 				if (!buf_skip(state, 3)) return 0;
@@ -187,11 +216,7 @@ packet_t *packet_read(packet_state_t *state)
 		case FIELD_ITEM_ARRAY:
 			t = buf_get_jshort(state);
 			for (int i = 0; i < t; i++)
-			{
-				jshort itype = buf_get_jshort(state);
-				if (itype != -1)
-					if (!buf_skip(state, 3)) return 0;
-			}
+				if (!buf_skip_item(state)) return 0;
 			break;
 
 		case FIELD_EXPLOSION_ARRAY:
