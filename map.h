@@ -17,15 +17,17 @@ struct map_region
 
 struct map_mode
 {
-	coord3_t (*s2w)(int sx, int sy);
-	void (*w2s)(coord_t cc, int *sx, int *sy);
-	void (*draw_map)(SDL_Surface *screen);
-	void (*draw_player)(SDL_Surface *screen);
-	void (*draw_entity)(SDL_Surface *screen, struct entity *e);
+	void *state;
+	void *(*initialize)(void);
+	coord3_t (*s2w)(void *state, int sx, int sy);
+	void (*w2s)(void *state, coord_t cc, int *sx, int *sy);
+	void (*draw_map)(void *state, SDL_Surface *screen);
+	void (*draw_player)(void *state, SDL_Surface *screen);
+	void (*draw_entity)(void *state, SDL_Surface *screen, struct entity *e);
 };
 
 extern struct map_mode *map_mode;
-extern struct map_mode map_mode_flat;
+extern struct map_mode map_mode_surface;
 
 extern rgba_t block_colors[256];
 

@@ -60,7 +60,10 @@ void map_init(SDL_Surface *screen)
 	map_gshift = screen_fmt->Gshift;
 	map_bshift = screen_fmt->Bshift;
 	regions = g_hash_table_new_full(coord_hash, coord_equal, 0, map_destroy_region);
-	map_mode = &map_mode_flat;
+
+	/* initialize map modes */
+	map_mode_surface.state = map_mode_surface.initialize();
+	map_mode = &map_mode_surface;
 }
 
 static struct map_region *map_create_region(coord_t rc)
@@ -207,7 +210,7 @@ inline void map_blit_scaled(SDL_Surface *dest, SDL_Surface *src, int sx, int sy,
 
 static void map_draw_entity_marker(void *idp, void *ep, void *userdata)
 {
-	map_mode->draw_entity((SDL_Surface *) userdata, (struct entity *) ep);
+	map_mode->draw_entity(map_mode->state, (SDL_Surface *) userdata, (struct entity *) ep);
 }
 
 static void map_draw_status_bar(SDL_Surface *screen)
@@ -224,7 +227,7 @@ static void map_draw_status_bar(SDL_Surface *screen)
 	{
 		int mx, my;
 		SDL_GetMouseState(&mx, &my);
-		hcc = map_mode->s2w(mx, my);
+		hcc = map_mode->s2w(map_mode->state, mx, my);
 		struct chunk *hc = world_chunk(COORD3_XZ(hcc), false);
 		if (!hc) goto no_block_info;
 		jint hcx = CHUNK_XOFF(hcc.x);
@@ -278,11 +281,11 @@ void map_draw(SDL_Surface *screen)
 
 	/* draw the map */
 
-	map_mode->draw_map(screen);
+	map_mode->draw_map(map_mode->state, screen);
 
 	/* player indicators and such */
 
-	map_mode->draw_player(screen);
+	map_mode->draw_player(map_mode->state, screen);
 
 	G_LOCK(entity_mutex);
 	g_hash_table_foreach(world_entities, map_draw_entity_marker, screen);

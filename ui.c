@@ -129,7 +129,7 @@ static void handle_mouse(SDL_MouseButtonEvent *e)
 			break;
 
 		/* teleport */
-		teleport(COORD3_XZ(map_mode->s2w(e->x, e->y)));
+		teleport(COORD3_XZ(map_mode->s2w(map_mode->state, e->x, e->y)));
 		break;
 	}
 }

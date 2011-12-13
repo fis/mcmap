@@ -7,47 +7,62 @@
 #include "protocol.h"
 #include "map.h"
 
-static int map_scale = 1;
-static int map_scale_indicator = 3;
+struct state {
+	int scale;
+	int scale_indicator;
+};
 
-coord_t s2w_offset(int sx, int sy, jint *xo, jint *zo)
+static struct state state_surface = {
+	.scale = 1,
+	.scale_indicator = 3,
+};
+
+void *initialize_surface()
+{
+	return &state_surface;
+}
+
+coord_t s2w_offset(struct state *state, int sx, int sy, jint *xo, jint *zo)
 {
 	/* Pixel map_w/2 equals middle (rounded down) of block player_pos.x.
-	 * Pixel map_w/2 - (map_scale-1)/2 equals left edge of block player_pos.x.
+	 * Pixel map_w/2 - (state->scale-1)/2 equals left edge of block player_pos.x.
 	 * Compute offset from there, divide by scale, round toward negative. */
 
-	int px = map_w/2 - (map_scale-1)/2;
-	int py = map_h/2 - (map_scale-1)/2;
+	int px = map_w/2 - (state->scale-1)/2;
+	int py = map_h/2 - (state->scale-1)/2;
 
 	int dx = sx - px, dy = sy - py;
 
-	dx = dx >= 0 ? dx/map_scale : (dx-(map_scale-1))/map_scale;
-	dy = dy >= 0 ? dy/map_scale : (dy-(map_scale-1))/map_scale;
+	dx = dx >= 0 ? dx/state->scale : (dx-(state->scale-1))/state->scale;
+	dy = dy >= 0 ? dy/state->scale : (dy-(state->scale-1))/state->scale;
 
-	*xo = sx - (px + dx*map_scale);
-	*zo = sy - (py + dy*map_scale);
+	*xo = sx - (px + dx*state->scale);
+	*zo = sy - (py + dy*state->scale);
 
 	return COORD(player_pos.x + dx, player_pos.z + dy);
 }
 
-static coord3_t s2w(int sx, int sy)
+static coord3_t s2w(void *data, int sx, int sy)
 {
 	jint xo, zo;
-	coord_t cc = s2w_offset(sx, sy, &xo, &zo);
+	coord_t cc = s2w_offset((struct state *) data, sx, sy, &xo, &zo);
 	return COORD3(cc.x, world_getheight(cc), cc.z);
 }
 
-static void w2s(coord_t cc, int *sx, int *sy)
+static void w2s(void *data, coord_t cc, int *sx, int *sy)
 {
-	int px = map_w/2 - (map_scale-1)/2;
-	int py = map_h/2 - (map_scale-1)/2;
+	struct state *state = data;
+	int px = map_w/2 - (state->scale-1)/2;
+	int py = map_h/2 - (state->scale-1)/2;
 
-	*sx = px + (cc.x - player_pos.x)*map_scale;
-	*sy = py + (cc.z - player_pos.z)*map_scale;
+	*sx = px + (cc.x - player_pos.x)*state->scale;
+	*sy = py + (cc.z - player_pos.z)*state->scale;
 }
 
-static void draw_player(SDL_Surface *screen)
+static void draw_player(void *data, SDL_Surface *screen)
 {
+	struct state *state = data;
+
 	/* determine transform from player direction */
 
 	int txx, txy, tyx, tyy;
@@ -61,12 +76,12 @@ static void draw_player(SDL_Surface *screen)
 	default: wtff("player_yaw = %d", player_yaw);
 	}
 
-	int s = map_scale_indicator;
+	int s = state->scale_indicator;
 
 	int x0, y0;
-	map_mode->w2s(COORD3_XZ(player_pos), &x0, &y0);
-	x0 += (map_scale - s)/2;
-	y0 += (map_scale - s)/2;
+	w2s(state, COORD3_XZ(player_pos), &x0, &y0);
+	x0 += (state->scale - s)/2;
+	y0 += (state->scale - s)/2;
 
 	if (txx < 0 || txy < 0) x0 += s-1;
 	if (tyx < 0 || tyy < 0) y0 += s-1;
@@ -113,8 +128,10 @@ static void draw_player(SDL_Surface *screen)
 	SDL_UnlockSurface(screen);
 }
 
-static void draw_entity(SDL_Surface *screen, struct entity *e)
+static void draw_entity(void *data, SDL_Surface *screen, struct entity *e)
 {
+	struct state *state = data;
+
 #if 0
 	if (e->type == ENTITY_MOB && !(map_flags & MAP_FLAG_MOBS))
 		return;
@@ -134,14 +151,14 @@ static void draw_entity(SDL_Surface *screen, struct entity *e)
 	}
 
 	int ex, ez;
-	map_mode->w2s(e->pos, &ex, &ez);
-	ex += (map_scale - map_scale_indicator)/2;
-	ez += (map_scale - map_scale_indicator)/2;
+	map_mode->w2s(state, e->pos, &ex, &ez);
+	ex += (state->scale - state->scale_indicator)/2;
+	ez += (state->scale - state->scale_indicator)/2;
 
-	if (ex < 0 || ez < 0 || ex+map_scale_indicator > map_w || ez+map_scale_indicator > map_h)
+	if (ex < 0 || ez < 0 || ex+state->scale_indicator > map_w || ez+state->scale_indicator > map_h)
 		return;
 
-	SDL_Rect r = { .x = ex, .y = ez, .w = map_scale_indicator, .h = map_scale_indicator };
+	SDL_Rect r = { .x = ex, .y = ez, .w = state->scale_indicator, .h = state->scale_indicator };
 	// TODO: handle alpha in surface mode
 	SDL_FillRect(screen, &r, pack_rgb(IGNORE_ALPHA(color)));
 }
@@ -314,14 +331,14 @@ static void paint_region(struct map_region *region)
 {
 	jint cidx = 0;
 
-	/* make sure the region has a flat for painting */
+	/* make sure the region has a surface for painting */
 
 	if (!region->surf)
 	{
 		region->surf = SDL_CreateRGBSurface(SDL_SWSURFACE, REGION_XSIZE, REGION_ZSIZE, 32,
 		                                    screen_fmt->Rmask, screen_fmt->Gmask, screen_fmt->Bmask, 0);
 		if (!region->surf)
-			dief("SDL map flat init: %s", SDL_GetError());
+			dief("SDL map surface init: %s", SDL_GetError());
 
 		SDL_LockSurface(region->surf);
 		SDL_Rect r = { .x = 0, .y = 0, .w = REGION_XSIZE, .h = REGION_ZSIZE };
@@ -351,14 +368,16 @@ static void paint_region(struct map_region *region)
 	}
 }
 
-static void draw_map(SDL_Surface *screen)
+static void draw_map(void *data, SDL_Surface *screen)
 {
+	struct state *state = data;
+
 	/* locate the screen corners in (sub-)block coordinates */
 
 	jint scr_x1, scr_z1;
 	jint scr_x1o, scr_z1o;
 
-	coord_t scr1 = s2w_offset(0, 0, &scr_x1o, &scr_z1o);
+	coord_t scr1 = s2w_offset(state, 0, 0, &scr_x1o, &scr_z1o);
 	scr_x1 = scr1.x;
 	scr_z1 = scr1.z;
 
@@ -371,11 +390,11 @@ static void draw_map(SDL_Surface *screen)
 	scr_x2o = scr_x1o + map_w;
 	scr_z2o = scr_z1o + map_h;
 
-	scr_x2 += scr_x2o / map_scale;
-	scr_z2 += scr_z2o / map_scale;
+	scr_x2 += scr_x2o / state->scale;
+	scr_z2 += scr_z2o / state->scale;
 
-	scr_x2o = scr_x2 % map_scale;
-	scr_z2o = scr_z2 % map_scale;
+	scr_x2o = scr_x2 % state->scale;
+	scr_z2o = scr_z2 % state->scale;
 
 	/* find the range of regions that intersect with the screen */
 
@@ -415,8 +434,8 @@ static void draw_map(SDL_Surface *screen)
 
 			int reg_sx, reg_sy;
 
-			reg_sx = (rc.x - scr_x1)*map_scale - scr_x1o;
-			reg_sy = (rc.z - scr_z1)*map_scale - scr_z1o;
+			reg_sx = (rc.x - scr_x1)*state->scale - scr_x1o;
+			reg_sy = (rc.z - scr_z1)*state->scale - scr_z1o;
 
 			map_blit_scaled(screen, regs, reg_sx, reg_sy, REGION_XSIZE, REGION_ZSIZE);
 
@@ -427,7 +446,8 @@ static void draw_map(SDL_Surface *screen)
 	SDL_UnlockSurface(screen);
 }
 
-struct map_mode map_mode_flat = {
+struct map_mode map_mode_surface = {
+	.initialize = initialize_surface,
 	.s2w = s2w,
 	.w2s = w2s,
 	.draw_map = draw_map,
