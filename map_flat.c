@@ -27,14 +27,14 @@ static void *init_cross()
 	return &state_cross;
 }
 
-static int indicator_scale(int scale)
+static int indicator_scale()
 {
-	if (scale <= 5)
-		return scale + 2;
-	else if (scale <= 9)
-		return scale;
+	if (map_scale <= 5)
+		return map_scale + 2;
+	else if (map_scale <= 9)
+		return map_scale;
 	else
-		return scale - 2;
+		return map_scale - 2;
 }
 
 static int surface_y(struct chunk *c, jint bx, int bz)
@@ -120,7 +120,7 @@ static void draw_player(void *data, SDL_Surface *screen)
 	default: wtff("player_yaw = %d", player_yaw);
 	}
 
-	int s = indicator_scale(map_scale);
+	int s = indicator_scale();
 
 	int x0, y0;
 	w2s(state, COORD3_XZ(player_pos), &x0, &y0);
@@ -194,7 +194,7 @@ static void draw_entity(void *data, SDL_Surface *screen, struct entity *e)
 	default: wtff("bad entity type: %d", e->type);
 	}
 
-	int s = indicator_scale(map_scale);
+	int s = indicator_scale();
 
 	int ex, ez;
 	map_mode->w2s(state, e->pos, &ex, &ez);
