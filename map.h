@@ -18,7 +18,8 @@ struct map_region
 struct map_mode
 {
 	void *state;
-	void *(*initialize)(void);
+	void *(*init)(void);
+	char *(*describe)(void *state);
 	coord3_t (*s2w)(void *state, int sx, int sy);
 	void (*w2s)(void *state, coord_t cc, int *sx, int *sy);
 	bool (*handle_key)(void *state, SDL_KeyboardEvent *e);
@@ -29,7 +30,9 @@ struct map_mode
 };
 
 extern struct map_mode *map_mode;
+extern struct map_mode *map_modes[256];
 extern struct map_mode map_mode_surface;
+extern struct map_mode map_mode_cross;
 
 extern rgba_t block_colors[256];
 
@@ -67,7 +70,8 @@ void map_update(coord_t c1, coord_t c2);
 
 void map_update_player_pos(double x, double y, double z);
 void map_update_player_dir(double yaw);
-void map_update_player_id(jint id);
+
+void map_set_mode(struct map_mode *mode);
 
 void map_repaint(void);
 

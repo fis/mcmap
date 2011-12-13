@@ -11,16 +11,22 @@
 struct state {
 	int base_scale;
 	int scale;
+	char *name;
+	jint (*y)(struct chunk *c, jint bx, jint bz);
+	rgba_t (*block_color)(struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
 };
 
-static struct state state_surface = {
-	.base_scale = 1,
-	.scale = 1,
-};
+static struct state state_surface;
+static struct state state_cross;
 
-static void *initialize_surface()
+static void *init_surface()
 {
 	return &state_surface;
+}
+
+static void *init_cross()
+{
+	return &state_cross;
 }
 
 static int indicator_scale(int scale)
@@ -31,6 +37,23 @@ static int indicator_scale(int scale)
 		return scale;
 	else
 		return scale - 2;
+}
+
+static int surface_y(struct chunk *c, jint bx, int bz)
+{
+	return c->height[bx][bz];
+}
+
+static int cross_y(struct chunk *c, jint bx, int bz)
+{
+	// FIXME
+	return 64;
+}
+
+static char *describe(void *data)
+{
+	struct state *state = data;
+	return g_strdup_printf("%s", state->name);
 }
 
 static coord_t s2w_offset(struct state *state, int sx, int sy, jint *xo, jint *zo)
@@ -55,9 +78,17 @@ static coord_t s2w_offset(struct state *state, int sx, int sy, jint *xo, jint *z
 
 static coord3_t s2w(void *data, int sx, int sy)
 {
+	struct state *state = data;
+
 	jint xo, zo;
 	coord_t cc = s2w_offset((struct state *) data, sx, sy, &xo, &zo);
-	return COORD3(cc.x, world_getheight(cc), cc.z);
+
+	jint y = -1;
+	struct chunk *c = world_chunk(cc, false);
+	if (c)
+		y = state->y(c, CHUNK_XOFF(cc.x), CHUNK_ZOFF(cc.z));
+
+	return COORD3(cc.x, y, cc.z);
 }
 
 static void w2s(void *data, coord_t cc, int *sx, int *sy)
@@ -271,7 +302,7 @@ static rgba_t block_color(struct chunk *c, unsigned char *b, jint bx, jint bz, j
 	           (below.b * (255 - rgba.a) + rgba.b * rgba.a)/255);
 }
 
-static void paint_chunk(SDL_Surface *region, coord_t cc)
+static void paint_chunk(struct state *state, SDL_Surface *region, coord_t cc)
 {
 	jint cxo = CHUNK_XIDX(REGION_XOFF(cc.x));
 	jint czo = CHUNK_ZIDX(REGION_ZOFF(cc.z));
@@ -306,41 +337,8 @@ static void paint_chunk(SDL_Surface *region, coord_t cc)
 
 		for (jint bx = 0; bx < CHUNK_XSIZE; bx++)
 		{
-			jint y = c->height[bx][bz];
-
-			/* select basic color */
-
-			rgba_t rgba;
-
-#if 0
-			if (map_mode == MAP_MODE_TOPO)
-			{
-				uint32_t v = *b;
-				if (IS_WATER(c->blocks[bx][bz][y]))
-					rgba = map_water_color(c, block_colors[0x08], bx, bz, y);
-				else if (v < 64)
-					rgba = RGB(4*v, 4*v, 0);
-				else
-					rgba = RGB(255, 255-4*(v-64), 0);
-			}
-			else if (map_mode == MAP_MODE_CROSS)
-				rgba = block_colors[b[map_y]];
-			else if (map_mode == MAP_MODE_SURFACE)
-			{
-				if (map_flags & MAP_FLAG_CHOP && y >= ceiling_y)
-				{
-					y = ceiling_y - 1;
-					while (IS_AIR(b[y]) && y > 1)
-						y--;
-				}
-#endif
-				rgba = block_color(c, b, bx, bz, y);
-#if 0
-			}
-			else
-				wtff("invalid map_mode %d", map_mode);
-#endif
-
+			jint y = state->y(c, bx, bz);
+			rgba_t rgba = state->block_color(c, b, bx, bz, y);
 			*p++ = pack_rgb(rgba);
 			b += blocks_xpitch;
 		}
@@ -352,7 +350,7 @@ static void paint_chunk(SDL_Surface *region, coord_t cc)
 	SDL_UnlockSurface(region);
 }
 
-static void paint_region(struct map_region *region)
+static void paint_region(struct state *state, struct map_region *region)
 {
 	jint cidx = 0;
 
@@ -384,7 +382,7 @@ static void paint_region(struct map_region *region)
 				coord_t cc;
 				cc.x = region->key.x + (cx * CHUNK_XSIZE);
 				cc.z = region->key.z + (cz * CHUNK_ZSIZE);
-				paint_chunk(region->surf, cc);
+				paint_chunk(state, region->surf, cc);
 				BITSET_CLEAR(region->dirty_chunk, cidx);
 			}
 
@@ -448,7 +446,7 @@ static void draw_map(void *data, SDL_Surface *screen)
 				continue; /* nothing to draw */
 
 			if (region->dirty_flag)
-				paint_region(region);
+				paint_region(state, region);
 
 			SDL_Surface *regs = region->surf;
 			if (!regs)
@@ -471,9 +469,39 @@ static void draw_map(void *data, SDL_Surface *screen)
 	SDL_UnlockSurface(screen);
 }
 
+static struct state state_surface = {
+	.base_scale = 1,
+	.scale = 1,
+	.name = "surface",
+	.y = surface_y,
+	.block_color = block_color,
+};
+
+static struct state state_cross = {
+	.base_scale = 1,
+	.scale = 1,
+	.name = "cross-section",
+	.y = cross_y,
+	.block_color = block_color,
+};
+
 struct map_mode map_mode_surface = {
 	.state = 0,
-	.initialize = initialize_surface,
+	.init = init_surface,
+	.describe = describe,
+	.s2w = s2w,
+	.w2s = w2s,
+	.handle_key = handle_key,
+	.handle_mouse = handle_mouse,
+	.draw_map = draw_map,
+	.draw_player = draw_player,
+	.draw_entity = draw_entity,
+};
+
+struct map_mode map_mode_cross = {
+	.state = 0,
+	.init = init_cross,
+	.describe = describe,
 	.s2w = s2w,
 	.w2s = w2s,
 	.handle_key = handle_key,

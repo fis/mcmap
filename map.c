@@ -41,6 +41,7 @@ jint map_w = 0, map_h = 0;
 static unsigned map_rshift, map_gshift, map_bshift;
 
 struct map_mode *map_mode = 0;
+struct map_mode *map_modes[256];
 
 G_LOCK_DEFINE_STATIC(map_mutex);
 
@@ -53,6 +54,12 @@ inline uint32_t pack_rgb(rgba_t rgba)
 
 static void map_destroy_region(gpointer gp);
 
+static struct map_mode *map_init_mode(struct map_mode *mode)
+{
+	mode->state = mode->init();
+	return mode;
+}
+
 void map_init(SDL_Surface *screen)
 {
 	screen_fmt = screen->format;
@@ -62,7 +69,8 @@ void map_init(SDL_Surface *screen)
 	regions = g_hash_table_new_full(coord_hash, coord_equal, 0, map_destroy_region);
 
 	/* initialize map modes */
-	map_mode_surface.state = map_mode_surface.initialize();
+	map_modes['1'] = map_init_mode(&map_mode_surface);
+	map_modes['2'] = map_init_mode(&map_mode_cross);
 	map_mode = &map_mode_surface;
 }
 
@@ -157,6 +165,23 @@ void map_update(coord_t c1, coord_t c2)
 	map_repaint();
 }
 
+static void map_update_all()
+{
+	GHashTableIter region_iter;
+	struct map_region *region;
+
+	G_LOCK(map_mutex);
+
+	g_hash_table_iter_init(&region_iter, regions);
+
+	while (g_hash_table_iter_next(&region_iter, NULL, (gpointer *) &region))
+	{
+		map_update_region(region->key);
+	}
+
+	G_UNLOCK(map_mutex);
+}
+
 void map_update_player_pos(double x, double y, double z)
 {
 	coord3_t new_pos = COORD3(floor(x), floor(y), floor(z));
@@ -193,6 +218,15 @@ void map_update_player_dir(double yaw)
 	player_yaw = new_yaw;
 
 	map_repaint();
+}
+
+void map_set_mode(struct map_mode *mode)
+{
+	map_mode = mode;
+	map_update_all();
+	char *description = map_mode->describe(map_mode->state);
+	tell("MODE: %s", description);
+	g_free(description);
 }
 
 /* screen-drawing related code */

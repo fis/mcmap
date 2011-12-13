@@ -116,7 +116,14 @@ void start_ui(bool map, bool resizable, int wnd_w, int wnd_h)
 
 static bool handle_key(SDL_KeyboardEvent *e)
 {
-	// FIXME
+	struct map_mode *mode = map_modes[e->keysym.unicode];
+
+	if (mode)
+	{
+		map_set_mode(mode);
+		return true;
+	}
+
 	return map_mode->handle_key(map_mode->state, e);
 }
 
