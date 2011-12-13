@@ -19,7 +19,7 @@
 
 /* miscellaneous helper routines */
 
-static void handle_key(SDL_KeyboardEvent *e, int *repaint);
+static bool handle_key(SDL_KeyboardEvent *e);
 static void handle_mouse(SDL_MouseButtonEvent *e);
 
 /* start the user interface side */
@@ -55,7 +55,7 @@ void start_ui(bool map, bool resizable, int wnd_w, int wnd_h)
 
 	while (1)
 	{
-		int repaint = 0;
+		bool repaint = false;
 
 		/* process pending events, coalesce repaints */
 
@@ -72,7 +72,7 @@ void start_ui(bool map, bool resizable, int wnd_w, int wnd_h)
 				return;
 
 			case SDL_KEYDOWN:
-				handle_key(&e.key, &repaint);
+				repaint |= handle_key(&e.key);
 				break;
 
 			case SDL_MOUSEBUTTONDOWN:
@@ -80,12 +80,12 @@ void start_ui(bool map, bool resizable, int wnd_w, int wnd_h)
 				break;
 
 			case SDL_VIDEORESIZE:
-				/* the map doesn't seem to like being zero pixels high */
+				/* the map doesn't seem to like being zero pixels high; see issue #6 */
 				if (e.resize.h < 36) e.resize.h = 36;
 				map_w = e.resize.w;
 				map_h = e.resize.h - 24;
 				screen = SDL_SetVideoMode(e.resize.w, e.resize.h, 32, SDL_SWSURFACE|SDL_RESIZABLE);
-				repaint = 1;
+				repaint = true;
 				break;
 
 			case SDL_ACTIVEEVENT:
@@ -96,7 +96,7 @@ void start_ui(bool map, bool resizable, int wnd_w, int wnd_h)
 			case SDL_VIDEOEXPOSE:
 			case SDL_MOUSEMOTION:
 			case MCMAP_EVENT_REPAINT:
-				repaint = 1;
+				repaint = true;
 				break;
 			}
 		}
@@ -114,10 +114,11 @@ void start_ui(bool map, bool resizable, int wnd_w, int wnd_h)
 
 /* helper routine implementations */
 
-static void handle_key(SDL_KeyboardEvent *e, int *repaint)
+static bool handle_key(SDL_KeyboardEvent *e)
 {
 	// FIXME
-	return;
+	return map_mode->handle_key(map_mode->state, e);
+}
 }
 
 static void handle_mouse(SDL_MouseButtonEvent *e)
@@ -131,6 +132,9 @@ static void handle_mouse(SDL_MouseButtonEvent *e)
 		/* teleport */
 		teleport(COORD3_XZ(map_mode->s2w(map_mode->state, e->x, e->y)));
 		break;
+
+	default:
+		map_mode->handle_mouse(map_mode->state, e);
 	}
 }
 

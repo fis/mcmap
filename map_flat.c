@@ -67,6 +67,16 @@ static void w2s(void *data, coord_t cc, int *sx, int *sy)
 	*sy = py + (cc.z - player_pos.z)*state->scale;
 }
 
+static bool handle_key(void *data, SDL_KeyboardEvent *e)
+{
+	return false;
+}
+
+static void handle_mouse(void *data, SDL_MouseButtonEvent *e)
+{
+	/* do nothing */
+}
+
 static void draw_player(void *data, SDL_Surface *screen)
 {
 	struct state *state = data;
@@ -457,9 +467,12 @@ static void draw_map(void *data, SDL_Surface *screen)
 }
 
 struct map_mode map_mode_surface = {
+	.state = 0,
 	.initialize = initialize_surface,
 	.s2w = s2w,
 	.w2s = w2s,
+	.handle_key = handle_key,
+	.handle_mouse = handle_mouse,
 	.draw_map = draw_map,
 	.draw_player = draw_player,
 	.draw_entity = draw_entity,
