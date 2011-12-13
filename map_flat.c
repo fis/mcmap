@@ -17,12 +17,12 @@ static struct state state_surface = {
 	.scale_indicator = 3,
 };
 
-void *initialize_surface()
+static void *initialize_surface()
 {
 	return &state_surface;
 }
 
-coord_t s2w_offset(struct state *state, int sx, int sy, jint *xo, jint *zo)
+static coord_t s2w_offset(struct state *state, int sx, int sy, jint *xo, jint *zo)
 {
 	/* Pixel map_w/2 equals middle (rounded down) of block player_pos.x.
 	 * Pixel map_w/2 - (state->scale-1)/2 equals left edge of block player_pos.x.
