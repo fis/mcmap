@@ -124,6 +124,18 @@ static bool handle_key(SDL_KeyboardEvent *e)
 		return true;
 	}
 
+	switch (e->keysym.sym)
+	{
+	case SDLK_PAGEUP:
+		return map_zoom(+1);
+
+	case SDLK_PAGEDOWN:
+		return map_zoom(-1);
+
+	default:
+		return false;
+	}
+
 	return map_mode->handle_key(map_mode->state, e);
 }
 
@@ -139,61 +151,15 @@ static bool handle_mouse(SDL_MouseButtonEvent *e)
 		teleport(COORD3_XZ(map_mode->s2w(map_mode->state, e->x, e->y)));
 		return false;
 
-	default:
-		return map_mode->handle_mouse(map_mode->state, e);
-	}
-}
-
-/* called by map mode implementations */
-
-static bool zoom(int *base_scale, int *scale, int ds)
-{
-	int bs = *base_scale + ds;
-
-	if (bs < 1)
-		return false;
-
-	int s = map_compute_scale(bs);
-
-	if (s != *scale)
-	{
-		*base_scale = bs;
-		*scale = s;
-		return true;
-	}
-	else
-		return false;
-}
-
-bool handle_scale_key(int *base_scale, int *scale, SDL_KeyboardEvent *e)
-{
-	switch (e->keysym.sym)
-	{
-	case SDLK_PAGEUP:
-		return zoom(base_scale, scale, 1);
-
-	case SDLK_PAGEDOWN:
-		return zoom(base_scale, scale, -1);
-
-	default:
-		return false;
-	}
-}
-
-bool handle_scale_mouse(int *base_scale, int *scale, SDL_MouseButtonEvent *e)
-{
-	switch (e->button)
-	{
 	case SDL_BUTTON_WHEELUP:
-		return zoom(base_scale, scale, 1);
+		return map_zoom(+1);
 
 	case SDL_BUTTON_WHEELDOWN:
-		return zoom(base_scale, scale, -1);
+		return map_zoom(-1);
 
 	default:
 		return false;
 	}
-
 }
 
 void handle_chat(struct buffer msg)

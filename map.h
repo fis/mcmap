@@ -23,7 +23,6 @@ struct map_mode
 	coord3_t (*s2w)(void *state, int sx, int sy);
 	void (*w2s)(void *state, coord_t cc, int *sx, int *sy);
 	bool (*handle_key)(void *state, SDL_KeyboardEvent *e);
-	bool (*handle_mouse)(void *state, SDL_MouseButtonEvent *e);
 	void (*draw_map)(void *state, SDL_Surface *screen);
 	void (*draw_player)(void *state, SDL_Surface *screen);
 	void (*draw_entity)(void *state, SDL_Surface *screen, struct entity *e);
@@ -58,11 +57,13 @@ extern coord3_t player_pos;
 extern int player_yaw;
 extern jshort player_health;
 
+extern int map_scale;
+
 uint32_t pack_rgb(rgba_t rgba);
 
 void map_init(SDL_Surface *screen);
 
-int map_compute_scale(int base_scale);
+bool map_zoom(int dscale);
 
 struct map_region *map_get_region(coord_t cc, bool gen);
 

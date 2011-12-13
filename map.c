@@ -40,6 +40,9 @@ bool map_focused = true;
 jint map_w = 0, map_h = 0;
 static unsigned map_rshift, map_gshift, map_bshift;
 
+static int map_base_scale = 1;
+int map_scale = 1;
+
 struct map_mode *map_mode = 0;
 struct map_mode *map_modes[256];
 
@@ -74,19 +77,31 @@ void map_init(SDL_Surface *screen)
 	map_mode = &map_mode_surface;
 }
 
-int map_compute_scale(int base_scale)
+bool map_zoom(int dscale)
 {
+	int bs = map_base_scale + dscale;
+
+	if (bs < 1)
+		return false;
+
 	int s;
 
-	if (base_scale > 5)
-		s = (base_scale - 3) * (base_scale - 3);
+	if (bs > 5)
+		s = (bs - 3) * (bs - 3);
 	else
-		s = base_scale;
+		s = bs;
 
 	if (s > 256)
 		s = 256;
 
-	return s;
+	if (s != map_scale)
+	{
+		map_base_scale = bs;
+		map_scale = s;
+		return true;
+	}
+
+	return false;
 }
 
 static struct map_region *map_create_region(coord_t rc)

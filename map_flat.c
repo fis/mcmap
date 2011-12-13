@@ -9,8 +9,6 @@
 #include "ui.h"
 
 struct state {
-	int base_scale;
-	int scale;
 	char *name;
 	jint (*y)(struct chunk *c, jint bx, jint bz);
 	rgba_t (*block_color)(struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
@@ -59,19 +57,19 @@ static char *describe(void *data)
 static coord_t s2w_offset(struct state *state, int sx, int sy, jint *xo, jint *zo)
 {
 	/* Pixel map_w/2 equals middle (rounded down) of block player_pos.x.
-	 * Pixel map_w/2 - (state->scale-1)/2 equals left edge of block player_pos.x.
+	 * Pixel map_w/2 - (map_scale-1)/2 equals left edge of block player_pos.x.
 	 * Compute offset from there, divide by scale, round toward negative. */
 
-	int px = map_w/2 - (state->scale-1)/2;
-	int py = map_h/2 - (state->scale-1)/2;
+	int px = map_w/2 - (map_scale-1)/2;
+	int py = map_h/2 - (map_scale-1)/2;
 
 	int dx = sx - px, dy = sy - py;
 
-	dx = dx >= 0 ? dx/state->scale : (dx-(state->scale-1))/state->scale;
-	dy = dy >= 0 ? dy/state->scale : (dy-(state->scale-1))/state->scale;
+	dx = dx >= 0 ? dx/map_scale : (dx-(map_scale-1))/map_scale;
+	dy = dy >= 0 ? dy/map_scale : (dy-(map_scale-1))/map_scale;
 
-	*xo = sx - (px + dx*state->scale);
-	*zo = sy - (py + dy*state->scale);
+	*xo = sx - (px + dx*map_scale);
+	*zo = sy - (py + dy*map_scale);
 
 	return COORD(player_pos.x + dx, player_pos.z + dy);
 }
@@ -93,24 +91,16 @@ static coord3_t s2w(void *data, int sx, int sy)
 
 static void w2s(void *data, coord_t cc, int *sx, int *sy)
 {
-	struct state *state = data;
-	int px = map_w/2 - (state->scale-1)/2;
-	int py = map_h/2 - (state->scale-1)/2;
+	int px = map_w/2 - (map_scale-1)/2;
+	int py = map_h/2 - (map_scale-1)/2;
 
-	*sx = px + (cc.x - player_pos.x)*state->scale;
-	*sy = py + (cc.z - player_pos.z)*state->scale;
+	*sx = px + (cc.x - player_pos.x)*map_scale;
+	*sy = py + (cc.z - player_pos.z)*map_scale;
 }
 
 static bool handle_key(void *data, SDL_KeyboardEvent *e)
 {
-	struct state *state = data;
-	return handle_scale_key(&state->base_scale, &state->scale, e);
-}
-
-static bool handle_mouse(void *data, SDL_MouseButtonEvent *e)
-{
-	struct state *state = data;
-	return handle_scale_mouse(&state->base_scale, &state->scale, e);
+	return false;
 }
 
 static void draw_player(void *data, SDL_Surface *screen)
@@ -130,12 +120,12 @@ static void draw_player(void *data, SDL_Surface *screen)
 	default: wtff("player_yaw = %d", player_yaw);
 	}
 
-	int s = indicator_scale(state->scale);
+	int s = indicator_scale(map_scale);
 
 	int x0, y0;
 	w2s(state, COORD3_XZ(player_pos), &x0, &y0);
-	x0 += (state->scale - s)/2;
-	y0 += (state->scale - s)/2;
+	x0 += (map_scale - s)/2;
+	y0 += (map_scale - s)/2;
 
 	if (txx < 0 || txy < 0) x0 += s-1;
 	if (tyx < 0 || tyy < 0) y0 += s-1;
@@ -204,12 +194,12 @@ static void draw_entity(void *data, SDL_Surface *screen, struct entity *e)
 	default: wtff("bad entity type: %d", e->type);
 	}
 
-	int s = indicator_scale(state->scale);
+	int s = indicator_scale(map_scale);
 
 	int ex, ez;
 	map_mode->w2s(state, e->pos, &ex, &ez);
-	ex += (state->scale - s)/2;
-	ez += (state->scale - s)/2;
+	ex += (map_scale - s)/2;
+	ez += (map_scale - s)/2;
 
 	if (ex < 0 || ez < 0 || ex+s > map_w || ez+s > map_h)
 		return;
@@ -413,11 +403,11 @@ static void draw_map(void *data, SDL_Surface *screen)
 	scr_x2o = scr_x1o + map_w;
 	scr_z2o = scr_z1o + map_h;
 
-	scr_x2 += scr_x2o / state->scale;
-	scr_z2 += scr_z2o / state->scale;
+	scr_x2 += scr_x2o / map_scale;
+	scr_z2 += scr_z2o / map_scale;
 
-	scr_x2o = scr_x2 % state->scale;
-	scr_z2o = scr_z2 % state->scale;
+	scr_x2o = scr_x2 % map_scale;
+	scr_z2o = scr_z2 % map_scale;
 
 	/* find the range of regions that intersect with the screen */
 
@@ -457,10 +447,10 @@ static void draw_map(void *data, SDL_Surface *screen)
 
 			int reg_sx, reg_sy;
 
-			reg_sx = (rc.x - scr_x1)*state->scale - scr_x1o;
-			reg_sy = (rc.z - scr_z1)*state->scale - scr_z1o;
+			reg_sx = (rc.x - scr_x1)*map_scale - scr_x1o;
+			reg_sy = (rc.z - scr_z1)*map_scale - scr_z1o;
 
-			map_blit_scaled(screen, regs, reg_sx, reg_sy, REGION_XSIZE, REGION_ZSIZE, state->scale);
+			map_blit_scaled(screen, regs, reg_sx, reg_sy, REGION_XSIZE, REGION_ZSIZE, map_scale);
 
 			SDL_UnlockSurface(regs);
 		}
@@ -470,16 +460,12 @@ static void draw_map(void *data, SDL_Surface *screen)
 }
 
 static struct state state_surface = {
-	.base_scale = 1,
-	.scale = 1,
 	.name = "surface",
 	.y = surface_y,
 	.block_color = block_color,
 };
 
 static struct state state_cross = {
-	.base_scale = 1,
-	.scale = 1,
 	.name = "cross-section",
 	.y = cross_y,
 	.block_color = block_color,
@@ -492,7 +478,6 @@ struct map_mode map_mode_surface = {
 	.s2w = s2w,
 	.w2s = w2s,
 	.handle_key = handle_key,
-	.handle_mouse = handle_mouse,
 	.draw_map = draw_map,
 	.draw_player = draw_player,
 	.draw_entity = draw_entity,
@@ -505,7 +490,6 @@ struct map_mode map_mode_cross = {
 	.s2w = s2w,
 	.w2s = w2s,
 	.handle_key = handle_key,
-	.handle_mouse = handle_mouse,
 	.draw_map = draw_map,
 	.draw_player = draw_player,
 	.draw_entity = draw_entity,
