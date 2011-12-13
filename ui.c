@@ -121,26 +121,37 @@ static bool handle_key(SDL_KeyboardEvent *e)
 }
 
 /* called by map mode implementations */
-bool handle_scale_key(int *scale, SDL_KeyboardEvent *e)
+bool handle_scale_key(int *base_scale, int *scale, SDL_KeyboardEvent *e)
 {
+	int bs = *base_scale;
+
 	switch (e->keysym.sym)
 	{
 	case SDLK_PAGEUP:
-		(*scale)++;
-		return true;
+		bs++;
+		break;
 
 	case SDLK_PAGEDOWN:
-		if (*scale > 1)
-		{
-			(*scale)--;
-			return true;
-		}
+		if (bs > 1)
+			bs--;
 		else
 			return false;
+		break;
 
 	default:
 		return false;
 	}
+
+	int s = map_compute_scale(bs);
+
+	if (s != *scale)
+	{
+		*base_scale = bs;
+		*scale = s;
+		return true;
+	}
+	else
+		return false;
 }
 
 static void handle_mouse(SDL_MouseButtonEvent *e)

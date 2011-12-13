@@ -59,6 +59,8 @@ uint32_t pack_rgb(rgba_t rgba);
 
 void map_init(SDL_Surface *screen);
 
+int map_compute_scale(int base_scale);
+
 struct map_region *map_get_region(coord_t cc, bool gen);
 
 void map_update(coord_t c1, coord_t c2);

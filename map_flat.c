@@ -9,10 +9,12 @@
 #include "ui.h"
 
 struct state {
+	int base_scale;
 	int scale;
 };
 
 static struct state state_surface = {
+	.base_scale = 1,
 	.scale = 1,
 };
 
@@ -71,7 +73,7 @@ static void w2s(void *data, coord_t cc, int *sx, int *sy)
 static bool handle_key(void *data, SDL_KeyboardEvent *e)
 {
 	struct state *state = data;
-	return handle_scale_key(&state->scale, e);
+	return handle_scale_key(&state->base_scale, &state->scale, e);
 }
 
 static void handle_mouse(void *data, SDL_MouseButtonEvent *e)

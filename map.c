@@ -66,6 +66,21 @@ void map_init(SDL_Surface *screen)
 	map_mode = &map_mode_surface;
 }
 
+int map_compute_scale(int base_scale)
+{
+	int s;
+
+	if (base_scale > 5)
+		s = (base_scale - 3) * (base_scale - 3);
+	else
+		s = base_scale;
+
+	if (s > 256)
+		s = 256;
+
+	return s;
+}
+
 static struct map_region *map_create_region(coord_t rc)
 {
 	struct map_region *region = g_new(struct map_region, 1);
