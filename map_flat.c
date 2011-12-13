@@ -9,17 +9,25 @@
 
 struct state {
 	int scale;
-	int scale_indicator;
 };
 
 static struct state state_surface = {
 	.scale = 1,
-	.scale_indicator = 3,
 };
 
 static void *initialize_surface()
 {
 	return &state_surface;
+}
+
+static int indicator_scale(int scale)
+{
+	if (scale <= 5)
+		return scale + 2;
+	else if (scale <= 9)
+		return scale;
+	else
+		return scale - 2;
 }
 
 static coord_t s2w_offset(struct state *state, int sx, int sy, jint *xo, jint *zo)
@@ -76,7 +84,7 @@ static void draw_player(void *data, SDL_Surface *screen)
 	default: wtff("player_yaw = %d", player_yaw);
 	}
 
-	int s = state->scale_indicator;
+	int s = indicator_scale(state->scale);
 
 	int x0, y0;
 	w2s(state, COORD3_XZ(player_pos), &x0, &y0);
@@ -150,15 +158,17 @@ static void draw_entity(void *data, SDL_Surface *screen, struct entity *e)
 	default: wtff("bad entity type: %d", e->type);
 	}
 
+	int s = indicator_scale(state->scale);
+
 	int ex, ez;
 	map_mode->w2s(state, e->pos, &ex, &ez);
-	ex += (state->scale - state->scale_indicator)/2;
-	ez += (state->scale - state->scale_indicator)/2;
+	ex += (state->scale - s)/2;
+	ez += (state->scale - s)/2;
 
-	if (ex < 0 || ez < 0 || ex+state->scale_indicator > map_w || ez+state->scale_indicator > map_h)
+	if (ex < 0 || ez < 0 || ex+s > map_w || ez+s > map_h)
 		return;
 
-	SDL_Rect r = { .x = ex, .y = ez, .w = state->scale_indicator, .h = state->scale_indicator };
+	SDL_Rect r = { .x = ex, .y = ez, .w = s, .h = s };
 	// TODO: handle alpha in surface mode
 	SDL_FillRect(screen, &r, pack_rgb(IGNORE_ALPHA(color)));
 }
