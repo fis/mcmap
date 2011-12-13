@@ -68,7 +68,24 @@ void map_init(SDL_Surface *screen)
 	/* initialize map modes */
 	map_modes['1'] = map_init_surface_mode();
 	map_modes['2'] = map_init_cross_mode();
+	map_modes['4'] = map_init_topo_mode();
 	map_mode = map_modes['1'];
+}
+
+// FIXME: Should we transform alpha too?
+#define TRANSFORM_RGB(expr) \
+	do { \
+		uint8_t x; \
+		x = rgba.r; rgba.r = (expr); \
+		x = rgba.g; rgba.g = (expr); \
+		x = rgba.b; rgba.b = (expr); \
+	} while (0)
+
+rgba_t map_water_color(struct chunk *c, rgba_t rgba, jint bx, jint bz, jint y)
+{
+	while (--y >= 0 && IS_WATER(c->blocks[bx][bz][y]))
+		TRANSFORM_RGB(x*7/8);
+	return rgba;
 }
 
 bool map_zoom(int dscale)

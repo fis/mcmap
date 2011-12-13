@@ -193,14 +193,6 @@ static void paint_chunk(struct flat_mode *flat_mode, SDL_Surface *region, coord_
 	unsigned char *blocks = &c->blocks[0][0][0];
 	unsigned blocks_pitch = CHUNK_YSIZE;
 
-#if 0
-	if (map_mode == MAP_MODE_TOPO)
-	{
-		blocks = &c->height[0][0];
-		blocks_pitch = 1;
-	}
-#endif
-
 	unsigned blocks_xpitch = CHUNK_ZSIZE*blocks_pitch;
 
 	for (jint bz = 0; bz < CHUNK_ZSIZE; bz++)

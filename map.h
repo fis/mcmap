@@ -41,6 +41,7 @@ extern struct map_mode *map_modes[256];
 struct map_mode *map_init_flat_mode(struct flat_mode *flat_mode);
 struct map_mode *map_init_surface_mode(void);
 struct map_mode *map_init_cross_mode(void);
+struct map_mode *map_init_topo_mode(void);
 
 extern rgba_t block_colors[256];
 
@@ -71,6 +72,8 @@ extern int map_scale;
 uint32_t pack_rgb(rgba_t rgba);
 
 void map_init(SDL_Surface *screen);
+
+rgba_t map_water_color(struct chunk *c, rgba_t rgba, jint bx, jint bz, jint y);
 
 bool map_zoom(int dscale);
 
