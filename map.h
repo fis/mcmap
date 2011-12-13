@@ -18,7 +18,6 @@ struct map_region
 struct map_mode
 {
 	void *state;
-	void *(*init)(void);
 	char *(*describe)(void *state);
 	coord3_t (*s2w)(void *state, int sx, int sy);
 	void (*w2s)(void *state, coord_t cc, int *sx, int *sy);
@@ -28,10 +27,20 @@ struct map_mode
 	void (*draw_entity)(void *state, SDL_Surface *screen, struct entity *e);
 };
 
+struct flat_mode
+{
+	void *state;
+	char *(*describe)(void *state);
+	jint (*mapped_y)(void *state, struct chunk *c, jint bx, jint bz);
+	rgba_t (*block_color)(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
+};
+
 extern struct map_mode *map_mode;
 extern struct map_mode *map_modes[256];
-extern struct map_mode map_mode_surface;
-extern struct map_mode map_mode_cross;
+
+struct map_mode *map_init_flat_mode(struct flat_mode *flat_mode);
+struct map_mode *map_init_surface_mode(void);
+struct map_mode *map_init_cross_mode(void);
 
 extern rgba_t block_colors[256];
 

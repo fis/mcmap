@@ -2,30 +2,9 @@
 #include <SDL.h>
 
 #include "common.h"
-#include "block.h"
 #include "console.h"
 #include "protocol.h"
 #include "map.h"
-#include "ui.h"
-
-struct state {
-	char *name;
-	jint (*y)(struct chunk *c, jint bx, jint bz);
-	rgba_t (*block_color)(struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
-};
-
-static struct state state_surface;
-static struct state state_cross;
-
-static void *init_surface()
-{
-	return &state_surface;
-}
-
-static void *init_cross()
-{
-	return &state_cross;
-}
 
 static int indicator_scale()
 {
@@ -37,24 +16,13 @@ static int indicator_scale()
 		return map_scale - 2;
 }
 
-static int surface_y(struct chunk *c, jint bx, int bz)
+static char *describe(void *state)
 {
-	return c->height[bx][bz];
+	struct flat_mode *flat_mode = state;
+	return flat_mode->describe(flat_mode->state);
 }
 
-static int cross_y(struct chunk *c, jint bx, int bz)
-{
-	// FIXME
-	return 64;
-}
-
-static char *describe(void *data)
-{
-	struct state *state = data;
-	return g_strdup_printf("%s", state->name);
-}
-
-static coord_t s2w_offset(struct state *state, int sx, int sy, jint *xo, jint *zo)
+static coord_t s2w_offset(int sx, int sy, jint *xo, jint *zo)
 {
 	/* Pixel map_w/2 equals middle (rounded down) of block player_pos.x.
 	 * Pixel map_w/2 - (map_scale-1)/2 equals left edge of block player_pos.x.
@@ -74,22 +42,22 @@ static coord_t s2w_offset(struct state *state, int sx, int sy, jint *xo, jint *z
 	return COORD(player_pos.x + dx, player_pos.z + dy);
 }
 
-static coord3_t s2w(void *data, int sx, int sy)
+static coord3_t s2w(void *state, int sx, int sy)
 {
-	struct state *state = data;
+	struct flat_mode *flat_mode = state;
 
 	jint xo, zo;
-	coord_t cc = s2w_offset((struct state *) data, sx, sy, &xo, &zo);
+	coord_t cc = s2w_offset(sx, sy, &xo, &zo);
 
 	jint y = -1;
 	struct chunk *c = world_chunk(cc, false);
 	if (c)
-		y = state->y(c, CHUNK_XOFF(cc.x), CHUNK_ZOFF(cc.z));
+		y = flat_mode->mapped_y(flat_mode->state, c, CHUNK_XOFF(cc.x), CHUNK_ZOFF(cc.z));
 
 	return COORD3(cc.x, y, cc.z);
 }
 
-static void w2s(void *data, coord_t cc, int *sx, int *sy)
+static void w2s(void *state, coord_t cc, int *sx, int *sy)
 {
 	int px = map_w/2 - (map_scale-1)/2;
 	int py = map_h/2 - (map_scale-1)/2;
@@ -98,14 +66,14 @@ static void w2s(void *data, coord_t cc, int *sx, int *sy)
 	*sy = py + (cc.z - player_pos.z)*map_scale;
 }
 
-static bool handle_key(void *data, SDL_KeyboardEvent *e)
+static bool handle_key(void *state, SDL_KeyboardEvent *e)
 {
 	return false;
 }
 
-static void draw_player(void *data, SDL_Surface *screen)
+static void draw_player(void *state, SDL_Surface *screen)
 {
-	struct state *state = data;
+	struct flat_mode *flat_mode = state;
 
 	/* determine transform from player direction */
 
@@ -123,7 +91,7 @@ static void draw_player(void *data, SDL_Surface *screen)
 	int s = indicator_scale();
 
 	int x0, y0;
-	w2s(state, COORD3_XZ(player_pos), &x0, &y0);
+	w2s(flat_mode, COORD3_XZ(player_pos), &x0, &y0);
 	x0 += (map_scale - s)/2;
 	y0 += (map_scale - s)/2;
 
@@ -172,10 +140,8 @@ static void draw_player(void *data, SDL_Surface *screen)
 	SDL_UnlockSurface(screen);
 }
 
-static void draw_entity(void *data, SDL_Surface *screen, struct entity *e)
+static void draw_entity(void *state, SDL_Surface *screen, struct entity *e)
 {
-	struct state *state = data;
-
 #if 0
 	if (e->type == ENTITY_MOB && !(map_flags & MAP_FLAG_MOBS))
 		return;
@@ -209,90 +175,7 @@ static void draw_entity(void *data, SDL_Surface *screen, struct entity *e)
 	SDL_FillRect(screen, &r, pack_rgb(IGNORE_ALPHA(color)));
 }
 
-// FIXME: Should we transform alpha too?
-#define TRANSFORM_RGB(expr) \
-	do { \
-		uint8_t x; \
-		x = rgba.r; rgba.r = (expr); \
-		x = rgba.g; rgba.g = (expr); \
-		x = rgba.b; rgba.b = (expr); \
-	} while (0)
-
-static rgba_t water_color(struct chunk *c, rgba_t rgba, jint bx, jint bz, jint y)
-{
-	while (--y >= 0 && IS_WATER(c->blocks[bx][bz][y]))
-		TRANSFORM_RGB(x*7/8);
-	return rgba;
-}
-
-static rgba_t block_color(struct chunk *c, unsigned char *b, jint bx, jint bz, jint y)
-{
-	rgba_t rgba = block_colors[b[y]];
-
-	/* apply shadings and such */
-
-	#ifdef FEAT_FULLCHUNK
-
-	#define LIGHT_EXP1 60800
-	#define LIGHT_EXP2 64000
-
-#if 0
-	if (map_flags & MAP_FLAG_LIGHTS)
-	{
-		int ly = y+1;
-		if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
-
-		int lv_block = c->light_blocks[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2];
-		int lv_day = c->light_sky[bx*(CHUNK_ZSIZE*CHUNK_YSIZE/2) + bz*(CHUNK_YSIZE/2) + ly/2];
-
-		if (ly & 1)
-			lv_block >>= 4, lv_day >>= 4;
-		else
-			lv_block &= 0xf, lv_day &= 0xf;
-
-		lv_day -= map_darken;
-		if (lv_day < 0) lv_day = 0;
-		uint32_t block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
-
-		uint32_t lf = 0x10000;
-
-		for (int i = lv_block; i < 15; i++)
-			lf = (lf*block_exp) >> 16;
-		for (int i = lv_day; i < 15; i++)
-			lf = (lf*LIGHT_EXP1) >> 16;
-
-		TRANSFORM_RGB((x*lf) >> 16);
-	}
-#endif
-
-	#endif /* FEAT_FULLCHUNK */
-
-	if (IS_WATER(b[y]))
-		rgba = water_color(c, rgba, bx, bz, y);
-
-	/* alpha transform */
-
-	if (rgba.a == 255 || y <= 1)
-		return IGNORE_ALPHA(rgba);
-
-	int below_y = y - 1;
-	while (IS_AIR(b[below_y]) && below_y > 1)
-	{
-		below_y--;
-		rgba.r = (block_colors[0x00].r * (255 - rgba.a) + rgba.r * rgba.a)/255;
-		rgba.g = (block_colors[0x00].g * (255 - rgba.a) + rgba.r * rgba.a)/255;
-		rgba.b = (block_colors[0x00].b * (255 - rgba.a) + rgba.r * rgba.a)/255;
-	}
-
-	// TODO: Stop going below when the colour stops changing
-	rgba_t below = block_color(c, b, bx, bz, below_y);
-
-	return RGB((below.r * (255 - rgba.a) + rgba.r * rgba.a)/255,
-	           (below.g * (255 - rgba.a) + rgba.g * rgba.a)/255,
-	           (below.b * (255 - rgba.a) + rgba.b * rgba.a)/255);
-}
-
-static void paint_chunk(struct state *state, SDL_Surface *region, coord_t cc)
+static void paint_chunk(struct flat_mode *flat_mode, SDL_Surface *region, coord_t cc)
 {
 	jint cxo = CHUNK_XIDX(REGION_XOFF(cc.x));
 	jint czo = CHUNK_ZIDX(REGION_ZOFF(cc.z));
@@ -327,8 +210,8 @@ static void paint_chunk(struct state *state, SDL_Surface *region, coord_t cc)
 
 		for (jint bx = 0; bx < CHUNK_XSIZE; bx++)
 		{
-			jint y = state->y(c, bx, bz);
-			rgba_t rgba = state->block_color(c, b, bx, bz, y);
+			jint y = flat_mode->mapped_y(flat_mode->state, c, bx, bz);
+			rgba_t rgba = flat_mode->block_color(flat_mode->state, c, b, bx, bz, y);
 			*p++ = pack_rgb(rgba);
 			b += blocks_xpitch;
 		}
@@ -340,7 +223,7 @@ static void paint_chunk(struct state *state, SDL_Surface *region, coord_t cc)
 	SDL_UnlockSurface(region);
 }
 
-static void paint_region(struct state *state, struct map_region *region)
+static void paint_region(struct flat_mode *flat_mode, struct map_region *region)
 {
 	jint cidx = 0;
 
@@ -372,7 +255,7 @@ static void paint_region(struct state *state, struct map_region *region)
 				coord_t cc;
 				cc.x = region->key.x + (cx * CHUNK_XSIZE);
 				cc.z = region->key.z + (cz * CHUNK_ZSIZE);
-				paint_chunk(state, region->surf, cc);
+				paint_chunk(flat_mode, region->surf, cc);
 				BITSET_CLEAR(region->dirty_chunk, cidx);
 			}
 
@@ -381,16 +264,16 @@ static void paint_region(struct state *state, struct map_region *region)
 	}
 }
 
-static void draw_map(void *data, SDL_Surface *screen)
+static void draw_map(void *state, SDL_Surface *screen)
 {
-	struct state *state = data;
+	struct flat_mode *flat_mode = state;
 
 	/* locate the screen corners in (sub-)block coordinates */
 
 	jint scr_x1, scr_z1;
 	jint scr_x1o, scr_z1o;
 
-	coord_t scr1 = s2w_offset(state, 0, 0, &scr_x1o, &scr_z1o);
+	coord_t scr1 = s2w_offset(0, 0, &scr_x1o, &scr_z1o);
 	scr_x1 = scr1.x;
 	scr_z1 = scr1.z;
 
@@ -436,7 +319,7 @@ static void draw_map(void *data, SDL_Surface *screen)
 				continue; /* nothing to draw */
 
 			if (region->dirty_flag)
-				paint_region(state, region);
+				paint_region(flat_mode, region);
 
 			SDL_Surface *regs = region->surf;
 			if (!regs)
@@ -459,38 +342,16 @@ static void draw_map(void *data, SDL_Surface *screen)
 	SDL_UnlockSurface(screen);
 }
 
-static struct state state_surface = {
-	.name = "surface",
-	.y = surface_y,
-	.block_color = block_color,
-};
-
-static struct state state_cross = {
-	.name = "cross-section",
-	.y = cross_y,
-	.block_color = block_color,
-};
-
-struct map_mode map_mode_surface = {
-	.state = 0,
-	.init = init_surface,
-	.describe = describe,
-	.s2w = s2w,
-	.w2s = w2s,
-	.handle_key = handle_key,
-	.draw_map = draw_map,
-	.draw_player = draw_player,
-	.draw_entity = draw_entity,
-};
-
-struct map_mode map_mode_cross = {
-	.state = 0,
-	.init = init_cross,
-	.describe = describe,
-	.s2w = s2w,
-	.w2s = w2s,
-	.handle_key = handle_key,
-	.draw_map = draw_map,
-	.draw_player = draw_player,
-	.draw_entity = draw_entity,
-};
+struct map_mode *map_init_flat_mode(struct flat_mode *flat_mode)
+{
+	struct map_mode *mode = g_new(struct map_mode, 1);
+	mode->state = flat_mode;
+	mode->describe = describe;
+	mode->s2w = s2w;
+	mode->w2s = w2s;
+	mode->handle_key = handle_key;
+	mode->draw_map = draw_map;
+	mode->draw_player = draw_player;
+	mode->draw_entity = draw_entity;
+	return mode;
+}

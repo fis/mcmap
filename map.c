@@ -57,12 +57,6 @@ inline uint32_t pack_rgb(rgba_t rgba)
 
 static void map_destroy_region(gpointer gp);
 
-static struct map_mode *map_init_mode(struct map_mode *mode)
-{
-	mode->state = mode->init();
-	return mode;
-}
-
 void map_init(SDL_Surface *screen)
 {
 	screen_fmt = screen->format;
@@ -72,9 +66,9 @@ void map_init(SDL_Surface *screen)
 	regions = g_hash_table_new_full(coord_hash, coord_equal, 0, map_destroy_region);
 
 	/* initialize map modes */
-	map_modes['1'] = map_init_mode(&map_mode_surface);
-	map_modes['2'] = map_init_mode(&map_mode_cross);
-	map_mode = &map_mode_surface;
+	map_modes['1'] = map_init_surface_mode();
+	map_modes['2'] = map_init_cross_mode();
+	map_mode = map_modes['1'];
 }
 
 bool map_zoom(int dscale)
