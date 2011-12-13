@@ -182,20 +182,19 @@ void map_update_player_dir(double yaw)
 
 /* screen-drawing related code */
 
-inline void map_blit_scaled(SDL_Surface *dest, SDL_Surface *src, int sx, int sy, int sw, int sh)
+inline void map_blit_scaled(SDL_Surface *dest, SDL_Surface *src, int sx, int sy, int sw, int sh, int scale)
 {
-	int map_scale = 1; // FIXME
 	for (int py = 0; py < sh; py++)
 	{
-		int y0 = sy + py*map_scale;
-		for (int y = y0; y < y0+map_scale && y < map_h; y++)
+		int y0 = sy + py*scale;
+		for (int y = y0; y < y0+scale && y < map_h; y++)
 		{
 			if (y < 0) continue;
 
 			for (int px = 0; px < sw; px++)
 			{
-				int x0 = sx + px*map_scale;
-				for (int x = x0; x < x0+map_scale && x < map_w; x++)
+				int x0 = sx + px*scale;
+				for (int x = x0; x < x0+scale && x < map_w; x++)
 				{
 					if (x < 0) continue;
 

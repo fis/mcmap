@@ -6,6 +6,7 @@
 #include "console.h"
 #include "protocol.h"
 #include "map.h"
+#include "ui.h"
 
 struct state {
 	int scale;
@@ -69,7 +70,8 @@ static void w2s(void *data, coord_t cc, int *sx, int *sy)
 
 static bool handle_key(void *data, SDL_KeyboardEvent *e)
 {
-	return false;
+	struct state *state = data;
+	return handle_scale_key(&state->scale, e);
 }
 
 static void handle_mouse(void *data, SDL_MouseButtonEvent *e)
@@ -457,7 +459,7 @@ static void draw_map(void *data, SDL_Surface *screen)
 			reg_sx = (rc.x - scr_x1)*state->scale - scr_x1o;
 			reg_sy = (rc.z - scr_z1)*state->scale - scr_z1o;
 
-			map_blit_scaled(screen, regs, reg_sx, reg_sy, REGION_XSIZE, REGION_ZSIZE);
+			map_blit_scaled(screen, regs, reg_sx, reg_sy, REGION_XSIZE, REGION_ZSIZE, state->scale);
 
 			SDL_UnlockSurface(regs);
 		}

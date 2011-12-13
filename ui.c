@@ -119,6 +119,24 @@ static bool handle_key(SDL_KeyboardEvent *e)
 	// FIXME
 	return map_mode->handle_key(map_mode->state, e);
 }
+
+/* called by map mode implementations */
+bool handle_scale_key(int *scale, SDL_KeyboardEvent *e)
+{
+	switch (e->keysym.sym)
+	{
+	case SDLK_PAGEUP:
+		(*scale)++;
+		return true;
+
+	case SDLK_PAGEDOWN:
+		if (*scale > 1)
+			(*scale)--;
+		return true;
+
+	default:
+		return false;
+	}
 }
 
 static void handle_mouse(SDL_MouseButtonEvent *e)

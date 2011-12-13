@@ -69,7 +69,7 @@ void map_update_player_id(jint id);
 
 void map_repaint(void);
 
-void map_blit_scaled(SDL_Surface *dest, SDL_Surface *src, int sx, int sy, int sw, int sh);
+void map_blit_scaled(SDL_Surface *dest, SDL_Surface *src, int sx, int sy, int sw, int sh, int scale);
 void map_draw(SDL_Surface *screen);
 
 #endif /* MCMAP_MAP_H */
