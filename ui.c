@@ -131,8 +131,12 @@ bool handle_scale_key(int *scale, SDL_KeyboardEvent *e)
 
 	case SDLK_PAGEDOWN:
 		if (*scale > 1)
+		{
 			(*scale)--;
-		return true;
+			return true;
+		}
+		else
+			return false;
 
 	default:
 		return false;
