@@ -76,9 +76,10 @@ static bool handle_key(void *data, SDL_KeyboardEvent *e)
 	return handle_scale_key(&state->base_scale, &state->scale, e);
 }
 
-static void handle_mouse(void *data, SDL_MouseButtonEvent *e)
+static bool handle_mouse(void *data, SDL_MouseButtonEvent *e)
 {
-	/* do nothing */
+	struct state *state = data;
+	return handle_scale_mouse(&state->base_scale, &state->scale, e);
 }
 
 static void draw_player(void *data, SDL_Surface *screen)

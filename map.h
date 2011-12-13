@@ -22,7 +22,7 @@ struct map_mode
 	coord3_t (*s2w)(void *state, int sx, int sy);
 	void (*w2s)(void *state, coord_t cc, int *sx, int *sy);
 	bool (*handle_key)(void *state, SDL_KeyboardEvent *e);
-	void (*handle_mouse)(void *state, SDL_MouseButtonEvent *e);
+	bool (*handle_mouse)(void *state, SDL_MouseButtonEvent *e);
 	void (*draw_map)(void *state, SDL_Surface *screen);
 	void (*draw_player)(void *state, SDL_Surface *screen);
 	void (*draw_entity)(void *state, SDL_Surface *screen, struct entity *e);
