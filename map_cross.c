@@ -10,6 +10,11 @@ static char *describe(void *state)
 	return g_strdup("cross-section");
 }
 
+static void update_player_pos(void *state)
+{
+	map_update_all();
+}
+
 static jint mapped_y(void *state, struct chunk *c, jint bx, jint bz)
 {
 	return player_pos.y;
@@ -25,6 +30,7 @@ struct map_mode *map_init_cross_mode()
 	struct flat_mode *flat_mode = g_new(struct flat_mode, 1);
 	flat_mode->state = 0;
 	flat_mode->describe = describe;
+	flat_mode->update_player_pos = update_player_pos;
 	flat_mode->mapped_y = mapped_y;
 	flat_mode->block_color = block_color;
 	return map_init_flat_mode(flat_mode);

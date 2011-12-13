@@ -22,6 +22,7 @@ struct map_mode
 	coord3_t (*s2w)(void *state, int sx, int sy);
 	void (*w2s)(void *state, coord_t cc, int *sx, int *sy);
 	bool (*handle_key)(void *state, SDL_KeyboardEvent *e);
+	void (*update_player_pos)(void *state);
 	void (*draw_map)(void *state, SDL_Surface *screen);
 	void (*draw_player)(void *state, SDL_Surface *screen);
 	void (*draw_entity)(void *state, SDL_Surface *screen, struct entity *e);
@@ -31,6 +32,7 @@ struct flat_mode
 {
 	void *state;
 	char *(*describe)(void *state);
+	void (*update_player_pos)(void *state);
 	jint (*mapped_y)(void *state, struct chunk *c, jint bx, jint bz);
 	rgba_t (*block_color)(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
 };
@@ -80,6 +82,7 @@ bool map_zoom(int dscale);
 struct map_region *map_get_region(coord_t cc, bool gen);
 
 void map_update(coord_t c1, coord_t c2);
+void map_update_all(void);
 
 void map_update_player_pos(double x, double y, double z);
 void map_update_player_dir(double yaw);

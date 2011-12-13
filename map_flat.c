@@ -71,6 +71,12 @@ static bool handle_key(void *state, SDL_KeyboardEvent *e)
 	return false;
 }
 
+static void update_player_pos(void *state)
+{
+	struct flat_mode *flat_mode = state;
+	flat_mode->update_player_pos(flat_mode->state);
+}
+
 static void draw_player(void *state, SDL_Surface *screen)
 {
 	struct flat_mode *flat_mode = state;
@@ -342,6 +348,7 @@ struct map_mode *map_init_flat_mode(struct flat_mode *flat_mode)
 	mode->s2w = s2w;
 	mode->w2s = w2s;
 	mode->handle_key = handle_key;
+	mode->update_player_pos = update_player_pos;
 	mode->draw_map = draw_map;
 	mode->draw_player = draw_player;
 	mode->draw_entity = draw_entity;

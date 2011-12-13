@@ -191,7 +191,7 @@ void map_update(coord_t c1, coord_t c2)
 	map_repaint();
 }
 
-static void map_update_all()
+void map_update_all()
 {
 	GHashTableIter region_iter;
 	struct map_region *region;
@@ -221,7 +221,7 @@ void map_update_player_pos(double x, double y, double z)
 
 	player_pos = new_pos;
 
-	// ...
+	map_mode->update_player_pos(map_mode->state);
 
 	map_repaint();
 }
