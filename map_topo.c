@@ -11,11 +11,6 @@ static char *describe(void *data)
 	return g_strdup("topographic");
 }
 
-static bool handle_key(void *data, SDL_KeyboardEvent *e)
-{
-	return false;
-}
-
 static void update_player_pos(void *data)
 {
 	return;
@@ -45,7 +40,7 @@ struct map_mode *map_init_topo_mode()
 	struct map_mode *mode = g_new(struct map_mode, 1);
 	mode->data = flat_mode;
 	mode->describe = describe;
-	mode->handle_key = handle_key;
+	mode->handle_key = flat_handle_key;
 	mode->update_player_pos = update_player_pos;
 	return map_init_flat_mode(mode);
 }

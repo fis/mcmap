@@ -32,10 +32,14 @@ struct flat_mode
 {
 	jint (*mapped_y)(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz);
 	rgba_t (*block_color)(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
+	bool track_pickups;
+	bool track_mobs;
 };
 
 extern struct map_mode *map_mode;
 extern struct map_mode *map_modes[256];
+
+bool flat_handle_key(void *data, SDL_KeyboardEvent *e);
 
 struct map_mode *map_init_flat_mode(struct map_mode *mode);
 struct map_mode *map_init_surface_mode(void);

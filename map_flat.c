@@ -64,6 +64,27 @@ static void w2s(void *data, coord_t cc, int *sx, int *sy)
 	*sy = py + (cc.z - player_pos.z)*map_scale;
 }
 
+bool flat_handle_key(void *data, SDL_KeyboardEvent *e)
+{
+	struct flat_mode *state = data;
+
+	switch (e->keysym.unicode)
+	{
+	case 'p':
+		state->track_pickups ^= true;
+		map_mode_changed();
+		return true;
+
+	case 'm':
+		state->track_mobs ^= true;
+		map_mode_changed();
+		return true;
+
+	default:
+		return false;
+	}
+}
+
 static void draw_player(void *data, SDL_Surface *screen)
 {
 	/* determine transform from player direction */
@@ -133,13 +154,13 @@ static void draw_player(void *data, SDL_Surface *screen)
 
 static void draw_entity(void *data, SDL_Surface *screen, struct entity *e)
 {
-#if 0
-	if (e->type == ENTITY_MOB && !(map_flags & MAP_FLAG_MOBS))
+	struct flat_mode *state = data;
+
+	if (e->type == ENTITY_MOB && !state->track_mobs)
 		return;
 
-	if (e->type == ENTITY_PICKUP && !(map_flags & MAP_FLAG_PICKUPS))
+	if (e->type == ENTITY_PICKUP && !state->track_pickups)
 		return;
-#endif
 
 	rgba_t color;
 
@@ -327,6 +348,9 @@ static void draw_map(void *data, SDL_Surface *screen)
 
 struct map_mode *map_init_flat_mode(struct map_mode *mode)
 {
+	struct flat_mode *state = mode->data;
+	state->track_pickups = false;
+	state->track_mobs = false;
 	mode->s2w = s2w;
 	mode->w2s = w2s;
 	mode->draw_map = draw_map;

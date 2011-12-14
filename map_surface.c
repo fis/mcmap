@@ -57,7 +57,7 @@ static bool handle_key(void *data, SDL_KeyboardEvent *e)
 		return true;
 
 	default:
-		return false;
+		return flat_handle_key(data, e);
 	}
 }
 
