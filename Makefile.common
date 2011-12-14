@@ -44,7 +44,9 @@ $(OBJDIR):
 	mkdir $@
 
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
-	$(call do, CC $<, $(CC) $(CFLAGS) -c -o $@ $<)
+	$(call do, CC $<, $(CC) -MD $(CFLAGS) -c -o $@ $<)
+
+$(OBJDIR)/%.d: $(OBJDIR)/%.o
 
 protocol: protocol.pl
 	curl -sS 'http://wiki.vg/wiki/index.php?title=Protocol&action=raw' | perl protocol.pl > protocol.def
@@ -56,6 +58,3 @@ block: block.pl colors.txt
 
 clean:
 	rm -rf build build-debug $(OBJDIR)
-
-$(OBJDIR)/%.d: %.c | $(OBJDIR)
-	$(if $(V),,@)$(CC) -MM -MT $(@:.d=.o) -MT $@ $(CFLAGS) $< > $@
