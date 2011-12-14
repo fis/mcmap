@@ -30,9 +30,6 @@ struct map_mode
 
 struct flat_mode
 {
-	void *state;
-	char *(*describe)(void *state);
-	void (*update_player_pos)(void *state);
 	jint (*mapped_y)(void *state, struct chunk *c, jint bx, jint bz);
 	rgba_t (*block_color)(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
 };
@@ -40,7 +37,7 @@ struct flat_mode
 extern struct map_mode *map_mode;
 extern struct map_mode *map_modes[256];
 
-struct map_mode *map_init_flat_mode(struct flat_mode *flat_mode);
+struct map_mode *map_init_flat_mode(struct map_mode *mode);
 struct map_mode *map_init_surface_mode(void);
 struct map_mode *map_init_cross_mode(void);
 struct map_mode *map_init_topo_mode(void);

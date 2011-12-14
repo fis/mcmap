@@ -11,6 +11,11 @@ static char *describe(void *state)
 	return g_strdup("surface");
 }
 
+static bool handle_key(void *state, SDL_KeyboardEvent *e)
+{
+	return false;
+}
+
 static void update_player_pos(void *state)
 {
 	return;
@@ -91,10 +96,13 @@ static rgba_t block_color(void *state, struct chunk *c, unsigned char *b, jint b
 struct map_mode *map_init_surface_mode()
 {
 	struct flat_mode *flat_mode = g_new(struct flat_mode, 1);
-	flat_mode->state = 0;
-	flat_mode->describe = describe;
-	flat_mode->update_player_pos = update_player_pos;
 	flat_mode->mapped_y = mapped_y;
 	flat_mode->block_color = block_color;
-	return map_init_flat_mode(flat_mode);
+
+	struct map_mode *mode = g_new(struct map_mode, 1);
+	mode->state = flat_mode;
+	mode->describe = describe;
+	mode->handle_key = handle_key;
+	mode->update_player_pos = update_player_pos;
+	return map_init_flat_mode(mode);
 }

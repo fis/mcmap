@@ -16,12 +16,6 @@ static int indicator_scale()
 		return map_scale - 2;
 }
 
-static char *describe(void *state)
-{
-	struct flat_mode *flat_mode = state;
-	return flat_mode->describe(flat_mode->state);
-}
-
 static coord_t s2w_offset(int sx, int sy, jint *xo, jint *zo)
 {
 	/* Pixel map_w/2 equals middle (rounded down) of block player_pos.x.
@@ -52,7 +46,7 @@ static coord3_t s2w(void *state, int sx, int sy)
 	jint y = -1;
 	struct chunk *c = world_chunk(cc, false);
 	if (c)
-		y = flat_mode->mapped_y(flat_mode->state, c, CHUNK_XOFF(cc.x), CHUNK_ZOFF(cc.z));
+		y = flat_mode->mapped_y(state, c, CHUNK_XOFF(cc.x), CHUNK_ZOFF(cc.z));
 
 	return COORD3(cc.x, y, cc.z);
 }
@@ -64,17 +58,6 @@ static void w2s(void *state, coord_t cc, int *sx, int *sy)
 
 	*sx = px + (cc.x - player_pos.x)*map_scale;
 	*sy = py + (cc.z - player_pos.z)*map_scale;
-}
-
-static bool handle_key(void *state, SDL_KeyboardEvent *e)
-{
-	return false;
-}
-
-static void update_player_pos(void *state)
-{
-	struct flat_mode *flat_mode = state;
-	flat_mode->update_player_pos(flat_mode->state);
 }
 
 static void draw_player(void *state, SDL_Surface *screen)
@@ -181,8 +164,10 @@ static void draw_entity(void *state, SDL_Surface *screen, struct entity *e)
 	SDL_FillRect(screen, &r, pack_rgb(IGNORE_ALPHA(color)));
 }
 
-static void paint_chunk(struct flat_mode *flat_mode, SDL_Surface *region, coord_t cc)
+static void paint_chunk(void *state, SDL_Surface *region, coord_t cc)
 {
+	struct flat_mode *flat_mode = state;
+
 	jint cxo = CHUNK_XIDX(REGION_XOFF(cc.x));
 	jint czo = CHUNK_ZIDX(REGION_ZOFF(cc.z));
 
@@ -208,8 +193,8 @@ static void paint_chunk(struct flat_mode *flat_mode, SDL_Surface *region, coord_
 
 		for (jint bx = 0; bx < CHUNK_XSIZE; bx++)
 		{
-			jint y = flat_mode->mapped_y(flat_mode->state, c, bx, bz);
-			rgba_t rgba = flat_mode->block_color(flat_mode->state, c, b, bx, bz, y);
+			jint y = flat_mode->mapped_y(state, c, bx, bz);
+			rgba_t rgba = flat_mode->block_color(state, c, b, bx, bz, y);
 			*p++ = pack_rgb(rgba);
 			b += blocks_xpitch;
 		}
@@ -221,7 +206,7 @@ static void paint_chunk(struct flat_mode *flat_mode, SDL_Surface *region, coord_
 	SDL_UnlockSurface(region);
 }
 
-static void paint_region(struct flat_mode *flat_mode, struct map_region *region)
+static void paint_region(void *state, struct map_region *region)
 {
 	jint cidx = 0;
 
@@ -253,7 +238,7 @@ static void paint_region(struct flat_mode *flat_mode, struct map_region *region)
 				coord_t cc;
 				cc.x = region->key.x + (cx * CHUNK_XSIZE);
 				cc.z = region->key.z + (cz * CHUNK_ZSIZE);
-				paint_chunk(flat_mode, region->surf, cc);
+				paint_chunk(state, region->surf, cc);
 				BITSET_CLEAR(region->dirty_chunk, cidx);
 			}
 
@@ -264,8 +249,6 @@ static void paint_region(struct flat_mode *flat_mode, struct map_region *region)
 
 static void draw_map(void *state, SDL_Surface *screen)
 {
-	struct flat_mode *flat_mode = state;
-
 	/* locate the screen corners in (sub-)block coordinates */
 
 	jint scr_x1, scr_z1;
@@ -317,7 +300,7 @@ static void draw_map(void *state, SDL_Surface *screen)
 				continue; /* nothing to draw */
 
 			if (region->dirty_flag)
-				paint_region(flat_mode, region);
+				paint_region(state, region);
 
 			SDL_Surface *regs = region->surf;
 			if (!regs)
@@ -340,15 +323,10 @@ static void draw_map(void *state, SDL_Surface *screen)
 	SDL_UnlockSurface(screen);
 }
 
-struct map_mode *map_init_flat_mode(struct flat_mode *flat_mode)
+struct map_mode *map_init_flat_mode(struct map_mode *mode)
 {
-	struct map_mode *mode = g_new(struct map_mode, 1);
-	mode->state = flat_mode;
-	mode->describe = describe;
 	mode->s2w = s2w;
 	mode->w2s = w2s;
-	mode->handle_key = handle_key;
-	mode->update_player_pos = update_player_pos;
 	mode->draw_map = draw_map;
 	mode->draw_player = draw_player;
 	mode->draw_entity = draw_entity;
