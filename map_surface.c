@@ -176,7 +176,7 @@ struct map_mode *map_init_surface_mode()
 	state->ceiling_y = CHUNK_YSIZE;
 
 	struct map_mode *mode = g_new(struct map_mode, 1);
-	mode->state = state;
+	mode->data = state;
 	mode->describe = describe;
 	mode->handle_key = handle_key;
 	mode->update_player_pos = update_player_pos;

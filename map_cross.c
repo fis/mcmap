@@ -5,22 +5,22 @@
 #include "protocol.h"
 #include "map.h"
 
-static char *describe(void *state)
+static char *describe(void *data)
 {
 	return g_strdup("cross-section");
 }
 
-static bool handle_key(void *state, SDL_KeyboardEvent *e)
+static bool handle_key(void *data, SDL_KeyboardEvent *e)
 {
 	return false;
 }
 
-static void update_player_pos(void *state)
+static void update_player_pos(void *data)
 {
 	map_update_all();
 }
 
-static jint mapped_y(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz)
+static jint mapped_y(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz)
 {
 	jint y = player_pos.y;
 	if (y < 0)
@@ -31,7 +31,7 @@ static jint mapped_y(void *state, struct chunk *c, unsigned char *b, jint bx, ji
 		return y;
 }
 
-static rgba_t block_color(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y)
+static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y)
 {
 	return block_colors[b[y]];
 }
@@ -43,7 +43,7 @@ struct map_mode *map_init_cross_mode()
 	flat_mode->block_color = block_color;
 
 	struct map_mode *mode = g_new(struct map_mode, 1);
-	mode->state = flat_mode;
+	mode->data = flat_mode;
 	mode->describe = describe;
 	mode->handle_key = handle_key;
 	mode->update_player_pos = update_player_pos;

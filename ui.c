@@ -133,7 +133,7 @@ static bool handle_key(SDL_KeyboardEvent *e)
 		return map_zoom(-1);
 
 	default:
-		return map_mode->handle_key(map_mode->state, e);
+		return map_mode->handle_key(map_mode->data, e);
 	}
 }
 
@@ -146,7 +146,7 @@ static bool handle_mouse(SDL_MouseButtonEvent *e)
 			return false;
 
 		/* teleport */
-		teleport(COORD3_XZ(map_mode->s2w(map_mode->state, e->x, e->y)));
+		teleport(COORD3_XZ(map_mode->s2w(map_mode->data, e->x, e->y)));
 		return false;
 
 	case SDL_BUTTON_WHEELUP:

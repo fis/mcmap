@@ -6,27 +6,27 @@
 #include "protocol.h"
 #include "map.h"
 
-static char *describe(void *state)
+static char *describe(void *data)
 {
 	return g_strdup("topographic");
 }
 
-static bool handle_key(void *state, SDL_KeyboardEvent *e)
+static bool handle_key(void *data, SDL_KeyboardEvent *e)
 {
 	return false;
 }
 
-static void update_player_pos(void *state)
+static void update_player_pos(void *data)
 {
 	return;
 }
 
-static jint mapped_y(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz)
+static jint mapped_y(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz)
 {
 	return c->height[bx][bz];
 }
 
-static rgba_t block_color(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y)
+static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y)
 {
 	if (IS_WATER(b[y]))
 		return map_water_color(c, block_colors[0x08], bx, bz, y);
@@ -43,7 +43,7 @@ struct map_mode *map_init_topo_mode()
 	flat_mode->block_color = block_color;
 
 	struct map_mode *mode = g_new(struct map_mode, 1);
-	mode->state = flat_mode;
+	mode->data = flat_mode;
 	mode->describe = describe;
 	mode->handle_key = handle_key;
 	mode->update_player_pos = update_player_pos;

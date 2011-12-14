@@ -212,7 +212,7 @@ void map_update_player_pos(double x, double y, double z)
 
 	player_pos = new_pos;
 
-	map_mode->update_player_pos(map_mode->state);
+	map_mode->update_player_pos(map_mode->data);
 
 	map_repaint();
 }
@@ -246,7 +246,7 @@ void map_set_mode(struct map_mode *mode)
 
 void map_mode_changed()
 {
-	char *description = map_mode->describe(map_mode->state);
+	char *description = map_mode->describe(map_mode->data);
 	tell("MODE: %s", description);
 	g_free(description);
 }
@@ -280,7 +280,7 @@ inline void map_blit_scaled(SDL_Surface *dest, SDL_Surface *src, int sx, int sy,
 
 static void map_draw_entity_marker(void *idp, void *ep, void *userdata)
 {
-	map_mode->draw_entity(map_mode->state, (SDL_Surface *) userdata, (struct entity *) ep);
+	map_mode->draw_entity(map_mode->data, (SDL_Surface *) userdata, (struct entity *) ep);
 }
 
 static void map_draw_status_bar(SDL_Surface *screen)
@@ -297,7 +297,7 @@ static void map_draw_status_bar(SDL_Surface *screen)
 	{
 		int mx, my;
 		SDL_GetMouseState(&mx, &my);
-		hcc = map_mode->s2w(map_mode->state, mx, my);
+		hcc = map_mode->s2w(map_mode->data, mx, my);
 		struct chunk *hc = world_chunk(COORD3_XZ(hcc), false);
 		if (!hc) goto no_block_info;
 		jint hcx = CHUNK_XOFF(hcc.x);
@@ -351,11 +351,11 @@ void map_draw(SDL_Surface *screen)
 
 	/* draw the map */
 
-	map_mode->draw_map(map_mode->state, screen);
+	map_mode->draw_map(map_mode->data, screen);
 
 	/* player indicators and such */
 
-	map_mode->draw_player(map_mode->state, screen);
+	map_mode->draw_player(map_mode->data, screen);
 
 	G_LOCK(entity_mutex);
 	g_hash_table_foreach(world_entities, map_draw_entity_marker, screen);

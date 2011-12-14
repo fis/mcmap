@@ -36,9 +36,9 @@ static coord_t s2w_offset(int sx, int sy, jint *xo, jint *zo)
 	return COORD(player_pos.x + dx, player_pos.z + dy);
 }
 
-static coord3_t s2w(void *state, int sx, int sy)
+static coord3_t s2w(void *data, int sx, int sy)
 {
-	struct flat_mode *flat_mode = state;
+	struct flat_mode *state = data;
 
 	jint xo, zo;
 	coord_t cc = s2w_offset(sx, sy, &xo, &zo);
@@ -49,13 +49,13 @@ static coord3_t s2w(void *state, int sx, int sy)
 	{
 		jint cx = CHUNK_XOFF(cc.x);
 		jint cz = CHUNK_ZOFF(cc.z);
-		y = flat_mode->mapped_y(state, c, c->blocks[cx][cz], cx, cz);
+		y = state->mapped_y(data, c, c->blocks[cx][cz], cx, cz);
 	}
 
 	return COORD3(cc.x, y, cc.z);
 }
 
-static void w2s(void *state, coord_t cc, int *sx, int *sy)
+static void w2s(void *data, coord_t cc, int *sx, int *sy)
 {
 	int px = map_w/2 - (map_scale-1)/2;
 	int py = map_h/2 - (map_scale-1)/2;
@@ -64,10 +64,8 @@ static void w2s(void *state, coord_t cc, int *sx, int *sy)
 	*sy = py + (cc.z - player_pos.z)*map_scale;
 }
 
-static void draw_player(void *state, SDL_Surface *screen)
+static void draw_player(void *data, SDL_Surface *screen)
 {
-	struct flat_mode *flat_mode = state;
-
 	/* determine transform from player direction */
 
 	int txx, txy, tyx, tyy;
@@ -84,7 +82,7 @@ static void draw_player(void *state, SDL_Surface *screen)
 	int s = indicator_scale();
 
 	int x0, y0;
-	w2s(flat_mode, COORD3_XZ(player_pos), &x0, &y0);
+	w2s(data, COORD3_XZ(player_pos), &x0, &y0);
 	x0 += (map_scale - s)/2;
 	y0 += (map_scale - s)/2;
 
@@ -133,7 +131,7 @@ static void draw_player(void *state, SDL_Surface *screen)
 	SDL_UnlockSurface(screen);
 }
 
-static void draw_entity(void *state, SDL_Surface *screen, struct entity *e)
+static void draw_entity(void *data, SDL_Surface *screen, struct entity *e)
 {
 #if 0
 	if (e->type == ENTITY_MOB && !(map_flags & MAP_FLAG_MOBS))
@@ -156,7 +154,7 @@ static void draw_entity(void *state, SDL_Surface *screen, struct entity *e)
 	int s = indicator_scale();
 
 	int ex, ez;
-	map_mode->w2s(state, e->pos, &ex, &ez);
+	w2s(data, e->pos, &ex, &ez);
 	ex += (map_scale - s)/2;
 	ez += (map_scale - s)/2;
 
@@ -168,9 +166,9 @@ static void draw_entity(void *state, SDL_Surface *screen, struct entity *e)
 	SDL_FillRect(screen, &r, pack_rgb(IGNORE_ALPHA(color)));
 }
 
-static void paint_chunk(void *state, SDL_Surface *region, coord_t cc)
+static void paint_chunk(void *data, SDL_Surface *region, coord_t cc)
 {
-	struct flat_mode *flat_mode = state;
+	struct flat_mode *state = data;
 
 	jint cxo = CHUNK_XIDX(REGION_XOFF(cc.x));
 	jint czo = CHUNK_ZIDX(REGION_ZOFF(cc.z));
@@ -197,8 +195,8 @@ static void paint_chunk(void *state, SDL_Surface *region, coord_t cc)
 
 		for (jint bx = 0; bx < CHUNK_XSIZE; bx++)
 		{
-			jint y = flat_mode->mapped_y(state, c, b, bx, bz);
-			rgba_t rgba = flat_mode->block_color(state, c, b, bx, bz, y);
+			jint y = state->mapped_y(data, c, b, bx, bz);
+			rgba_t rgba = state->block_color(data, c, b, bx, bz, y);
 			*p++ = pack_rgb(rgba);
 			b += blocks_xpitch;
 		}
@@ -210,7 +208,7 @@ static void paint_chunk(void *state, SDL_Surface *region, coord_t cc)
 	SDL_UnlockSurface(region);
 }
 
-static void paint_region(void *state, struct map_region *region)
+static void paint_region(void *data, struct map_region *region)
 {
 	jint cidx = 0;
 
@@ -242,7 +240,7 @@ static void paint_region(void *state, struct map_region *region)
 				coord_t cc;
 				cc.x = region->key.x + (cx * CHUNK_XSIZE);
 				cc.z = region->key.z + (cz * CHUNK_ZSIZE);
-				paint_chunk(state, region->surf, cc);
+				paint_chunk(data, region->surf, cc);
 				BITSET_CLEAR(region->dirty_chunk, cidx);
 			}
 
@@ -251,7 +249,7 @@ static void paint_region(void *state, struct map_region *region)
 	}
 }
 
-static void draw_map(void *state, SDL_Surface *screen)
+static void draw_map(void *data, SDL_Surface *screen)
 {
 	/* locate the screen corners in (sub-)block coordinates */
 
@@ -304,7 +302,7 @@ static void draw_map(void *state, SDL_Surface *screen)
 				continue; /* nothing to draw */
 
 			if (region->dirty_flag)
-				paint_region(state, region);
+				paint_region(data, region);
 
 			SDL_Surface *regs = region->surf;
 			if (!regs)

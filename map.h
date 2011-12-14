@@ -17,21 +17,21 @@ struct map_region
 
 struct map_mode
 {
-	void *state;
-	char *(*describe)(void *state);
-	coord3_t (*s2w)(void *state, int sx, int sy);
-	void (*w2s)(void *state, coord_t cc, int *sx, int *sy);
-	bool (*handle_key)(void *state, SDL_KeyboardEvent *e);
-	void (*update_player_pos)(void *state);
-	void (*draw_map)(void *state, SDL_Surface *screen);
-	void (*draw_player)(void *state, SDL_Surface *screen);
-	void (*draw_entity)(void *state, SDL_Surface *screen, struct entity *e);
+	void *data;
+	char *(*describe)(void *data);
+	coord3_t (*s2w)(void *data, int sx, int sy);
+	void (*w2s)(void *data, coord_t cc, int *sx, int *sy);
+	bool (*handle_key)(void *data, SDL_KeyboardEvent *e);
+	void (*update_player_pos)(void *data);
+	void (*draw_map)(void *data, SDL_Surface *screen);
+	void (*draw_player)(void *data, SDL_Surface *screen);
+	void (*draw_entity)(void *data, SDL_Surface *screen, struct entity *e);
 };
 
 struct flat_mode
 {
-	jint (*mapped_y)(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz);
-	rgba_t (*block_color)(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
+	jint (*mapped_y)(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz);
+	rgba_t (*block_color)(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
 };
 
 extern struct map_mode *map_mode;
