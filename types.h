@@ -67,6 +67,15 @@ typedef struct rgba rgba_t;
 #define RGB(rv, gv, bv) RGBA(rv, gv, bv, 255)
 #define IGNORE_ALPHA(rgba) RGB((rgba).r, (rgba).g, (rgba).b)
 
+// FIXME: Should we transform alpha too?
+#define TRANSFORM_RGB(expr) \
+	do { \
+		uint8_t x; \
+		x = rgba.r; rgba.r = (expr); \
+		x = rgba.g; rgba.g = (expr); \
+		x = rgba.b; rgba.b = (expr); \
+	} while (0)
+
 /* general-purpose (bytes, len) buffers */
 
 struct buffer

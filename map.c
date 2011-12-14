@@ -72,15 +72,6 @@ void map_init(SDL_Surface *screen)
 	map_mode = map_modes['1'];
 }
 
-// FIXME: Should we transform alpha too?
-#define TRANSFORM_RGB(expr) \
-	do { \
-		uint8_t x; \
-		x = rgba.r; rgba.r = (expr); \
-		x = rgba.g; rgba.g = (expr); \
-		x = rgba.b; rgba.b = (expr); \
-	} while (0)
-
 rgba_t map_water_color(struct chunk *c, rgba_t rgba, jint bx, jint bz, jint y)
 {
 	while (--y >= 0 && IS_WATER(c->blocks[bx][bz][y]))
@@ -250,6 +241,11 @@ void map_set_mode(struct map_mode *mode)
 {
 	map_mode = mode;
 	map_update_all();
+	map_mode_changed();
+}
+
+void map_mode_changed()
+{
 	char *description = map_mode->describe(map_mode->state);
 	tell("MODE: %s", description);
 	g_free(description);

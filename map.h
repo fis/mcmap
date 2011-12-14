@@ -85,6 +85,7 @@ void map_update_player_pos(double x, double y, double z);
 void map_update_player_dir(double yaw);
 
 void map_set_mode(struct map_mode *mode);
+void map_mode_changed(void);
 
 void map_repaint(void);
 

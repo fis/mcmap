@@ -6,40 +6,75 @@
 #include "protocol.h"
 #include "map.h"
 
-static char *describe(void *state)
+struct state
 {
-	return g_strdup("surface");
+	struct flat_mode flat_mode;
+#ifdef FEAT_FULLCHUNK
+	bool lights;
+#endif
+};
+
+static char *describe(void *data)
+{
+	struct state *state = data;
+
+	GString *str = g_string_new("surface");
+
+#ifdef FEAT_FULLCHUNK
+	if (state->lights)
+		g_string_append(str, " (lights)");
+#endif
+
+	return g_string_free(str, false);
 }
 
-static bool handle_key(void *state, SDL_KeyboardEvent *e)
+static bool handle_key(void *data, SDL_KeyboardEvent *e)
 {
-	return false;
+	struct state *state = data;
+
+	switch (e->keysym.unicode)
+	{
+#ifdef FEAT_FULLCHUNK
+	case 'l':
+		state->lights ^= true;
+		map_update_all();
+		map_mode_changed();
+		return true;
+#endif
+
+	default:
+		return false;
+	}
 }
 
-static void update_player_pos(void *state)
+static void update_player_pos(void *data)
 {
 	return;
 }
 
-static jint mapped_y(void *state, struct chunk *c, jint bx, jint bz)
+static jint mapped_y(void *data, struct chunk *c, jint bx, jint bz)
 {
 	return c->height[bx][bz];
 }
 
-static rgba_t block_color(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y)
+static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y)
 {
+	struct state *state = data;
+
 	rgba_t rgba = block_colors[b[y]];
 
 	/* apply shadings and such */
 
-	#ifdef FEAT_FULLCHUNK
+#ifdef FEAT_FULLCHUNK
 
-	#define LIGHT_EXP1 60800
-	#define LIGHT_EXP2 64000
+#define LIGHT_EXP1 60800
+#define LIGHT_EXP2 64000
 
-#if 0
-	if (map_flags & MAP_FLAG_LIGHTS)
+	if (state->lights)
 	{
+		// FIXME
+		static int map_darken = 1;
+
 		int ly = y+1;
 		if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
 
@@ -64,9 +99,8 @@ static rgba_t block_color(void *state, struct chunk *c, unsigned char *b, jint b
 
 		TRANSFORM_RGB((x*lf) >> 16);
 	}
-#endif
 
-	#endif /* FEAT_FULLCHUNK */
+#endif /* FEAT_FULLCHUNK */
 
 	if (IS_WATER(b[y]))
 		rgba = map_water_color(c, rgba, bx, bz, y);
@@ -95,12 +129,13 @@ static rgba_t block_color(void *state, struct chunk *c, unsigned char *b, jint b
 
 struct map_mode *map_init_surface_mode()
 {
-	struct flat_mode *flat_mode = g_new(struct flat_mode, 1);
-	flat_mode->mapped_y = mapped_y;
-	flat_mode->block_color = block_color;
+	struct state *state = g_new(struct state, 1);
+	state->flat_mode.mapped_y = mapped_y;
+	state->flat_mode.block_color = block_color;
+	state->lights = true;
 
 	struct map_mode *mode = g_new(struct map_mode, 1);
-	mode->state = flat_mode;
+	mode->state = state;
 	mode->describe = describe;
 	mode->handle_key = handle_key;
 	mode->update_player_pos = update_player_pos;
