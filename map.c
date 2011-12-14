@@ -240,6 +240,7 @@ void map_update_player_dir(double yaw)
 void map_set_mode(struct map_mode *mode)
 {
 	map_mode = mode;
+	map_mode->update_player_pos(map_mode->data);
 	map_update_all();
 	map_mode_changed();
 }
