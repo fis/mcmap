@@ -22,7 +22,13 @@ static void update_player_pos(void *state)
 
 static jint mapped_y(void *state, struct chunk *c, jint bx, jint bz)
 {
-	return player_pos.y;
+	jint y = player_pos.y;
+	if (y < 0)
+		return 0;
+	else if (y >= CHUNK_YSIZE)
+		return CHUNK_YSIZE - 1;
+	else
+		return y;
 }
 
 static rgba_t block_color(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y)
