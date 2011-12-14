@@ -133,10 +133,8 @@ static bool handle_key(SDL_KeyboardEvent *e)
 		return map_zoom(-1);
 
 	default:
-		return false;
+		return map_mode->handle_key(map_mode->state, e);
 	}
-
-	return map_mode->handle_key(map_mode->state, e);
 }
 
 static bool handle_mouse(SDL_MouseButtonEvent *e)
