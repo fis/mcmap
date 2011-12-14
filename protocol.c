@@ -78,7 +78,7 @@ static bool buf_fill(packet_state_t *state)
 	return true;
 }
 
-static bool buf_skip(packet_state_t *state, unsigned n)
+static bool buf_skip(packet_state_t *state, jint n)
 {
 	if (n < 0)
 		dief("%d passed to buf_skip! Broken server or desync", n);
@@ -219,6 +219,7 @@ packet_t *packet_read(packet_state_t *state)
 
 		case FIELD_EXPLOSION_ARRAY:
 			t = buf_get_jint(state);
+			// FIXME: Possible over/underflow?
 			if (!buf_skip(state, 3*t)) return 0;
 			break;
 
