@@ -9,21 +9,28 @@
 struct state
 {
 	struct flat_mode flat_mode;
-#ifdef FEAT_FULLCHUNK
-	bool lights;
-#endif
 	bool chop;
 	jint ceiling_y;
+#ifdef FEAT_FULLCHUNK
+	bool lights;
+	bool lights_dynamic;
+	int darken;
+#endif
 };
 
 static void update_player_pos(void *data);
+static void update_time(void *data);
 
 static char *describe(void *data, GPtrArray *attribs)
 {
 	struct state *state = data;
 
 #ifdef FEAT_FULLCHUNK
-	if (state->lights) g_ptr_array_add(attribs, "lights");
+	if (state->lights)
+	{
+		if (state->lights_dynamic) g_ptr_array_add(attribs, "lights/dynamic");
+		else g_ptr_array_add(attribs, "lights");
+	}
 #endif
 	if (state->chop) g_ptr_array_add(attribs, "chop");
 
@@ -39,6 +46,23 @@ static bool handle_key(void *data, SDL_KeyboardEvent *e)
 #ifdef FEAT_FULLCHUNK
 	case 'l':
 		state->lights ^= true;
+		map_update_all();
+		map_mode_changed();
+		return true;
+
+	case 'd':
+		if (state->lights)
+		{
+			state->lights_dynamic ^= true;
+			if (!state->lights_dynamic)
+				state->darken = 0;
+		}
+		else
+		{
+			state->lights = true;
+			state->lights_dynamic = true;
+		}
+		update_time(data);
 		map_update_all();
 		map_mode_changed();
 		return true;
@@ -75,6 +99,38 @@ static void update_player_pos(void *data)
 	}
 }
 
+static void update_time(void *data)
+{
+	/* world_time: 0 at sunrise, 12000 at sunset, 24000 on next sunrise.
+	 * 12000 .. 13800 is dusk, 22200 .. 24000 is dawn */
+
+	struct state *state = data;
+
+	if (state->lights && state->lights_dynamic)
+	{
+		int darken;
+
+		if (world_time > 12000)
+		{
+			if (world_time < 13800)
+				darken = (world_time-12000)/180;
+			else if (world_time > 22200)
+				darken = (24000-world_time)/180;
+			else
+				darken = 10;
+		}
+		else
+			darken = 0;
+
+		if (state->darken != darken)
+		{
+			state->darken = darken;
+			map_update_all();
+			map_repaint();
+		}
+	}
+}
+
 static jint mapped_y(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz)
 {
 	struct state *state = data;
@@ -106,9 +162,6 @@ static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx
 
 	if (state->lights)
 	{
-		// FIXME
-		static int map_darken = 1;
-
 		int ly = y+1;
 		if (ly >= CHUNK_YSIZE) ly = CHUNK_YSIZE-1;
 
@@ -120,9 +173,9 @@ static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx
 		else
 			lv_block &= 0xf, lv_day &= 0xf;
 
-		lv_day -= map_darken;
+		lv_day -= state->darken;
 		if (lv_day < 0) lv_day = 0;
-		uint32_t block_exp = LIGHT_EXP2 - map_darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
+		uint32_t block_exp = LIGHT_EXP2 - state->darken*(LIGHT_EXP2-LIGHT_EXP1)/10;
 
 		uint32_t lf = 0x10000;
 
@@ -164,15 +217,18 @@ static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx
 struct map_mode *map_init_surface_mode()
 {
 	struct state *state = g_new(struct state, 1);
-	state->lights = true;
 	state->chop = true;
 	state->ceiling_y = CHUNK_YSIZE;
+	state->lights = true;
+	state->lights_dynamic = false;
+	state->darken = 0;
 
 	struct flat_mode flat_mode;
 	flat_mode.data = state;
 	flat_mode.describe = describe;
 	flat_mode.handle_key = handle_key;
 	flat_mode.update_player_pos = update_player_pos;
+	flat_mode.update_time = update_time;
 	flat_mode.mapped_y = mapped_y;
 	flat_mode.block_color = block_color;
 	return map_init_flat_mode(flat_mode);

@@ -74,6 +74,11 @@ static void update_player_pos(void *data)
 	}
 }
 
+static void update_time(void *data)
+{
+	return;
+}
+
 static jint mapped_y(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz)
 {
 	struct state *state = data;
@@ -96,6 +101,7 @@ struct map_mode *map_init_cross_mode()
 	flat_mode.describe = describe;
 	flat_mode.handle_key = handle_key;
 	flat_mode.update_player_pos = update_player_pos;
+	flat_mode.update_time = update_time;
 	flat_mode.mapped_y = mapped_y;
 	flat_mode.block_color = block_color;
 	return map_init_flat_mode(flat_mode);

@@ -107,6 +107,12 @@ static void update_player_pos(void *data)
 	return state->flat_mode.update_player_pos(state->flat_mode.data);
 }
 
+static void update_time(void *data)
+{
+	struct state *state = data;
+	return state->flat_mode.update_time(state->flat_mode.data);
+}
+
 static void draw_player(void *data, SDL_Surface *screen)
 {
 	/* determine transform from player direction */
@@ -382,6 +388,7 @@ struct map_mode *map_init_flat_mode(struct flat_mode flat_mode)
 	mode->w2s = w2s;
 	mode->handle_key = handle_key;
 	mode->update_player_pos = update_player_pos;
+	mode->update_time = update_time;
 	mode->draw_map = draw_map;
 	mode->draw_player = draw_player;
 	mode->draw_entity = draw_entity;

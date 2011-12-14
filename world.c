@@ -29,6 +29,7 @@ G_LOCK_DEFINE(entity_mutex);
 static jint entity_player = -1;
 static jint entity_vehicle = -1;
 
+int world_time = 0;
 static jlong world_seed = 0;
 static int spawn_known = 0;
 static jint spawn_x = 0, spawn_y = 0, spawn_z = 0;
@@ -638,7 +639,8 @@ static gpointer world_thread(gpointer data)
 		case PACKET_TIME_UPDATE:
 			tl = packet_long(packet, 0);
 			tl %= 24000;
-			// FIXME
+			world_time = tl;
+			map_mode->update_time(map_mode->data);
 			break;
 
 		case PACKET_UPDATE_HEALTH:

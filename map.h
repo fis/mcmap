@@ -23,6 +23,7 @@ struct map_mode
 	void (*w2s)(void *data, coord_t cc, int *sx, int *sy);
 	bool (*handle_key)(void *data, SDL_KeyboardEvent *e);
 	void (*update_player_pos)(void *data);
+	void (*update_time)(void *data);
 	void (*draw_map)(void *data, SDL_Surface *screen);
 	void (*draw_player)(void *data, SDL_Surface *screen);
 	void (*draw_entity)(void *data, SDL_Surface *screen, struct entity *e);
@@ -34,6 +35,7 @@ struct flat_mode
 	char *(*describe)(void *data, GPtrArray *attrs);
 	bool (*handle_key)(void *data, SDL_KeyboardEvent *e);
 	void (*update_player_pos)(void *data);
+	void (*update_time)(void *data);
 	jint (*mapped_y)(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz);
 	rgba_t (*block_color)(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
 };
