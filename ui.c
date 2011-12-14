@@ -118,7 +118,7 @@ static bool handle_key(SDL_KeyboardEvent *e)
 {
 	struct map_mode *mode = map_modes[e->keysym.unicode];
 
-	if (mode)
+	if (mode && map_mode != mode)
 	{
 		map_set_mode(mode);
 		return true;
