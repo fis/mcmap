@@ -20,7 +20,7 @@ static void update_player_pos(void *state)
 	map_update_all();
 }
 
-static jint mapped_y(void *state, struct chunk *c, jint bx, jint bz)
+static jint mapped_y(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz)
 {
 	jint y = player_pos.y;
 	if (y < 0)

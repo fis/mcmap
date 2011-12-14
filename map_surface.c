@@ -12,7 +12,11 @@ struct state
 #ifdef FEAT_FULLCHUNK
 	bool lights;
 #endif
+	bool chop;
+	jint ceiling_y;
 };
+
+static void update_player_pos(void *data);
 
 static char *describe(void *data)
 {
@@ -24,6 +28,9 @@ static char *describe(void *data)
 	if (state->lights)
 		g_string_append(str, " (lights)");
 #endif
+
+	if (state->chop)
+		g_string_append(str, " (chop)");
 
 	return g_string_free(str, false);
 }
@@ -42,6 +49,13 @@ static bool handle_key(void *data, SDL_KeyboardEvent *e)
 		return true;
 #endif
 
+	case 'c':
+		state->chop ^= true;
+		update_player_pos(data);
+		map_update_all();
+		map_mode_changed();
+		return true;
+
 	default:
 		return false;
 	}
@@ -49,12 +63,37 @@ static bool handle_key(void *data, SDL_KeyboardEvent *e)
 
 static void update_player_pos(void *data)
 {
-	return;
+	struct state *state = data;
+
+	if (state->chop)
+	{
+		unsigned char *stack = world_stack(COORD3_XZ(player_pos), false);
+		jint old_ceiling_y = state->ceiling_y;
+		if (stack && player_pos.y >= 0 && player_pos.y < CHUNK_YSIZE)
+		{
+			for (state->ceiling_y = player_pos.y + 2; state->ceiling_y < CHUNK_YSIZE; state->ceiling_y++)
+				if (!IS_HOLLOW(stack[state->ceiling_y]))
+					break;
+			if (state->ceiling_y != old_ceiling_y)
+				map_update_all();
+		}
+	}
 }
 
-static jint mapped_y(void *data, struct chunk *c, jint bx, jint bz)
+static jint mapped_y(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz)
 {
-	return c->height[bx][bz];
+	struct state *state = data;
+
+	jint y = c->height[bx][bz];
+
+	if (state->chop && y >= state->ceiling_y)
+	{
+		y = state->ceiling_y - 1;
+		while (IS_AIR(b[y]) && y > 1)
+			y--;
+	}
+
+	return y;
 }
 
 static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y)
@@ -133,6 +172,8 @@ struct map_mode *map_init_surface_mode()
 	state->flat_mode.mapped_y = mapped_y;
 	state->flat_mode.block_color = block_color;
 	state->lights = true;
+	state->chop = true;
+	state->ceiling_y = CHUNK_YSIZE;
 
 	struct map_mode *mode = g_new(struct map_mode, 1);
 	mode->state = state;

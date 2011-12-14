@@ -30,7 +30,7 @@ struct map_mode
 
 struct flat_mode
 {
-	jint (*mapped_y)(void *state, struct chunk *c, jint bx, jint bz);
+	jint (*mapped_y)(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz);
 	rgba_t (*block_color)(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
 };
 

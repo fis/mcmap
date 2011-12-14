@@ -46,7 +46,11 @@ static coord3_t s2w(void *state, int sx, int sy)
 	jint y = -1;
 	struct chunk *c = world_chunk(cc, false);
 	if (c)
-		y = flat_mode->mapped_y(state, c, CHUNK_XOFF(cc.x), CHUNK_ZOFF(cc.z));
+	{
+		jint cx = CHUNK_XOFF(cc.x);
+		jint cz = CHUNK_ZOFF(cc.z);
+		y = flat_mode->mapped_y(state, c, c->blocks[cx][cz], cx, cz);
+	}
 
 	return COORD3(cc.x, y, cc.z);
 }
@@ -193,7 +197,7 @@ static void paint_chunk(void *state, SDL_Surface *region, coord_t cc)
 
 		for (jint bx = 0; bx < CHUNK_XSIZE; bx++)
 		{
-			jint y = flat_mode->mapped_y(state, c, bx, bz);
+			jint y = flat_mode->mapped_y(state, c, b, bx, bz);
 			rgba_t rgba = flat_mode->block_color(state, c, b, bx, bz, y);
 			*p++ = pack_rgb(rgba);
 			b += blocks_xpitch;

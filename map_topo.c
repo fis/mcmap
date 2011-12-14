@@ -21,7 +21,7 @@ static void update_player_pos(void *state)
 	return;
 }
 
-static jint mapped_y(void *state, struct chunk *c, jint bx, jint bz)
+static jint mapped_y(void *state, struct chunk *c, unsigned char *b, jint bx, jint bz)
 {
 	return c->height[bx][bz];
 }
