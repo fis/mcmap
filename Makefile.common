@@ -44,7 +44,7 @@ $(OBJDIR):
 	mkdir $@
 
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
-	$(call do, CC $<, $(CC) -MD $(CFLAGS) -c -o $@ $<)
+	$(call do, CC $<, $(CC) -MMD $(CFLAGS) -c -o $@ $<)
 
 $(OBJDIR)/%.d: $(OBJDIR)/%.o
 
