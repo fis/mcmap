@@ -73,7 +73,7 @@ int mcmap_main(int argc, char **argv)
 		dief("Invalid port number: %d", opt.localport);
 	}
 
-	if (opt.scale < 1 || opt.scale > 64)
+	if (opt.scale < 1 || opt.scale > 19)
 	{
 		dief("Unreasonable scale factor: %d", opt.scale);
 	}

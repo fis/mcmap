@@ -16,6 +16,7 @@
 #include "map.h"
 #include "world.h"
 #include "proxy.h"
+#include "ui.h"
 
 /* miscellaneous helper routines */
 
@@ -24,7 +25,7 @@ static bool handle_mouse(SDL_MouseButtonEvent *e);
 
 /* start the user interface side */
 
-void start_ui(bool map, bool resizable, int wnd_w, int wnd_h)
+void start_ui(bool map, int scale, bool resizable, int wnd_w, int wnd_h)
 {
 	console_init();
 
@@ -49,6 +50,9 @@ void start_ui(bool map, bool resizable, int wnd_w, int wnd_h)
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
 		map_init(screen);
+
+		/* - 1 because it's a delta */
+		map_zoom(scale - 1);
 	}
 
 	/* enter SDL main loop */
