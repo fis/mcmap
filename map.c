@@ -246,9 +246,16 @@ void map_set_mode(struct map_mode *mode)
 
 void map_mode_changed()
 {
-	char *description = map_mode->describe(map_mode->data);
-	tell("MODE: %s", description);
-	g_free(description);
+	GPtrArray *attribs = g_ptr_array_new();
+	char *name = map_mode->describe(map_mode->data, attribs);
+	if (attribs->len)
+	{
+		g_ptr_array_add(attribs, NULL);
+		tell("MODE: %s (%s)", name, g_strjoinv(", ", (char **) attribs->pdata));
+	}
+	else
+		tell("MODE: %s", name);
+	g_ptr_array_free(attribs, true);
 }
 
 /* screen-drawing related code */

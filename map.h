@@ -18,7 +18,7 @@ struct map_region
 struct map_mode
 {
 	void *data;
-	char *(*describe)(void *data);
+	char *(*describe)(void *data, GPtrArray *attrs);
 	coord3_t (*s2w)(void *data, int sx, int sy);
 	void (*w2s)(void *data, coord_t cc, int *sx, int *sy);
 	bool (*handle_key)(void *data, SDL_KeyboardEvent *e);
@@ -30,18 +30,18 @@ struct map_mode
 
 struct flat_mode
 {
+	void *data;
+	char *(*describe)(void *data, GPtrArray *attrs);
+	bool (*handle_key)(void *data, SDL_KeyboardEvent *e);
+	void (*update_player_pos)(void *data);
 	jint (*mapped_y)(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz);
 	rgba_t (*block_color)(void *data, struct chunk *c, unsigned char *b, jint bx, jint bz, jint y);
-	bool track_pickups;
-	bool track_mobs;
 };
 
 extern struct map_mode *map_mode;
 extern struct map_mode *map_modes[256];
 
-bool flat_handle_key(void *data, SDL_KeyboardEvent *e);
-
-struct map_mode *map_init_flat_mode(struct map_mode *mode);
+struct map_mode *map_init_flat_mode(struct flat_mode flat_mode);
 struct map_mode *map_init_surface_mode(void);
 struct map_mode *map_init_cross_mode(void);
 struct map_mode *map_init_topo_mode(void);

@@ -18,21 +18,16 @@ struct state
 
 static void update_player_pos(void *data);
 
-static char *describe(void *data)
+static char *describe(void *data, GPtrArray *attribs)
 {
 	struct state *state = data;
 
-	GString *str = g_string_new("surface");
-
 #ifdef FEAT_FULLCHUNK
-	if (state->lights)
-		g_string_append(str, " (lights)");
+	if (state->lights) g_ptr_array_add(attribs, "lights");
 #endif
+	if (state->chop) g_ptr_array_add(attribs, "chop");
 
-	if (state->chop)
-		g_string_append(str, " (chop)");
-
-	return g_string_free(str, false);
+	return "surface";
 }
 
 static bool handle_key(void *data, SDL_KeyboardEvent *e)
@@ -57,7 +52,7 @@ static bool handle_key(void *data, SDL_KeyboardEvent *e)
 		return true;
 
 	default:
-		return flat_handle_key(data, e);
+		return false;
 	}
 }
 
@@ -169,16 +164,16 @@ static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx
 struct map_mode *map_init_surface_mode()
 {
 	struct state *state = g_new(struct state, 1);
-	state->flat_mode.mapped_y = mapped_y;
-	state->flat_mode.block_color = block_color;
 	state->lights = true;
 	state->chop = true;
 	state->ceiling_y = CHUNK_YSIZE;
 
-	struct map_mode *mode = g_new(struct map_mode, 1);
-	mode->data = state;
-	mode->describe = describe;
-	mode->handle_key = handle_key;
-	mode->update_player_pos = update_player_pos;
-	return map_init_flat_mode(mode);
+	struct flat_mode flat_mode;
+	flat_mode.data = state;
+	flat_mode.describe = describe;
+	flat_mode.handle_key = handle_key;
+	flat_mode.update_player_pos = update_player_pos;
+	flat_mode.mapped_y = mapped_y;
+	flat_mode.block_color = block_color;
+	return map_init_flat_mode(flat_mode);
 }

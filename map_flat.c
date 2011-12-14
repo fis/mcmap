@@ -6,6 +6,22 @@
 #include "protocol.h"
 #include "map.h"
 
+struct state
+{
+	struct flat_mode flat_mode;
+	bool track_pickups;
+	bool track_mobs;
+};
+
+static char *describe(void *data, GPtrArray *attribs)
+{
+	struct state *state = data;
+	char *name = state->flat_mode.describe(state->flat_mode.data, attribs);
+	if (state->track_pickups) g_ptr_array_add(attribs, "pickups");
+	if (state->track_mobs) g_ptr_array_add(attribs, "mobs");
+	return name;
+}
+
 static int indicator_scale()
 {
 	if (map_scale <= 5)
@@ -38,7 +54,7 @@ static coord_t s2w_offset(int sx, int sy, jint *xo, jint *zo)
 
 static coord3_t s2w(void *data, int sx, int sy)
 {
-	struct flat_mode *state = data;
+	struct state *state = data;
 
 	jint xo, zo;
 	coord_t cc = s2w_offset(sx, sy, &xo, &zo);
@@ -49,7 +65,7 @@ static coord3_t s2w(void *data, int sx, int sy)
 	{
 		jint cx = CHUNK_XOFF(cc.x);
 		jint cz = CHUNK_ZOFF(cc.z);
-		y = state->mapped_y(data, c, c->blocks[cx][cz], cx, cz);
+		y = state->flat_mode.mapped_y(state->flat_mode.data, c, c->blocks[cx][cz], cx, cz);
 	}
 
 	return COORD3(cc.x, y, cc.z);
@@ -64,9 +80,9 @@ static void w2s(void *data, coord_t cc, int *sx, int *sy)
 	*sy = py + (cc.z - player_pos.z)*map_scale;
 }
 
-bool flat_handle_key(void *data, SDL_KeyboardEvent *e)
+static bool handle_key(void *data, SDL_KeyboardEvent *e)
 {
-	struct flat_mode *state = data;
+	struct state *state = data;
 
 	switch (e->keysym.unicode)
 	{
@@ -81,8 +97,14 @@ bool flat_handle_key(void *data, SDL_KeyboardEvent *e)
 		return true;
 
 	default:
-		return false;
+		return state->flat_mode.handle_key(state->flat_mode.data, e);
 	}
+}
+
+static void update_player_pos(void *data)
+{
+	struct state *state = data;
+	return state->flat_mode.update_player_pos(state->flat_mode.data);
 }
 
 static void draw_player(void *data, SDL_Surface *screen)
@@ -154,7 +176,7 @@ static void draw_player(void *data, SDL_Surface *screen)
 
 static void draw_entity(void *data, SDL_Surface *screen, struct entity *e)
 {
-	struct flat_mode *state = data;
+	struct state *state = data;
 
 	if (e->type == ENTITY_MOB && !state->track_mobs)
 		return;
@@ -189,7 +211,7 @@ static void draw_entity(void *data, SDL_Surface *screen, struct entity *e)
 
 static void paint_chunk(void *data, SDL_Surface *region, coord_t cc)
 {
-	struct flat_mode *state = data;
+	struct state *state = data;
 
 	jint cxo = CHUNK_XIDX(REGION_XOFF(cc.x));
 	jint czo = CHUNK_ZIDX(REGION_ZOFF(cc.z));
@@ -216,8 +238,8 @@ static void paint_chunk(void *data, SDL_Surface *region, coord_t cc)
 
 		for (jint bx = 0; bx < CHUNK_XSIZE; bx++)
 		{
-			jint y = state->mapped_y(data, c, b, bx, bz);
-			rgba_t rgba = state->block_color(data, c, b, bx, bz, y);
+			jint y = state->flat_mode.mapped_y(state->flat_mode.data, c, b, bx, bz);
+			rgba_t rgba = state->flat_mode.block_color(state->flat_mode.data, c, b, bx, bz, y);
 			*p++ = pack_rgb(rgba);
 			b += blocks_xpitch;
 		}
@@ -346,13 +368,20 @@ static void draw_map(void *data, SDL_Surface *screen)
 	SDL_UnlockSurface(screen);
 }
 
-struct map_mode *map_init_flat_mode(struct map_mode *mode)
+struct map_mode *map_init_flat_mode(struct flat_mode flat_mode)
 {
-	struct flat_mode *state = mode->data;
+	struct state *state = g_new(struct state, 1);
+	state->flat_mode = flat_mode;
 	state->track_pickups = false;
 	state->track_mobs = false;
+
+	struct map_mode *mode = g_new(struct map_mode, 1);
+	mode->data = state;
+	mode->describe = describe;
 	mode->s2w = s2w;
 	mode->w2s = w2s;
+	mode->handle_key = handle_key;
+	mode->update_player_pos = update_player_pos;
 	mode->draw_map = draw_map;
 	mode->draw_player = draw_player;
 	mode->draw_entity = draw_entity;
