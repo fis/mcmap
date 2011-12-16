@@ -18,7 +18,7 @@ objs += $(sources:%.c=$(OBJDIR)/%.o)
 extra_objs += $(extra_sources:%.c=$(OBJDIR)/%.o)
 deps += $(sources:%.c=$(OBJDIR)/%.d) $(extra_sources:%.c=$(OBJDIR)/%.d)
 
-.PHONY: all clean protocol block
+.PHONY: all clean protocol block enchantable
 
 ifdef V
 define do
@@ -53,6 +53,10 @@ protocol: protocol.pl
 
 block: block.pl colors.txt
 	curl -Ss 'http://www.minecraftwiki.net/index.php?title=Data_values&action=raw' | perl block.pl > block.c
+
+enchantable:
+	curl -Ss 'http://wiki.vg/wiki/index.php?title=Slot_Data&action=raw' | \
+		perl -ne 'next unless /^ /; print "case $$&:\n" while /0x[0-9a-zA-Z]+/g' > enchantable.c
 
 -include $(deps)
 
