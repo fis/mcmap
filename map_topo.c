@@ -1,9 +1,15 @@
+#include <stdbool.h>
+
 #include <glib.h>
 #include <SDL.h>
+#include <SDL_ttf.h>
 
-#include "common.h"
+#include "config.h"
+#include "types.h"
+#include "platform.h"
 #include "block.h"
 #include "protocol.h"
+#include "world.h"
 #include "map.h"
 
 static char *describe(void *data, GPtrArray *attribs)

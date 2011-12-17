@@ -1,9 +1,6 @@
 #ifndef MCMAP_WORLD_H
 #define MCMAP_WORLD_H 1
 
-#include "config.h"
-#include "types.h"
-
 #define CHUNK_XBITS 4
 #define CHUNK_ZBITS 4
 

@@ -4,18 +4,18 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #include <glib.h>
 #include <SDL.h>
 
-#include "cmd.h"
-#include "config.h"
-#include "protocol.h"
+#include "types.h"
+#include "platform.h"
 #include "common.h"
 #include "console.h"
-#include "map.h"
-#include "world.h"
 #include "ui.h"
+#include "protocol.h"
+#include "world.h"
 #include "proxy.h"
 
 /* proxying thread function to pass packets */

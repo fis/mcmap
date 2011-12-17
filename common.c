@@ -1,13 +1,14 @@
 #include <unistd.h>
 #include <math.h>
+#include <stdbool.h>
 
 #include <glib.h>
 #include <SDL.h>
 
-#include "protocol.h"
+#include "types.h"
+#include "platform.h"
 #include "common.h"
-#include "map.h"
-#include "world.h"
+#include "protocol.h"
 #include "proxy.h"
 
 guint coord_hash(gconstpointer key)

@@ -7,20 +7,24 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <stdbool.h>
 
-#include <SDL.h>
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <SDL.h>
+#include <SDL_ttf.h>
 #include <zlib.h>
 
-#include "cmd.h"
-#include "protocol.h"
+#include "config.h"
+#include "types.h"
+#include "platform.h"
 #include "common.h"
+#include "cmd.h"
 #include "console.h"
-#include "map.h"
 #include "nbt.h"
+#include "protocol.h"
 #include "world.h"
-#include "proxy.h"
+#include "map.h"
 
 static GHashTable *region_table = 0;
 

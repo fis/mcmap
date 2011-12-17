@@ -6,18 +6,21 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include <glib.h>
 #include <glib/gstdio.h>
 
 #include <SDL.h>
 
-#include "cmd.h"
-#include "protocol.h"
+#include "config.h"
+#include "types.h"
+#include "platform.h"
 #include "common.h"
-#include "map.h"
-#include "world.h"
+#include "protocol.h"
 #include "proxy.h"
+#include "world.h"
+#include "cmd.h"
 
 struct command
 {

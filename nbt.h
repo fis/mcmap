@@ -1,8 +1,6 @@
 #ifndef MCMAP_NBT_H
 #define MCMAP_NBT_H 1
 
-#include "types.h"
-
 enum nbt_tag_type
 {
 	NBT_TAG_END = 0,

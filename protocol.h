@@ -1,9 +1,6 @@
 #ifndef MCMAP_PROTOCOL_H
 #define MCMAP_PROTOCOL_H 1
 
-#include "platform.h"
-#include "types.h"
-
 enum packet_id {
 #define PACKET(id, cname, nfields, ...) \
 	PACKET_##cname = id,

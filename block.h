@@ -1,8 +1,6 @@
 #ifndef MCMAP_BLOCK_H
 #define MCMAP_BLOCK_H 1
 
-#include "types.h"
-
 extern struct block_info
 {
 	char *name;

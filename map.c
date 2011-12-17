@@ -1,18 +1,19 @@
 #include <math.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include <glib.h>
 #include <SDL.h>
 #include <SDL_ttf.h>
 
-#include "protocol.h"
-#include "common.h"
-#include "console.h"
 #include "config.h"
-#include "map.h"
+#include "types.h"
+#include "platform.h"
 #include "block.h"
-#include "world.h"
+#include "protocol.h"
 #include "proxy.h"
+#include "world.h"
+#include "map.h"
 
 /* color maps */
 

@@ -2,9 +2,12 @@
 #include <windows.h>
 #include <glib.h>
 
+/* TODO FIXME: Update includes */
+#if 0
 #include "common.h"
 #include "platform.h"
 #include "win32-res.h"
+#endif
 
 static int splash_argc = 0;
 static char **splash_argv = 0;

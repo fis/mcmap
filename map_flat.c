@@ -1,9 +1,14 @@
+#include <stdbool.h>
+
 #include <glib.h>
 #include <SDL.h>
+#include <SDL_ttf.h>
 
-#include "common.h"
+#include "types.h"
+#include "platform.h"
 #include "console.h"
 #include "protocol.h"
+#include "world.h"
 #include "map.h"
 
 struct state

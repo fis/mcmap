@@ -2,13 +2,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #include <glib.h>
 
-#include "protocol.h"
-#include "common.h"
+#include "types.h"
 #include "console.h"
-#include "world.h"
 
 int console_outfd = 1;
 

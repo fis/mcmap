@@ -4,12 +4,16 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #include <glib.h>
 
-#include "protocol.h"
+#include "config.h"
+#include "types.h"
+#include "platform.h"
 #include "common.h"
 #include "console.h"
+#include "protocol.h"
 
 /*
  * reference:

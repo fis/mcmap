@@ -1,9 +1,6 @@
 #ifndef MCMAP_COMMON_H
 #define MCMAP_COMMON_H
 
-#include "platform.h"
-#include "types.h"
-
 #define NELEMS(array) (sizeof(array) / sizeof((array)[0]))
 
 /* options */

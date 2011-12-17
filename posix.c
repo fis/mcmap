@@ -4,14 +4,17 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #include <glib.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 
-#include "protocol.h"
-#include "common.h"
+#include "types.h"
+#include "platform.h"
 #include "console.h"
+#include "protocol.h"
 #include "proxy.h"
 
 static int console_readline = 0;

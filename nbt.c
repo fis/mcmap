@@ -1,10 +1,12 @@
 #include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #include <glib.h>
 #include <zlib.h>
 
-#include "protocol.h"
-#include "common.h"
+#include "config.h"
+#include "types.h"
 #include "console.h"
 #include "nbt.h"
 

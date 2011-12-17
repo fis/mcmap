@@ -3,19 +3,20 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include <glib.h>
 #include <SDL.h>
 #include <SDL_ttf.h>
 
-#include "cmd.h"
 #include "config.h"
-#include "protocol.h"
+#include "types.h"
+#include "platform.h"
 #include "common.h"
 #include "console.h"
-#include "map.h"
+#include "protocol.h"
 #include "world.h"
-#include "proxy.h"
+#include "map.h"
 #include "ui.h"
 
 /* miscellaneous helper routines */

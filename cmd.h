@@ -1,9 +1,6 @@
 #ifndef MCMAP_CMD_H
 #define MCMAP_CMD_H 1
 
-#include "config.h"
-#include "types.h"
-
 void init_cmd(void);
 
 void cmd_parse(struct buffer cmd);
