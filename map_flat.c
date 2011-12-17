@@ -104,13 +104,13 @@ static bool handle_key(void *data, SDL_KeyboardEvent *e)
 static void update_player_pos(void *data)
 {
 	struct state *state = data;
-	return state->flat_mode.update_player_pos(state->flat_mode.data);
+	state->flat_mode.update_player_pos(state->flat_mode.data);
 }
 
 static void update_time(void *data)
 {
 	struct state *state = data;
-	return state->flat_mode.update_time(state->flat_mode.data);
+	state->flat_mode.update_time(state->flat_mode.data);
 }
 
 static void draw_player(void *data, SDL_Surface *screen)
