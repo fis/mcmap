@@ -1,6 +1,10 @@
 #ifndef MCMAP_PROXY_H
 #define MCMAP_PROXY_H 1
 
+#ifndef DEBUG_PROTOCOL
+#define DEBUG_PROTOCOL 0
+#endif
+
 void start_proxy(socket_t sock_cli, socket_t sock_srv);
 
 /* packet injection */
