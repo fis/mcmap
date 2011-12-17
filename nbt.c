@@ -157,7 +157,7 @@ void nbt_struct_add(struct nbt_tag *s, struct nbt_tag *field)
 
 /* NBT serialization code */
 
-static void format_tag(GByteArray *arr, struct nbt_tag *tag, int only_payload)
+static void format_tag(GByteArray *arr, struct nbt_tag *tag, bool only_payload)
 {
 	if (!only_payload)
 	{
