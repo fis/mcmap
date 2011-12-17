@@ -24,7 +24,7 @@ struct nbt_tag *nbt_new_int(char *name, enum nbt_tag_type type, jint intv);
 struct nbt_tag *nbt_new_long(char *name, jlong longv);
 struct nbt_tag *nbt_new_double(char *name, enum nbt_tag_type type, double doublev);
 
-struct nbt_tag *nbt_new_blob(char *name, enum nbt_tag_type type, const void *data, int len);
+struct nbt_tag *nbt_new_blob(char *name, enum nbt_tag_type type, const void *data, size_t len);
 struct nbt_tag *nbt_new_str(char *name, const char *str);
 
 struct nbt_tag *nbt_new_struct(char *name);

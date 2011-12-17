@@ -80,7 +80,7 @@ typedef struct rgba rgba_t;
 
 struct buffer
 {
-	unsigned len;
+	size_t len;
 	unsigned char *data;
 };
 

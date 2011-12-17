@@ -628,7 +628,7 @@ void packet_dump(packet_t *packet)
 
 		case FIELD_STRING:
 			tb = packet_string(packet, f);
-			DUMP(" '%.*s'", tb.len, tb.data);
+			DUMP(" '%.*s'", (int) tb.len, tb.data);
 			g_free(tb.data);
 			break;
 

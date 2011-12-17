@@ -36,7 +36,7 @@ static struct nbt_tag *nbt_new(char *name, enum nbt_tag_type type)
 	tag->type = type;
 	tag->name = name;
 
-	int namelen = strlen(name);
+	size_t namelen = strlen(name);
 	tag->namelen[0] = namelen >> 8;
 	tag->namelen[1] = namelen;
 
@@ -70,7 +70,7 @@ struct nbt_tag *nbt_new_double(char *name, enum nbt_tag_type type, double double
 	return tag;
 }
 
-struct nbt_tag *nbt_new_blob(char *name, enum nbt_tag_type type, const void *data, int len)
+struct nbt_tag *nbt_new_blob(char *name, enum nbt_tag_type type, const void *data, size_t len)
 {
 	if (type != NBT_TAG_BLOB && type != NBT_TAG_STR)
 		dief("nbt_new_blob: bad type: %d", type);
@@ -252,7 +252,7 @@ struct buffer nbt_compress(struct nbt_tag *tag)
 	return (struct buffer){ clen, cbuf };
 }
 
-static struct nbt_tag *parse_tag(uint8_t *data, unsigned len, unsigned *taglen)
+static struct nbt_tag *parse_tag(uint8_t *data, size_t len, size_t *taglen)
 {
 	if (len < 1)
 		die("truncated NBT tag: short type");
@@ -283,7 +283,7 @@ static struct nbt_tag *parse_tag(uint8_t *data, unsigned len, unsigned *taglen)
 	jbyte tb;
 
 	struct nbt_tag *sub;
-	unsigned sublen;
+	size_t sublen;
 
 	switch (tag->type)
 	{
@@ -418,7 +418,7 @@ struct nbt_tag *nbt_uncompress(struct buffer buf)
 	if (arr->len < 3 || memcmp(arr->data, "\x0a\x00", 3) != 0)
 		die("nbt_uncompress: invalid header in uncompressed NBT");
 
-	unsigned t;
+	size_t t;
 	struct nbt_tag *tag = parse_tag(arr->data + 3, arr->len - 3, &t);
 
 	g_byte_array_unref(arr);
