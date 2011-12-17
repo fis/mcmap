@@ -182,7 +182,7 @@ void map_update(coord_t c1, coord_t c2)
 	map_repaint();
 }
 
-void map_update_all()
+void map_update_all(void)
 {
 	GHashTableIter region_iter;
 	struct map_region *region;
@@ -245,7 +245,7 @@ void map_set_mode(struct map_mode *mode)
 	map_mode_changed();
 }
 
-void map_mode_changed()
+void map_mode_changed(void)
 {
 	GPtrArray *attribs = g_ptr_array_new();
 	char *name = map_mode->describe(map_mode->data, attribs);

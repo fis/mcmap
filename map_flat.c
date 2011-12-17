@@ -22,7 +22,7 @@ static char *describe(void *data, GPtrArray *attribs)
 	return name;
 }
 
-static int indicator_scale()
+static int indicator_scale(void)
 {
 	if (map_scale <= 5)
 		return map_scale + 2;

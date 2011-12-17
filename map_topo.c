@@ -41,7 +41,7 @@ static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx
 		return RGB(255, 255-4*(y-64), 0);
 }
 
-struct map_mode *map_init_topo_mode()
+struct map_mode *map_init_topo_mode(void)
 {
 	struct flat_mode flat_mode;
 	flat_mode.data = NULL;

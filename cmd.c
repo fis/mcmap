@@ -27,7 +27,7 @@ struct command
 
 GHashTable *commands;
 
-void init_cmd()
+void init_cmd(void)
 {
 	struct command *command;
 	commands = g_hash_table_new(g_str_hash, g_str_equal);
@@ -122,7 +122,7 @@ usage:
 	g_hash_table_iter_init(&jump_iter, jumps); \
 	while (g_hash_table_iter_next(&jump_iter, (gpointer *) &name, (gpointer *) &jump))
 
-void jumps_list()
+void jumps_list(void)
 {
 	if (g_hash_table_size(jumps) == 0)
 	{

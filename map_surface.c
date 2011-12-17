@@ -214,7 +214,7 @@ static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx
 	           (below.b * (255 - rgba.a) + rgba.b * rgba.a)/255);
 }
 
-struct map_mode *map_init_surface_mode()
+struct map_mode *map_init_surface_mode(void)
 {
 	struct state *state = g_new(struct state, 1);
 	state->chop = true;

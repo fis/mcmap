@@ -19,11 +19,14 @@ static int opipe_read, opipe_write;
 
 static gpointer console_thread(gpointer data);
 
-void socket_init() {}
+void socket_init(void)
+{
+	return;
+}
 
 /* readline input and log output interlacing */
 
-void console_init()
+void console_init(void)
 {
         if (isatty(0) && isatty(1))
         {

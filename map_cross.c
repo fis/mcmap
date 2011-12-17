@@ -90,7 +90,7 @@ static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx
 	return block_colors[b[y]];
 }
 
-struct map_mode *map_init_cross_mode()
+struct map_mode *map_init_cross_mode(void)
 {
 	struct state *state = g_new(struct state, 1);
 	state->follow_y = true;
