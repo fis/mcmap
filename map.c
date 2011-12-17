@@ -142,7 +142,7 @@ inline void map_repaint(void)
 	SDL_PushEvent(&e);
 }
 
-void map_update_chunk(coord_t cc)
+static void map_update_chunk(coord_t cc)
 {
 	struct chunk *c = world_chunk(cc, false);
 
@@ -154,7 +154,7 @@ void map_update_chunk(coord_t cc)
 	BITSET_SET(region->dirty_chunk, CHUNK_ZIDX(REGION_ZOFF(cc.z))*REGION_SIZE + CHUNK_XIDX(REGION_XOFF(cc.x)));
 }
 
-void map_update_region(coord_t cc)
+static void map_update_region(coord_t cc)
 {
 	struct region *r = world_region(cc, false);
 
