@@ -419,17 +419,14 @@ packet_t *packet_new(enum packet_id type, ...)
 			break;
 
 		case FIELD_INT:
-			/* FIXME: jint could be bigger than int */
-			packet_add_jint(&pc, va_arg(ap, int));
+			packet_add_jint(&pc, va_arg(ap, long));
 			break;
 
 		case FIELD_LONG:		
-			/* FIXME: ditto here, I think */
 			packet_add_jlong(&pc, va_arg(ap, long long));
 			break;
 
 		case FIELD_FLOAT:
-			/* FIXME: maybe here and in the double case, too? */
 			packet_add_jfloat(&pc, va_arg(ap, double));
 			break;
 
