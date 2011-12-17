@@ -157,7 +157,7 @@ char *default_colors[] = {
 	"iron block: 92 92 92",
 	"double slabs: 180 180 180",
 	"slabs: 180 180 180",
-	"brick: 160 0 0",
+	"bricks: 160 0 0",
 	"moss stone: 0 255 0",
 	"obsidian: 61 0 61",
 	"torch: 255 255 0",
@@ -179,7 +179,7 @@ char *default_colors[] = {
 	"pumpkin: 246 156 0",
 	"netherrack: 121 17 0",
 	"soul sand: 107 43 15",
-	"glowstone: 186 157 0",
+	"glowstone block: 186 157 0",
 	"jack-o-lantern: 246 156 0",
 	0
 };
