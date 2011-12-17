@@ -28,11 +28,6 @@ rgba_t special_colors[COLOR_MAX_SPECIAL] = {
 
 /* map graphics code */
 
-double player_dx = 0.0, player_dy = 0.0, player_dz = 0.0;
-coord3_t player_pos = { .x = 0, .y = 0, .z = 0 };
-int player_yaw = 0;
-jshort player_health = 0;
-
 GHashTable *regions = 0;
 TTF_Font *map_font = 0;
 SDL_PixelFormat *screen_fmt = 0;
@@ -197,44 +192,6 @@ void map_update_all(void)
 	}
 
 	G_UNLOCK(map_mutex);
-}
-
-void map_update_player_pos(double x, double y, double z)
-{
-	coord3_t new_pos = COORD3(floor(x), floor(y), floor(z));
-
-	if (COORD3_EQUAL(player_pos, new_pos))
-		return;
-
-	player_dx = x;
-	player_dy = y;
-	player_dz = z;
-
-	player_pos = new_pos;
-
-	map_mode->update_player_pos(map_mode->data);
-
-	map_repaint();
-}
-
-void map_update_player_dir(double yaw)
-{
-	int new_yaw = 0;
-
-	yaw = fmod(yaw, 360.0);
-
-	if (yaw < 0.0) yaw += 360.0;
-	if (yaw > 360-22.5) yaw -= 360;
-
-	while (new_yaw < 7 && yaw > 22.5)
-		new_yaw++, yaw -= 45.0;
-
-	if (new_yaw == player_yaw)
-		return;
-
-	player_yaw = new_yaw;
-
-	map_repaint();
 }
 
 void map_set_mode(struct map_mode *mode)

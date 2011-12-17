@@ -73,6 +73,9 @@ struct entity
 };
 
 extern int world_time;
+extern coord3_t player_pos;
+extern int player_yaw;
+extern jshort player_health;
 
 void world_start(const char *path);
 

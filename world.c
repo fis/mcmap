@@ -1,3 +1,4 @@
+#include <math.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -31,7 +32,12 @@ static jint entity_vehicle = -1;
 
 int world_time = 0;
 static jlong world_seed = 0;
-static int spawn_known = 0;
+
+coord3_t player_pos = { .x = 0, .y = 0, .z = 0 };
+int player_yaw = 0;
+jshort player_health = 0;
+
+static bool spawn_known = false;
 static jint spawn_x = 0, spawn_y = 0, spawn_z = 0;
 
 static char *world_path = 0;
@@ -413,6 +419,39 @@ static void handle_set_block(jint x, jint y, jint z, jint type)
 		map_update(cc, cc);
 }
 
+static void update_player_pos(double x, double y, double z)
+{
+	coord3_t new_pos = COORD3(floor(x), floor(y), floor(z));
+
+	if (COORD3_EQUAL(player_pos, new_pos))
+		return;
+
+	player_pos = new_pos;
+
+	map_mode->update_player_pos(map_mode->data);
+	map_repaint();
+}
+
+static void update_player_dir(double yaw)
+{
+	int new_yaw = 0;
+
+	yaw = fmod(yaw, 360.0);
+
+	if (yaw < 0.0) yaw += 360.0;
+	if (yaw > 360-22.5) yaw -= 360;
+
+	while (new_yaw < 7 && yaw > 22.5)
+		new_yaw++, yaw -= 45.0;
+
+	if (new_yaw == player_yaw)
+		return;
+
+	player_yaw = new_yaw;
+
+	map_repaint();
+}
+
 static void entity_add(jint id, enum entity_type type, jshort subtype,
                        unsigned char *name, jint x, jint y, jint z)
 {
@@ -497,7 +536,7 @@ static void entity_move(jint id, jint x, jint y, jint z, int relative)
 	e->pos = ep;
 
 	if (id == entity_vehicle)
-		map_update_player_pos(ep.x, e->ay/32, ep.z);
+		update_player_pos(ep.x, e->ay/32, ep.z);
 	else
 		map_repaint();
 }
@@ -548,23 +587,23 @@ static gpointer world_thread(gpointer data)
 			break;
 
 		case PACKET_PLAYER_LOOK:
-			map_update_player_dir(packet_double(packet, 0));
+			update_player_dir(packet_double(packet, 0));
 			break;
 
 		case PACKET_PLAYER_POSITION_AND_LOOK:
-			map_update_player_dir(packet_double(packet, 4));
+			update_player_dir(packet_double(packet, 4));
 
 			/* fall-thru to PACKET_PLAYER_POSITION */
 
 		case PACKET_PLAYER_POSITION:
 			if (entity_vehicle < 0)
-				map_update_player_pos(packet_double(packet, 0),
-				                      packet_double(packet, 1),
-				                      packet_double(packet, 3));
+				update_player_pos(packet_double(packet, 0),
+				                  packet_double(packet, 1),
+				                  packet_double(packet, 3));
 
 			if (from == PACKET_FROM_SERVER && !spawn_known)
 			{
-				spawn_known = 1;
+				spawn_known = true;
 				spawn_x = packet_double(packet, 0);
 				spawn_y = packet_double(packet, 1);
 				spawn_z = packet_double(packet, 3);

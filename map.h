@@ -67,10 +67,6 @@ extern SDL_PixelFormat *screen_fmt;
 extern TTF_Font *map_font;
 extern int map_w, map_h;
 extern bool map_focused;
-extern double player_dx, player_dy, player_dz;
-extern coord3_t player_pos;
-extern int player_yaw;
-extern jshort player_health;
 
 extern int map_scale;
 
@@ -86,9 +82,6 @@ struct map_region *map_get_region(coord_t cc, bool gen);
 
 void map_update(coord_t c1, coord_t c2);
 void map_update_all(void);
-
-void map_update_player_pos(double x, double y, double z);
-void map_update_player_dir(double yaw);
 
 void map_set_mode(struct map_mode *mode);
 void map_mode_changed(void);
