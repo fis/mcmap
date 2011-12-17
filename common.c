@@ -53,7 +53,7 @@ jfloat jfloat_read(unsigned char *p)
 	jint i = jint_read(p);
 	jfloat f;
 
-#if !FEAT_PORTABLE_FLOATS
+#ifndef FEAT_PORTABLE_FLOATS
 	memcpy(&f, &i, sizeof f);
 #else
 	jint fraction = i & 0x7fffff;
@@ -89,7 +89,7 @@ jdouble jdouble_read(unsigned char *p)
 	jlong i = jlong_read(p);
 	jdouble f;
 
-#if !FEAT_PORTABLE_FLOATS
+#ifndef FEAT_PORTABLE_FLOATS
 	memcpy(&f, &i, sizeof f);
 #else
 	jlong fraction = i & 0xfffffffffffff;
@@ -150,7 +150,7 @@ void jfloat_write(unsigned char *p, jfloat v)
 {
 	jint i;
 
-#if !FEAT_PORTABLE_FLOATS
+#ifndef FEAT_PORTABLE_FLOATS
 	memcpy(&i, &v, sizeof i);
 #else
 	jint fraction;
@@ -183,7 +183,7 @@ void jdouble_write(unsigned char *p, jdouble v)
 {
 	jlong i;
 
-#if !FEAT_PORTABLE_FLOATS
+#ifndef FEAT_PORTABLE_FLOATS
 	memcpy(&i, &v, sizeof i);
 #else
 	jlong fraction;
