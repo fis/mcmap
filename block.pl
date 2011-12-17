@@ -61,7 +61,7 @@ while (<$colors>)
 	/^(.*):/ or die "invalid line: $_\n";
 	if (!$names{$1})
 	{
-		print STDERR "invalid block: $1\n";
+		die "invalid block: $1\n";
 	}
 	print "\t\"$_\",\n";
 	$colored{$1} = 1;
