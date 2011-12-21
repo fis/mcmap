@@ -8,7 +8,7 @@ include Makefile.common
 PKGCFLAGS := $(shell pkg-config --cflags $(libs) | sed 's/-I/-isystem /g')
 
 ifeq ($(PKGCFLAGS),)
-	$(error Can't satisfy dependencies)
+$(error Can't satisfy dependencies)
 endif
 
 PKGLDFLAGS := $(shell pkg-config --libs $(libs))
