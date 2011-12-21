@@ -82,7 +82,7 @@ static void entity_free(gpointer ep)
 
 void world_start(const char *path)
 {
-	region_table = g_hash_table_new_full(coord_hash, coord_equal, 0, region_free);
+	region_table = g_hash_table_new_full(coord_glib_hash, coord_glib_equal, 0, region_free);
 	world_entities = g_hash_table_new_full(g_int_hash, g_int_equal, 0, entity_free);
 	worldq = g_async_queue_new_full(packet_free);
 	g_thread_create(world_thread, 0, false, 0);
@@ -260,9 +260,9 @@ static bool handle_compressed_chunk(jint x0, jint y0, jint z0,
 	// Not really a problem, though.
 	struct buffer zb = { zbuf_len, zbuf };
 #ifdef FEAT_FULLCHUNK
-	struct buffer zb_meta = OFFSET_BUFFER(zb, xs*ys*zs);
-	struct buffer zb_light_blocks = OFFSET_BUFFER(zb_meta, (xs*ys*zs+1)/2);
-	struct buffer zb_light_sky = OFFSET_BUFFER(zb_light_blocks, (xs*ys*zs+1)/2);
+	struct buffer zb_meta = offset_buffer(zb, xs*ys*zs);
+	struct buffer zb_light_blocks = offset_buffer(zb_meta, (xs*ys*zs+1)/2);
+	struct buffer zb_light_sky = offset_buffer(zb_light_blocks, (xs*ys*zs+1)/2);
 #else
 	struct buffer zb_meta = { 0, 0 };
 	struct buffer zb_light_blocks = { 0, 0 };
@@ -297,7 +297,7 @@ bool world_handle_chunk(jint x0, jint y0, jint z0,
 		{
 			coord_t cc = COORD(CHUNK_XMASK(x), CHUNK_ZMASK(z));
 
-			if (!COORD_EQUAL(cc, current_chunk) || !set_chunk)
+			if (!coord_equal(cc, current_chunk) || !set_chunk)
 			{
 				set_chunk = true;
 				c = world_chunk(cc, true);
@@ -427,7 +427,7 @@ static void update_player_pos(double x, double y, double z)
 {
 	coord3_t new_pos = COORD3(floor(x), floor(y), floor(z));
 
-	if (COORD3_EQUAL(player_pos, new_pos))
+	if (coord3_equal(player_pos, new_pos))
 		return;
 
 	player_pos = new_pos;
@@ -534,7 +534,7 @@ static void entity_move(jint id, jint x, jint y, jint z, int relative)
 	}
 
 	coord_t ep = COORD(e->ax/32, e->az/32);
-	if (COORD_EQUAL(e->pos, ep))
+	if (coord_equal(e->pos, ep))
 		return;
 
 	e->pos = ep;
@@ -694,7 +694,7 @@ static gpointer world_thread(gpointer data)
 			msg = packet_string(packet, 0);
 			if (msg.len >= 3 && msg.data[0] == '/' && msg.data[1] == '/')
 			{
-				struct buffer cmd = OFFSET_BUFFER(msg, 2);
+				struct buffer cmd = offset_buffer(msg, 2);
 				cmd_parse(cmd);
 			}
 			g_free(msg.data);

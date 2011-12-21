@@ -136,7 +136,7 @@ static void draw_player(void *data, SDL_Surface *screen)
 	int s = indicator_scale();
 
 	int x0, y0;
-	w2s(data, COORD3_XZ(player_pos), &x0, &y0);
+	w2s(data, coord3_xz(player_pos), &x0, &y0);
 	x0 += (map_scale - s)/2;
 	y0 += (map_scale - s)/2;
 
@@ -156,7 +156,7 @@ static void draw_player(void *data, SDL_Surface *screen)
 			int sy = y0 + tyx*ix + tyy*iy; \
 			uint32_t *p = (uint32_t *)&pixels[sy*pitch + sx*4]; \
 			/* TODO: Handle alpha in flat mode */ \
-			*p = pack_rgb(IGNORE_ALPHA(special_colors[COLOR_PLAYER])); \
+			*p = pack_rgb(ignore_alpha(special_colors[COLOR_PLAYER])); \
 		} while (0)
 
 	/* draw the triangle shape */
@@ -217,7 +217,7 @@ static void draw_entity(void *data, SDL_Surface *screen, struct entity *e)
 
 	SDL_Rect r = { .x = ex, .y = ez, .w = s, .h = s };
 	// TODO: handle alpha in surface mode
-	SDL_FillRect(screen, &r, pack_rgb(IGNORE_ALPHA(color)));
+	SDL_FillRect(screen, &r, pack_rgb(ignore_alpha(color)));
 }
 
 static void paint_chunk(void *data, SDL_Surface *region, coord_t cc)
@@ -277,7 +277,7 @@ static void paint_region(void *data, struct map_region *region)
 
 		SDL_LockSurface(region->surf);
 		SDL_Rect r = { .x = 0, .y = 0, .w = REGION_XSIZE, .h = REGION_ZSIZE };
-		SDL_FillRect(region->surf, &r, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_UNLOADED])));
+		SDL_FillRect(region->surf, &r, pack_rgb(ignore_alpha(special_colors[COLOR_UNLOADED])));
 		SDL_UnlockSurface(region->surf);
 	}
 

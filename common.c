@@ -11,17 +11,44 @@
 #include "protocol.h"
 #include "proxy.h"
 
-guint coord_hash(gconstpointer key)
+inline bool coord_equal(coord_t a, coord_t b)
 {
-	const coord_t *c = key;
-	uint32_t x = c->x, z = c->z;
+	return a.x == b.x && a.z == b.z;
+}
+
+inline bool coord3_equal(coord3_t a, coord3_t b)
+{
+	return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+
+inline coord_t coord3_xz(coord3_t cc)
+{
+	return COORD(cc.x, cc.z);
+}
+
+
+unsigned coord_glib_hash(const void *p)
+{
+	const coord_t *cc = p;
+	jint x = cc->x, z = cc->z;
 	return x ^ ((z << 16) | (z >> 16));
 }
 
-gboolean coord_equal(gconstpointer a, gconstpointer b)
+/* gboolean = int != bool, thus the return value */
+int coord_glib_equal(const void *a, const void *b)
 {
 	const coord_t *ca = a, *cb = b;
-	return COORD_EQUAL(*ca, *cb);
+	return coord_equal(*ca, *cb);
+}
+
+inline rgba_t ignore_alpha(rgba_t rgba)
+{
+	return RGB(rgba.r, rgba.g, rgba.b);
+}
+
+inline struct buffer offset_buffer(struct buffer buf, size_t n)
+{
+	return (struct buffer){ buf.len - n, buf.data + n };
 }
 
 void teleport(coord_t cc)

@@ -92,7 +92,7 @@ static void update_player_pos(void *data)
 
 	if (state->chop)
 	{
-		unsigned char *stack = world_stack(COORD3_XZ(player_pos), false);
+		unsigned char *stack = world_stack(coord3_xz(player_pos), false);
 		jint old_ceiling_y = state->ceiling_y;
 		if (stack && player_pos.y >= 0 && player_pos.y < CHUNK_YSIZE)
 		{
@@ -201,7 +201,7 @@ static rgba_t block_color(void *data, struct chunk *c, unsigned char *b, jint bx
 	/* alpha transform */
 
 	if (rgba.a == 255 || y <= 1)
-		return IGNORE_ALPHA(rgba);
+		return ignore_alpha(rgba);
 
 	int below_y = y - 1;
 	while (IS_AIR(b[below_y]) && below_y > 1)

@@ -59,7 +59,7 @@ void map_init(SDL_Surface *screen)
 	map_rshift = screen_fmt->Rshift;
 	map_gshift = screen_fmt->Gshift;
 	map_bshift = screen_fmt->Bshift;
-	regions = g_hash_table_new_full(coord_hash, coord_equal, 0, map_destroy_region);
+	regions = g_hash_table_new_full(coord_glib_hash, coord_glib_equal, 0, map_destroy_region);
 
 	/* initialize map modes */
 	map_modes['1'] = map_init_surface_mode();
@@ -264,7 +264,7 @@ static void map_draw_status_bar(SDL_Surface *screen)
 		int mx, my;
 		SDL_GetMouseState(&mx, &my);
 		hcc = map_mode->s2w(map_mode->data, mx, my);
-		struct chunk *hc = world_chunk(COORD3_XZ(hcc), false);
+		struct chunk *hc = world_chunk(coord3_xz(hcc), false);
 		if (!hc) goto no_block_info;
 		jint hcx = CHUNK_XOFF(hcc.x);
 		jint hcz = CHUNK_ZOFF(hcc.z);
@@ -313,7 +313,7 @@ void map_draw(SDL_Surface *screen)
 	/* clear the window */
 
 	SDL_Rect rect_screen = { .x = 0, .y = 0, .w = screen->w, .h = screen->h };
-	SDL_FillRect(screen, &rect_screen, pack_rgb(IGNORE_ALPHA(special_colors[COLOR_UNLOADED])));
+	SDL_FillRect(screen, &rect_screen, pack_rgb(ignore_alpha(special_colors[COLOR_UNLOADED])));
 
 	/* draw the map */
 

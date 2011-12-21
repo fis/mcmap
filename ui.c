@@ -151,7 +151,7 @@ static bool handle_mouse(SDL_MouseButtonEvent *e)
 			return false;
 
 		/* teleport */
-		teleport(COORD3_XZ(map_mode->s2w(map_mode->data, e->x, e->y)));
+		teleport(coord3_xz(map_mode->s2w(map_mode->data, e->x, e->y)));
 		return false;
 
 	case SDL_BUTTON_WHEELUP:

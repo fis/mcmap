@@ -38,15 +38,14 @@ typedef struct coord coord_t;
 typedef struct coord3 coord3_t;
 
 #define COORD(xv, zv) ((coord_t){ .x = (xv), .z = (zv) })
-#define COORD_EQUAL(a,b) ((a).x == (b).x && (a).z == (b).z)
-
 #define COORD3(xv, yv, zv) ((coord3_t){ .x = (xv), .y = (yv), .z = (zv) })
-#define COORD3_EQUAL(a,b) ((a).x == (b).x && (a).y == (b).y && (a).z == (b).z)
-#define COORD3_XZ(cc3) COORD((cc3).x, (cc3).z)
 
-/* for glib */
-guint coord_hash(gconstpointer key);
-gboolean coord_equal(gconstpointer a, gconstpointer b);
+bool coord_equal(coord_t a, coord_t b);
+bool coord3_equal(coord3_t a, coord3_t b);
+coord_t coord3_xz(coord3_t cc);
+
+unsigned coord_glib_hash(const void *p);
+int coord_glib_equal(const void *a, const void *b);
 
 /* colors */
 
@@ -62,7 +61,8 @@ typedef struct rgba rgba_t;
 
 #define RGBA(rv, gv, bv, av) ((rgba_t){ .r = (rv), .g = (gv), .b = (bv), .a = (av) })
 #define RGB(rv, gv, bv) RGBA(rv, gv, bv, 255)
-#define IGNORE_ALPHA(rgba) RGB((rgba).r, (rgba).g, (rgba).b)
+
+rgba_t ignore_alpha(rgba_t rgba);
 
 // FIXME: Should we transform alpha too?
 #define TRANSFORM_RGB(expr) \
@@ -81,8 +81,9 @@ struct buffer
 	unsigned char *data;
 };
 
-#define OFFSET_BUFFER(buf, n) { (buf).len - (n), (buf).data + (n) }
-#define ADVANCE_BUFFER(buf, n) do { (buf).len -= n; (buf).data += n; } while (0)
+struct buffer offset_buffer(struct buffer buf, size_t n);
+
+#define ADVANCE_BUFFER(buf, n) do { (buf) = offset_buffer((buf), (n)); } while (0)
 
 /* fixed-size bitsets */
 
