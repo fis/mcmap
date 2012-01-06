@@ -16,9 +16,4 @@ PKGLDFLAGS := $(shell pkg-config --libs $(libs))
 CFLAGS += -DPLATFORM_POSIX
 CFLAGS += $(PKGCFLAGS)
 
-# Apple's gcc is braindead by default.
-ifeq ($(shell uname),Darwin)
-        CFLAGS += -fnested-functions
-endif
-
 LDFLAGS := $(PKGLDFLAGS) -lz -lreadline -lSDL_ttf -lm
